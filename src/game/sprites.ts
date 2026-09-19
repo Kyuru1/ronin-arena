@@ -421,23 +421,6 @@ export function buildSprites() {
     ],
     { b: "#9c2931", r: "#681923", w: "#f3dfbd", s: "#d8e0df", g: "#f2c58d" },
   );
-  SPR.icoAxe = makeSprite(
-    [
-      "...ss..ss...",
-      "..ssssssss..",
-      ".ssmmrrmmss.",
-      ".ssmmrrmmss.",
-      "..sssrrsss..",
-      "....hrrh....",
-      "...hh..hh...",
-      "..hh........",
-      ".hh.........",
-      "hh..........",
-      "h...........",
-      "............",
-    ],
-    { s: "#dbe3df", m: "#6f7880", r: "#8e2430", h: "#69241f" },
-  );
   SPR.icoHammer = makeSprite(
     [
       "....mmmmmm..",
@@ -488,6 +471,23 @@ export function buildSprites() {
       "............",
     ],
     { s: "#555d63", w: "#aab1b5", r: "#e0444d" },
+  );
+  SPR.icoBook = makeSprite(
+    [
+      "..bbbbbbbb..",
+      ".bppppppppb.",
+      ".bpwwppwwpb.",
+      ".bpwwppwwpb.",
+      ".bpppyppppb.",
+      ".bppyyypppb.",
+      ".bpppyppppb.",
+      ".bpwwppwwpb.",
+      ".bpwwppwwpb.",
+      ".bppppppppb.",
+      "..bbbbbbbb..",
+      "............",
+    ],
+    { b: "#4f245f", p: "#9a55a5", w: "#f0d8a8", y: "#63d8ff" },
   );
   SPR.icoSpeed = makeSprite(
     [
@@ -607,6 +607,23 @@ export function buildSprites() {
       "............",
     ],
     { g: "#ffe2c4" },
+  );
+  SPR.icoCrosshair = makeSprite(
+    [
+      ".....cc.....",
+      ".....cc.....",
+      "............",
+      "...cccccc...",
+      "...cc..cc...",
+      "cc.cc..cc.cc",
+      "cc.cc..cc.cc",
+      "...cc..cc...",
+      "...cccccc...",
+      "............",
+      ".....cc.....",
+      ".....cc.....",
+    ],
+    { c: "#7ed9d1" },
   );
   SPR.icoTrophy = makeSprite(
     [

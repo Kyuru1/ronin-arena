@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Game, type HudStats, type PowerUp, type UpgradeOffer, type Weapon } from "./game/engine";
+import { Game, type HudStats, type MagicType, type PowerUp, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
 import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
-import { clearScores, loadScores, saveScore, type ScoreEntry } from "./game/storage";
+import { clearScores, loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
 import Hud from "./components/Hud";
 import { GameOverScreen, PauseScreen } from "./components/Screens";
 import MainMenu, { type UiOpts } from "./components/MainMenu";
 import ShopScreen from "./components/ShopScreen";
+import TutorialScreen from "./components/TutorialScreen";
 
-type UiPhase = "menu" | "playing" | "paused" | "upgrade" | "dead";
+type UiPhase = "menu" | "tutorial" | "playing" | "paused" | "upgrade" | "dead";
 
 const emptyStats: HudStats = {
   hp: 5,
@@ -31,10 +32,20 @@ const emptyStats: HudStats = {
   speedBonus: 0,
   dashSpeedMult: 1,
   mineTutorial: false,
+  weaponLevels: {
+    katana: { damage: 0, speed: 0, range: 0, form: 0 },
+    bow: { damage: 0, speed: 0, range: 0, form: 0 },
+    hammer: { damage: 0, speed: 0, range: 0, form: 0 },
+    shield: { damage: 0, speed: 0, range: 0, form: 0 },
+    mine: { damage: 0, speed: 0, range: 0, form: 0 },
+    book: { damage: 0, speed: 0, range: 0, form: 0 },
+  },
+  magicType: "fire",
 };
 
 const OPT_KEY = "ronin.options.v2";
 const NAME_KEY = "ronin.lastname";
+const TUTORIAL_KEY = "ronin.tutorial.hidden.v1";
 
 const defaultOpts: UiOpts = {
   sound: true,
@@ -82,7 +93,7 @@ export default function App() {
     setVolume(o.volume);
     setMutedState(!o.sound);
     document.fonts?.load('10px "Press Start 2P"').catch(() => {});
-    setScores(loadScores());
+    void loadRemoteScores().then(setScores);
     setIsTouch(
       typeof window !== "undefined" &&
         (window.matchMedia?.("(pointer: coarse)").matches || "ontouchstart" in window),
@@ -128,19 +139,45 @@ export default function App() {
     };
   }, []);
 
-  const start = useCallback(() => {
-    const g = gameRef.current;
-    if (!g) return;
-    unlockAudio();
+  const launchRun = useCallback(() => {
+    const game = gameRef.current;
+    if (!game) return;
+    game.startGame();
     setRank(-1);
     setPendingScore(false);
+    setPhase("playing");
+    setMenuClosing(false);
+  }, []);
+
+  const start = useCallback(() => {
+    if (!gameRef.current) return;
+    unlockAudio();
     setMenuClosing(true);
     window.setTimeout(() => {
-      g.startGame();
-      setPhase("playing");
-      setMenuClosing(false);
-    }, 260);
-  }, []);
+      let hidden = false;
+      try {
+        hidden = localStorage.getItem(TUTORIAL_KEY) === "1";
+      } catch {
+        /* ignore */
+      }
+      if (hidden) launchRun();
+      else {
+        setPhase("tutorial");
+        setMenuClosing(false);
+      }
+    }, 220);
+  }, [launchRun]);
+
+  const finishTutorial = useCallback((neverAgain: boolean) => {
+    if (neverAgain) {
+      try {
+        localStorage.setItem(TUTORIAL_KEY, "1");
+      } catch {
+        /* ignore */
+      }
+    }
+    launchRun();
+  }, [launchRun]);
 
   const togglePause = useCallback(() => {
     const g = gameRef.current;
@@ -169,7 +206,7 @@ export default function App() {
     setPhase("menu");
     setStats(emptyStats);
     setUpgrade(null);
-    setScores(loadScores());
+    void loadRemoteScores().then(setScores);
   }, []);
 
   const submitName = useCallback(
@@ -180,17 +217,19 @@ export default function App() {
       } catch {
         /* ignore */
       }
-      const { list, rank: r } = saveScore({
+      const entry = {
         name: clean,
         score: finalStats.score,
         wave: finalStats.wave,
         kills: finalStats.kills,
         time: finalStats.time,
         date: Date.now(),
+      };
+      void saveRemoteScore(entry).then(({ list, rank: r }) => {
+        setScores(list);
+        setRank(r);
+        setPendingScore(false);
       });
-      setScores(list);
-      setRank(r);
-      setPendingScore(false);
     },
     [finalStats, opts.language],
   );
@@ -217,6 +256,14 @@ export default function App() {
 
   const buyPowerUp = useCallback((power: PowerUp, cost: number) => {
     gameRef.current?.buyPowerUp(power, cost);
+  }, []);
+
+  const upgradeWeapon = useCallback((weapon: Weapon, upgrade: WeaponUpgrade, cost: number) => {
+    gameRef.current?.buyWeaponUpgrade(weapon, upgrade, cost);
+  }, []);
+
+  const selectMagic = useCallback((type: MagicType) => {
+    gameRef.current?.setMagicType(type);
   }, []);
 
   const closeShop = useCallback(() => {
@@ -323,6 +370,7 @@ export default function App() {
             onPause={togglePause}
             onSelectSlot={selectSlot}
             hudScale={opts.hudScale}
+            language={opts.language}
             t={t}
           />
         )}
@@ -360,6 +408,7 @@ export default function App() {
           </div>
         )}
 
+        {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} onBegin={finishTutorial} />}
         {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onQuit={toMenu} t={t} />}
         {phase === "dead" && (
           <GameOverScreen
@@ -382,7 +431,10 @@ export default function App() {
             onSellWeapon={sellWeapon}
             onSelectSlot={selectSlot}
             onBuyPowerUp={buyPowerUp}
+            onUpgradeWeapon={upgradeWeapon}
+            onMagicType={selectMagic}
             onCloseShop={closeShop}
+            language={opts.language}
             t={t}
           />
         )}

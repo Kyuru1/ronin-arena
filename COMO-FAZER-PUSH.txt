@@ -39,3 +39,15 @@ Em "Build and deployment", deixe "Source" selecionado como:
 GitHub Actions
 
 Isso precisa ser configurado uma vez para o deploy automatico funcionar.
+
+RANKING ONLINE
+
+Quando a API PostgreSQL estiver hospedada em um endereco HTTPS publico, crie no
+GitHub o secret VITE_RANKING_API_URL com o endereco terminado em /api:
+
+Settings > Secrets and variables > Actions > New repository secret
+
+Exemplo: https://api.seudominio.com/api
+
+Sem esse secret, o jogo publicado continua funcionando, mas usa o ranking salvo
+no navegador de cada jogador quando a API local nao estiver acessivel.

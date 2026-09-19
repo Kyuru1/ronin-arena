@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { type ScoreEntry, formatTime } from "../game/storage";
+import { GAMEPLAY_TEXT } from "../game/gameplayText";
 import { I18N, LANGS, type Language } from "../game/i18n";
+import { formatTime, type ScoreEntry } from "../game/storage";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxChip, PxFrame, PxHeading, PxRow } from "./PixelUi";
 
@@ -17,16 +18,7 @@ export interface UiOpts {
 
 type MenuTab = "main" | "settings" | "language" | "ranking";
 
-export default function MainMenu({
-  onStart,
-  scores,
-  best,
-  isTouch,
-  opts,
-  onOpts,
-  onClearScores,
-  onFullscreen,
-}: {
+export default function MainMenu({ onStart, scores, best, isTouch, opts, onOpts, onClearScores, onFullscreen }: {
   onStart: () => void;
   scores: ScoreEntry[];
   best: number;
@@ -38,203 +30,72 @@ export default function MainMenu({
 }) {
   const [tab, setTab] = useState<MenuTab>("main");
   const t = I18N[opts.language];
+  const g = GAMEPLAY_TEXT[opts.language];
 
-  const back = () => setTab("main");
+  if (tab !== "main") {
+    return (
+      <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
+        <PxFrame className="anim-pop my-auto w-full max-w-xl p-4 sm:p-6">
+          {tab === "settings" && <div className="flex flex-col gap-3">
+            <PxHeading>{t.settings}</PxHeading>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <PxRow label={t.quality}>{(["high", "low"] as const).map((quality) => <PxChip key={quality} on={opts.quality === quality} onClick={() => onOpts({ quality })}>{quality === "high" ? t.qualityHigh : t.qualityLow}</PxChip>)}</PxRow>
+              <PxRow label={t.vsync}><PxChip on={opts.vsync} onClick={() => onOpts({ vsync: !opts.vsync })}>{opts.vsync ? t.on : t.off}</PxChip></PxRow>
+              <PxRow label={t.screenShake}><PxChip on={opts.shake} onClick={() => onOpts({ shake: !opts.shake })}>{opts.shake ? t.on : t.off}</PxChip></PxRow>
+              <PxRow label={t.screenFlash}><PxChip on={opts.flash} onClick={() => onOpts({ flash: !opts.flash })}>{opts.flash ? t.on : t.off}</PxChip></PxRow>
+              <PxRow label={t.sound}><PxChip on={opts.sound} onClick={() => onOpts({ sound: !opts.sound })}>{opts.sound ? t.on : t.off}</PxChip></PxRow>
+              <PxRow label={t.fullscreen}><PxChip on onClick={onFullscreen}>{t.enter}</PxChip></PxRow>
+            </div>
+            <div className="px-inset p-3"><div className="mb-2 flex justify-between font-pixel text-[7px]"><span>{t.volume}</span><span className="text-[#ffd44a]">{Math.round(opts.volume * 100)}%</span></div><input type="range" min={0} max={100} value={Math.round(opts.volume * 100)} onChange={(event) => onOpts({ volume: Number(event.target.value) / 100 })} className="slider w-full" /></div>
+            <div className="px-inset p-3"><div className="mb-2 font-pixel text-[7px]">{t.hudSize}</div><div className="flex gap-1">{([1, 1.25, 1.5] as const).map((size) => <PxChip key={size} on={opts.hudScale === size} onClick={() => onOpts({ hudScale: size })}>{size === 1 ? t.hudNormal : size === 1.25 ? t.hudLarge : t.hudHuge}</PxChip>)}</div></div>
+          </div>}
+
+          {tab === "language" && <div className="flex flex-col gap-2"><PxHeading>{t.language}</PxHeading>{LANGS.map((language) => <PxButton key={language} tone="menu" active={opts.language === language} onClick={() => onOpts({ language })} className="text-[9px]">{I18N[language].langName}{opts.language === language && <span className="ml-auto text-[#ffd44a]">■</span>}</PxButton>)}</div>}
+
+          {tab === "ranking" && <div className="flex flex-col gap-2"><PxHeading>{t.ranking} · TOP 50</PxHeading><div className="px-inset"><div className="ranking-head"><span>#</span><span>{t.name}</span><span>{t.score}</span><span>{t.wave}</span><span>{t.time}</span></div><div className="scrollbar-thin max-h-[55vh] overflow-y-auto">{scores.length === 0 ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div> : scores.slice(0, 50).map((score, index) => <div key={`${score.date}-${index}`} className={`ranking-row ${index < 3 ? "is-top" : ""}`}><span>{index + 1}</span><span>{score.name}</span><span>{score.score.toLocaleString()}</span><span>{score.wave}</span><span>{formatTime(score.time)}</span></div>)}</div></div>{scores.length > 0 && <PxButton tone="dark" onClick={onClearScores} className="py-2 text-[7px]">{t.clear}</PxButton>}</div>}
+
+          <PxButton tone="dark" onClick={() => setTab("main")} className="mt-4 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
+        </PxFrame>
+      </div>
+    );
+  }
+
+  const basics = [
+    { icon: "player", title: g.move, detail: isTouch ? g.touchMove : g.moveHelp },
+    { icon: "icoCrosshair", title: g.aim, detail: isTouch ? g.touchAim : g.aimHelp },
+    { icon: "icoKatana", title: g.attack, detail: isTouch ? g.touchAttack : g.attackHelp },
+    { icon: "icoDash", title: g.dash, detail: isTouch ? g.touchDash : g.dashHelp },
+  ];
 
   return (
-    <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
-      <div className="px-vignette pointer-events-none absolute inset-0" />
-
-      {/* Title block above the frame */}
-      <div className="relative my-auto flex w-full max-w-md flex-col items-center">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <div className="mb-2 flex items-end gap-3">
-            <PixelSprite name="grunt" scale={3} className="anim-bob opacity-80" style={{ animationDelay: "0.3s" }} />
-            <PixelSprite name="player" scale={4} className="anim-bob" />
-            <PixelSprite name="ninja" scale={3} className="anim-bob opacity-80" style={{ animationDelay: "0.6s", transform: "scaleX(-1)" }} />
+    <div className="menu-arena absolute inset-0 z-20 overflow-y-auto">
+      <div className="menu-grid mx-auto flex min-h-full w-full max-w-6xl flex-col justify-center px-4 py-6 sm:px-8">
+        <header className="flex items-end justify-between border-b-4 border-[#6b2530] pb-4">
+          <div>
+            <div className="font-pixel text-[8px] text-[#e6535c]">RONIN</div>
+            <h1 className="font-pixel mt-2 text-[24px] leading-none text-[#f4e4cf] sm:text-[42px]">ARENA <span className="text-[#e6535c]">CARMESIM</span></h1>
+            <p className="font-pixel mt-3 max-w-2xl text-[7px] leading-5 text-[#91b9b5] sm:text-[8px]">{g.menuLead}</p>
           </div>
-          <div className="font-pixel text-[8px] tracking-[0.35em] text-[#d9464f]">RONIN</div>
-          <h1 className="font-pixel text-shadow-pix text-[22px] leading-none text-[#ffe2c4] sm:text-[32px]">
-            ARENA
-            <br />
-            <span className="text-[#e0444d]">CARMESIM</span>
-          </h1>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="h-[3px] w-6 bg-[#8c2a35]" />
-            <span className="font-pixel text-[7px] text-[#a35662] sm:text-[8px]">{t.tagline}</span>
-            <span className="h-[3px] w-6 bg-[#8c2a35]" />
-          </div>
-        </div>
+          <div className="hidden items-end gap-2 sm:flex"><PixelSprite name="grunt" scale={3} className="opacity-70" /><PixelSprite name="player" scale={5} className="anim-bob" /><PixelSprite name="boss" scale={2} className="opacity-80" /></div>
+        </header>
 
-        <PxFrame className="anim-pop w-full p-4 sm:p-5">
-          {tab === "main" && (
-            <div className="flex flex-col gap-2">
-              <PxButton tone="red" onClick={onStart} className="w-full py-4 text-[12px] sm:text-[14px]">
-                <PixelSprite name="icoPlay" scale={1} />
-                {t.play}
-              </PxButton>
+        <main className="py-5">
+          <button onClick={onStart} className="menu-play group w-full">
+            <span className="font-pixel text-[16px] sm:text-[24px]">▶ {t.play}</span>
+            <span className="font-pixel text-[7px] text-[#3c171b]">{isTouch ? t.touchStart : t.start}</span>
+          </button>
 
-              <PxButton tone="menu" onClick={() => setTab("settings")} className="text-[9px] sm:text-[10px]">
-                <PixelSprite name="icoGear" scale={1} />
-                {t.settings}
-              </PxButton>
-              <PxButton tone="menu" onClick={() => setTab("language")} className="text-[9px] sm:text-[10px]">
-                <PixelSprite name="icoGlobe" scale={1} />
-                {t.language}
-                <span className="ml-auto text-[7px] text-[#a35662]">{I18N[opts.language].langName}</span>
-              </PxButton>
-              <PxButton tone="menu" onClick={() => setTab("ranking")} className="text-[9px] sm:text-[10px]">
-                <PixelSprite name="icoTrophy" scale={1} />
-                {t.ranking}
-              </PxButton>
+          <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">{basics.map((item) => <div key={item.title} className="menu-control"><PixelSprite name={item.icon} scale={2} /><div><strong>{item.title}</strong><span>{item.detail}</span></div></div>)}</div>
 
-              <div className="px-inset mt-2 flex items-center justify-between px-3 py-2">
-                <div className="flex items-center gap-2">
-                  <PixelSprite name="icoSkull" scale={1} />
-                  <span className="font-pixel text-[7px] text-[#a35662]">{t.best}</span>
-                </div>
-                <span className="font-pixel text-[11px] text-[#ffd44a]">{best.toLocaleString()}</span>
-              </div>
-              <div className="font-pixel mt-1 text-center text-[6px] text-[#6c3a42] sm:text-[7px]">
-                <span className="anim-caret">▶</span> {isTouch ? t.touchStart : t.start}
-              </div>
-            </div>
-          )}
+          <div className="mt-3 flex items-center gap-3 border-l-4 border-[#ffd44a] bg-[#10282b] px-4 py-3"><PixelSprite name="coin" scale={2} /><div className="font-pixel text-[7px] leading-5 text-[#b6ddd8]"><strong className="text-[#ffd44a]">{g.shopSoon}</strong><br />{g.shopHelp}</div></div>
+        </main>
 
-          {tab === "settings" && (
-            <div className="anim-slide flex flex-col gap-2">
-              <PxHeading>{t.graphics}</PxHeading>
-              <PxRow label={t.quality}>
-                {(["high", "low"] as const).map((q) => (
-                  <PxChip key={q} on={opts.quality === q} onClick={() => onOpts({ quality: q })}>
-                    {q === "high" ? t.qualityHigh : t.qualityLow}
-                  </PxChip>
-                ))}
-              </PxRow>
-              <PxRow label={t.vsync}>
-                <PxChip on={opts.vsync} onClick={() => onOpts({ vsync: !opts.vsync })}>
-                  {opts.vsync ? t.on : t.off}
-                </PxChip>
-              </PxRow>
-              <PxRow label={t.fullscreen}>
-                <PxChip on onClick={onFullscreen}>
-                  {t.enter}
-                </PxChip>
-              </PxRow>
-              <PxRow label={t.screenShake}>
-                <PxChip on={opts.shake} onClick={() => onOpts({ shake: !opts.shake })}>
-                  {opts.shake ? t.on : t.off}
-                </PxChip>
-              </PxRow>
-              <PxRow label={t.screenFlash}>
-                <PxChip on={opts.flash} onClick={() => onOpts({ flash: !opts.flash })}>
-                  {opts.flash ? t.on : t.off}
-                </PxChip>
-              </PxRow>
-              <PxRow label={t.hudSize}>
-                {([1, 1.25, 1.5] as const).map((size) => (
-                  <PxChip key={size} on={opts.hudScale === size} onClick={() => onOpts({ hudScale: size })}>
-                    {size === 1 ? t.hudNormal : size === 1.25 ? t.hudLarge : t.hudHuge}
-                  </PxChip>
-                ))}
-              </PxRow>
-
-              <PxHeading className="mt-2">{t.sound}</PxHeading>
-              <PxRow label={t.sound}>
-                <PxChip on={opts.sound} onClick={() => onOpts({ sound: !opts.sound })}>
-                  {opts.sound ? t.on : t.off}
-                </PxChip>
-              </PxRow>
-              <div className="px-inset px-3 py-2">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="font-pixel text-[8px] text-[#ffe2c4]">{t.volume}</span>
-                  <span className="font-pixel text-[8px] text-[#ffd44a]">{Math.round(opts.volume * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  value={Math.round(opts.volume * 100)}
-                  onChange={(e) => onOpts({ volume: Number(e.target.value) / 100 })}
-                  className="slider w-full"
-                />
-              </div>
-
-              <PxButton tone="dark" onClick={back} className="mt-2 w-full py-3 text-[8px] sm:text-[9px]">
-                ◀ {t.menu}
-              </PxButton>
-            </div>
-          )}
-
-          {tab === "language" && (
-            <div className="anim-slide flex flex-col gap-2">
-              <PxHeading>{t.language}</PxHeading>
-              {LANGS.map((lng) => (
-                <PxButton
-                  key={lng}
-                  tone="menu"
-                  active={opts.language === lng}
-                  onClick={() => onOpts({ language: lng })}
-                  className="text-[9px] sm:text-[10px]"
-                >
-                  {I18N[lng].langName}
-                  {opts.language === lng && <span className="ml-auto text-[#ffd44a]">■</span>}
-                </PxButton>
-              ))}
-              <PxButton tone="dark" onClick={back} className="mt-2 w-full py-3 text-[8px] sm:text-[9px]">
-                ◀ {t.menu}
-              </PxButton>
-            </div>
-          )}
-
-          {tab === "ranking" && (
-            <div className="anim-slide flex flex-col gap-2">
-              <PxHeading>{t.ranking}</PxHeading>
-              <div className="px-inset">
-                <div className="font-pixel flex items-center gap-2 border-b-[3px] border-[#070305] bg-[#2a0e13] px-3 py-2 text-[6px] text-[#a35662] sm:text-[7px]">
-                  <span className="w-5">{t.rank}</span>
-                  <span className="grow">{t.name}</span>
-                  <span className="w-16 text-right">{t.score}</span>
-                  <span className="w-8 text-right">{t.wave}</span>
-                  <span className="w-10 text-right">{t.time}</span>
-                </div>
-                {scores.length === 0 ? (
-                  <div className="font-pixel px-3 py-6 text-center text-[8px] text-[#6c3a42]">
-                    {t.noScores}
-                  </div>
-                ) : (
-                  <div className="scrollbar-thin max-h-[36vh] overflow-y-auto">
-                    {scores.map((s, i) => (
-                      <div
-                        key={i}
-                        className={`font-pixel flex items-center gap-2 px-3 py-2 text-[7px] sm:text-[8px] ${
-                          i % 2 ? "bg-[#140609]" : "bg-[#0c0407]"
-                        } ${i === 0 ? "text-[#ffd44a]" : "text-[#ffe2c4]"}`}
-                      >
-                        <span className="w-5">{i + 1}</span>
-                        <span className="grow truncate uppercase">{s.name}</span>
-                        <span className="w-16 text-right">{s.score.toLocaleString()}</span>
-                        <span className="w-8 text-right text-[#a35662]">{s.wave}</span>
-                        <span className="w-10 text-right text-[#a35662]">{formatTime(s.time)}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="mt-2 flex gap-2">
-                {scores.length > 0 && (
-                  <PxButton tone="dark" onClick={onClearScores} className="flex-1 py-3 text-[7px] sm:text-[8px]">
-                    {t.clear}
-                  </PxButton>
-                )}
-                <PxButton tone="dark" onClick={back} className="flex-1 py-3 text-[7px] sm:text-[8px]">
-                  ◀ {t.menu}
-                </PxButton>
-              </div>
-            </div>
-          )}
-        </PxFrame>
-
+        <footer className="grid gap-2 border-t-4 border-[#35141b] pt-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
+          <PxButton tone="menu" onClick={() => setTab("settings")} className="text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("language")} className="text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("ranking")} className="text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
+          <div className="menu-record"><span>{t.best}</span><strong>{best.toLocaleString()}</strong></div>
+        </footer>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import type { Weapon } from "./audio";
  * Every function draws with the grip at (0,0) pointing along +X.
  */
 export interface WeaponDrawOpts {
-  /** blade/handle length in px (katana/axe/hammer) */
+  /** blade/handle length in px */
   len: number;
   /** bow draw amount: 0 = slack, 1 = fully pulled back */
   draw01?: number;
@@ -14,35 +14,38 @@ export interface WeaponDrawOpts {
   glint?: number;
   /** 0..1 position of the glint along the blade */
   glintP?: number;
+  /** evolved weapon shape */
+  form?: number;
 }
 
 /** Default rest length used both for previews and idle stance. */
 export const WEAPON_REST_LEN: Record<Weapon, number> = {
   katana: 34,
   bow: 24,
-  axe: 38,
   hammer: 36,
   shield: 28,
   mine: 9,
+  book: 18,
 };
 
 export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: WeaponDrawOpts) {
   const L = Math.max(8, Math.round(o.len));
   switch (weapon) {
     case "bow":
-      drawBow(ctx, o.draw01 ?? 0);
+      drawBow(ctx, o.draw01 ?? 0, o.form ?? 0);
       break;
-    case "axe":
-      drawAxe(ctx, L);
-      break;
+
     case "hammer":
-      drawHammer(ctx, L);
+      drawHammer(ctx, L, o.form ?? 0);
       break;
     case "shield":
       drawShield(ctx);
       break;
     case "mine":
       drawMine(ctx);
+      break;
+    case "book":
+      drawBook(ctx);
       break;
     default:
       drawKatana(ctx, L, o.glint ?? 0, o.glintP ?? 0);
@@ -100,7 +103,11 @@ function pixLine(ctx: CanvasRenderingContext2D, x0: number, y0: number, x1: numb
   }
 }
 
-function drawBow(ctx: CanvasRenderingContext2D, draw01: number) {
+function drawBow(ctx: CanvasRenderingContext2D, draw01: number, form: number) {
+  if (form > 0) {
+    drawPistol(ctx);
+    return;
+  }
   const pull = Math.max(0, Math.min(1, draw01));
   const nockX = Math.round(-1 - pull * 8);
   const tipX = 5 + Math.round(pull);
@@ -137,60 +144,42 @@ function drawBow(ctx: CanvasRenderingContext2D, draw01: number) {
   ctx.fillRect(hx + 1, 0, 2, 1);
 }
 
-function drawAxe(ctx: CanvasRenderingContext2D, L: number) {
-  // Long wrapped haft with a steel pommel.
+function drawPistol(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#070508";
-  ctx.fillRect(-9, -3, L + 8, 7);
-  ctx.fillStyle = "#5b271f";
-  ctx.fillRect(-8, -2, L + 6, 5);
-  ctx.fillStyle = "#a94a32";
-  ctx.fillRect(-6, -1, L + 3, 2);
-  for (let x = -6; x < L - 5; x += 5) {
-    ctx.fillStyle = "#d17a4d";
-    ctx.fillRect(x, -2, 2, 1);
-    ctx.fillRect(x + 2, 2, 2, 1);
-  }
-  ctx.fillStyle = "#b8c2c0";
-  ctx.fillRect(-10, -3, 3, 7);
-
-  // Symmetrical double crescent head with clearly exposed cutting edges.
-  ctx.fillStyle = "#070508";
-  ctx.fillRect(L - 7, -13, 15, 27);
-  ctx.fillStyle = "#353c43";
-  ctx.fillRect(L - 5, -11, 11, 23);
-  ctx.fillStyle = "#6f7880";
-  ctx.fillRect(L - 8, -10, 4, 21);
-  ctx.fillRect(L + 5, -10, 4, 21);
-  ctx.fillRect(L - 6, -12, 4, 5);
-  ctx.fillRect(L + 3, -12, 4, 5);
-  ctx.fillRect(L - 6, 8, 4, 5);
-  ctx.fillRect(L + 3, 8, 4, 5);
-  ctx.fillStyle = "#dbe3df";
-  ctx.fillRect(L - 9, -9, 2, 19);
-  ctx.fillRect(L + 8, -9, 2, 19);
-  ctx.fillRect(L - 7, -12, 3, 2);
-  ctx.fillRect(L + 5, -12, 3, 2);
-  ctx.fillRect(L - 7, 11, 3, 2);
-  ctx.fillRect(L + 5, 11, 3, 2);
+  ctx.fillRect(-5, -5, 24, 10);
+  ctx.fillRect(0, 4, 8, 10);
+  ctx.fillStyle = "#626a72";
+  ctx.fillRect(-3, -3, 20, 6);
+  ctx.fillStyle = "#c9d2d2";
+  ctx.fillRect(2, -2, 14, 2);
   ctx.fillStyle = "#8e2430";
-  ctx.fillRect(L - 3, -5, 7, 11);
+  ctx.fillRect(1, 4, 6, 8);
   ctx.fillStyle = "#e3574f";
-  ctx.fillRect(L - 1, -3, 3, 7);
+  ctx.fillRect(3, 5, 2, 5);
+  ctx.fillStyle = "#ffd44a";
+  ctx.fillRect(18, -2, 3, 4);
 }
 
-function drawHammer(ctx: CanvasRenderingContext2D, L: number) {
+function drawHammer(ctx: CanvasRenderingContext2D, L: number, form: number) {
+  const evolved = form > 0;
+  const headW = evolved ? 24 : 15;
+  const headH = evolved ? 26 : 18;
   ctx.fillStyle = "#08070a";
-  ctx.fillRect(-7, -2, L + 5, 5);
+  ctx.fillRect(-7, -3, L + 7, 7);
   ctx.fillStyle = "#64201e";
-  ctx.fillRect(-6, -1, L + 3, 3);
+  ctx.fillRect(-6, -2, L + 5, 4);
   ctx.fillStyle = "#0a0709";
-  ctx.fillRect(L - 6, -9, 15, 18);
-  ctx.fillStyle = "#5f1a27";
-  ctx.fillRect(L - 4, -7, 11, 14);
-  ctx.fillStyle = "#ba3742";
-  ctx.fillRect(L - 3, -6, 8, 4);
-  ctx.fillStyle = "#e35a59";
-  ctx.fillRect(L - 3, -5, 2, 8);
+  ctx.fillRect(L - 7, -Math.floor(headH / 2), headW, headH);
+  ctx.fillStyle = evolved ? "#773044" : "#5f1a27";
+  ctx.fillRect(L - 5, -Math.floor(headH / 2) + 2, headW - 4, headH - 4);
+  ctx.fillStyle = evolved ? "#e25762" : "#ba3742";
+  ctx.fillRect(L - 3, -Math.floor(headH / 2) + 3, headW - 8, 5);
+  ctx.fillStyle = "#f08a78";
+  ctx.fillRect(L - 2, -Math.floor(headH / 2) + 4, 3, evolved ? 13 : 8);
+  if (evolved) {
+    ctx.fillStyle = "#ffd44a";
+    ctx.fillRect(L + headW - 10, -3, 3, 6);
+  }
 }
 
 function drawShield(ctx: CanvasRenderingContext2D) {
@@ -202,6 +191,21 @@ function drawShield(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(8, -6, 4, 12);
   ctx.fillStyle = "#ffd0a2";
   ctx.fillRect(9, -2, 2, 4);
+}
+
+function drawBook(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle = "#070508";
+  ctx.fillRect(2, -10, 17, 20);
+  ctx.fillStyle = "#4f245f";
+  ctx.fillRect(3, -9, 15, 18);
+  ctx.fillStyle = "#9a55a5";
+  ctx.fillRect(5, -7, 11, 14);
+  ctx.fillStyle = "#f0d8a8";
+  ctx.fillRect(8, -4, 5, 8);
+  ctx.fillStyle = "#63d8ff";
+  ctx.fillRect(10, -2, 2, 4);
+  ctx.fillStyle = "#d9b45c";
+  ctx.fillRect(3, -9, 2, 18);
 }
 
 function drawMine(ctx: CanvasRenderingContext2D) {
@@ -222,7 +226,7 @@ function drawMine(ctx: CanvasRenderingContext2D) {
  * Renders a weapon into an offscreen canvas exactly as it appears in-game,
  * scaled up with nearest-neighbour. Used by the shop preview.
  */
-export function renderWeaponPreview(weapon: Weapon, scale = 3, angleDeg = -35): HTMLCanvasElement {
+export function renderWeaponPreview(weapon: Weapon, scale = 3, angleDeg = -35, form = 0): HTMLCanvasElement {
   const len = WEAPON_REST_LEN[weapon];
   // generous bounds around the grip origin
   const W = 72;
@@ -241,6 +245,7 @@ export function renderWeaponPreview(weapon: Weapon, scale = 3, angleDeg = -35): 
     draw01: weapon === "bow" ? 0.55 : 0,
     glint: 0.4,
     glintP: 0.6,
+    form,
   });
   return c;
 }

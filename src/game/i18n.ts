@@ -69,8 +69,6 @@ export interface Strings {
   katanaDesc: string;
   bow: string;
   bowDesc: string;
-  axe: string;
-  axeDesc: string;
   hammer: string;
   hammerDesc: string;
   shield: string;
@@ -190,8 +188,6 @@ export const I18N = {
     katanaDesc: "Cortes rápidos e fluidos como ventoinha. Alcance equilibrado.",
     bow: "ARCO E FLECHA",
     bowDesc: "Dispara flechas velozes à distância. Perfeito para manter espaço.",
-    axe: "MACHADO DE GUERRA",
-    axeDesc: "Golpe largo e pesado com grande dano de sangramento.",
     hammer: "MARTELO ONI",
     hammerDesc: "Impacto esmagador que cria onda de choque e atordoa inimigos.",
     shield: "ESCUDO DE AÇO",
@@ -304,8 +300,6 @@ export const I18N = {
     katanaDesc: "Fast and fluid fan slashes. Balanced range and speed.",
     bow: "BOW & ARROW",
     bowDesc: "Shoots swift arrows at distance. Great for keeping space.",
-    axe: "WAR AXE",
-    axeDesc: "Wide and heavy cleave dealing bleeding and high damage.",
     hammer: "ONI HAMMER",
     hammerDesc: "Crushing slam creating a shockwave that stuns surrounding foes.",
     shield: "STEEL SHIELD",
@@ -418,8 +412,6 @@ export const I18N = {
     katanaDesc: "Coups rapides et fluides en éventail. Portée équilibrée.",
     bow: "ARC ET FLÈCHES",
     bowDesc: "Tire des flèches rapides à distance. Idéal pour garder l'espace.",
-    axe: "HACHE DE GUERRE",
-    axeDesc: "Large balayage infligeant de lourds dégâts de saignement.",
     hammer: "MARTEAU ONI",
     hammerDesc: "Frappe écrasante créant une onde de choc étourdissante.",
     shield: "BOUCLIER D'ACIER",
@@ -486,8 +478,8 @@ I18N.de = {
   powerupsTitle: "VERBESSERUNGEN", slotsTitle: "AUSGERÜSTETE WAFFEN (TASTEN 1–4)", emptySlot: "LEER",
   buy: "KAUFEN", sell: "VERKAUFEN", equipped: "AUSGERÜSTET", maxSlots: "ALLE PLÄTZE BELEGT",
   notEnoughCoins: "NICHT GENUG MÜNZEN", nextWave: "ZUR NÄCHSTEN WELLE", katanaDesc: "Schnelle, flüssige Hiebe mit ausgewogener Reichweite.",
-  bow: "BOGEN", bowDesc: "Feuert schnelle Pfeile aus sicherer Entfernung.", axe: "KRIEGSAXT",
-  axeDesc: "Schwere Doppelklinge mit breitem Hieb und hohem Schaden.", hammer: "ONI-HAMMER",
+  bow: "BOGEN", bowDesc: "Feuert schnelle Pfeile aus sicherer Entfernung.",
+  hammer: "ONI-HAMMER",
   hammerDesc: "Wuchtiger Schlag mit Schockwelle, der Gegner betäubt.", shield: "STAHLSCHILD",
   shieldDesc: "Richtet sich zur Maus aus und reflektiert Projektile mit M1.", mine: "LANDMINE",
   mineDesc: "Auf den Boden legen. Explodiert bei Gegnernähe (max. 6).", mineTutorial: "MINE: ZIELEN UND KLICKEN, UM SIE ABZULEGEN",
@@ -517,7 +509,7 @@ I18N.zh = {
   powerupsTitle: "强化", slotsTitle: "已装备武器（按键1至4）", emptySlot: "空", buy: "购买", sell: "出售",
   equipped: "已装备", maxSlots: "武器栏已满", notEnoughCoins: "金币不足", nextWave: "进入下一波",
   katana: "武士刀", katanaDesc: "快速流畅的斩击，范围与速度均衡。", bow: "弓箭", bowDesc: "从远处射出高速箭矢。",
-  axe: "双刃战斧", axeDesc: "双面锋刃，横扫范围广且伤害高。", hammer: "鬼锤", hammerDesc: "重击产生冲击波并击晕敌人。",
+  hammer: "鬼锤", hammerDesc: "重击产生冲击波并击晕敌人。",
   shield: "钢盾", shieldDesc: "跟随鼠标方向，按鼠标左键反射投射物。", mine: "地雷",
   mineDesc: "放置在地面，敌人靠近时爆炸（最多6枚）。", mineTutorial: "地雷：瞄准并点击鼠标左键放置",
   speedUp: "+ 移动速度", speedDesc: "+18移动速度。", heartUp: "+ 生命 / 治疗", heartDesc: "+1最大生命并恢复2点生命。",

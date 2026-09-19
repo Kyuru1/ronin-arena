@@ -11,18 +11,20 @@ export default function WeaponPreview({
   scale = 3,
   angle = -35,
   className = "",
+  form = 0,
 }: {
   weapon: Weapon;
   scale?: number;
   angle?: number;
   className?: string;
+  form?: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
     const c = ref.current;
     if (!c) return;
-    const src = renderWeaponPreview(weapon, scale, angle);
+    const src = renderWeaponPreview(weapon, scale, angle, form);
     c.width = src.width;
     c.height = src.height;
     const ctx = c.getContext("2d");
@@ -32,7 +34,7 @@ export default function WeaponPreview({
     ctx.drawImage(src, 0, 0);
     c.style.width = `${src.width}px`;
     c.style.height = `${src.height}px`;
-  }, [weapon, scale, angle]);
+  }, [weapon, scale, angle, form]);
 
   return <canvas ref={ref} className={`pixelated ${className}`} aria-hidden />;
 }

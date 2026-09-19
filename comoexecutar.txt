@@ -58,3 +58,33 @@ PARA TESTAR A VERSAO FINAL COMPILADA
 4. Para parar a previa, volte ao terminal e pressione:
 
    Ctrl+C
+
+RANKING COM POSTGRESQL (NO SEU COMPUTADOR)
+
+1. Crie o banco ronin_arena no PostgreSQL e execute o arquivo server\schema.sql nele.
+
+2. Crie uma copia do arquivo .env.example e renomeie para .env.
+
+3. No arquivo .env, troque YOUR_PASSWORD pela senha do seu PostgreSQL.
+
+4. Em um terminal, inicie a API do ranking:
+
+   npm run server
+
+5. Em outro terminal, inicie o jogo:
+
+   npm run dev
+
+6. Abra o endereco mostrado pelo Vite, normalmente:
+
+   http://localhost:5173
+
+O jogo buscara e enviara automaticamente as pontuacoes para o PostgreSQL.
+Para parar cada servidor, pressione Ctrl+C no terminal correspondente.
+
+IMPORTANTE SOBRE O GITHUB PAGES
+
+O GitHub Pages hospeda apenas o jogo. A API acima fica no seu computador; por isso,
+o ranking compartilhado no site publicado precisa de uma API PostgreSQL hospedada na
+internet. Quando voce tiver essa hospedagem, defina VITE_RANKING_API_URL com o
+endereco dela antes de executar npm run build.

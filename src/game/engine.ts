@@ -6,6 +6,9 @@ export type { Weapon } from "./audio";
 
 export type Phase = "menu" | "playing" | "paused" | "upgrade" | "dying" | "dead";
 export type PowerUp = "speed" | "heart" | "dashCd" | "dashDist";
+export type WeaponUpgrade = "damage" | "speed" | "range" | "form";
+export type MagicType = "fire" | "ice" | "poison" | "water";
+export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
 export interface UpgradeOffer {
   wave: number;
@@ -32,6 +35,8 @@ export interface HudStats {
   speedBonus: number;
   dashSpeedMult: number;
   mineTutorial: boolean;
+  weaponLevels: WeaponLevels;
+  magicType: MagicType;
 }
 
 export interface GameOpts {
@@ -81,6 +86,14 @@ interface Enemy {
   score: number;
   dmg: number;
   scaleY: number;
+  baseSpeed: number;
+  fireT: number;
+  fireTick: number;
+  poisonT: number;
+  poisonTick: number;
+  freezeT: number;
+  freezeImmune: number;
+  slowT: number;
 }
 
 interface Particle {
@@ -190,11 +203,20 @@ const WEAPON_CONFIG: Record<
 > = {
   katana: { wind: 0.05, strike: 0.12, rec: 0.09, cd: 0.12, arc: 1.55, range: 34, dmg: 2, kb: 160 },
   bow: { wind: 0.12, strike: 0.08, rec: 0.12, cd: 0.18, arc: 0.8, range: 24, dmg: 3, kb: 120 },
-  axe: { wind: 0.11, strike: 0.16, rec: 0.15, cd: 0.2, arc: 2.45, range: 38, dmg: 4, kb: 250 },
   hammer: { wind: 0.16, strike: 0.2, rec: 0.22, cd: 0.28, arc: 2.2, range: 36, dmg: 6, kb: 360 },
   shield: { wind: 0.06, strike: 0.12, rec: 0.14, cd: 0.16, arc: 1.85, range: 28, dmg: 0, kb: 0 },
   mine: { wind: 0, strike: 0, rec: 0, cd: 0.45, arc: 0, range: 12, dmg: 6, kb: 0 },
+  book: { wind: 0, strike: 0, rec: 0, cd: 0.5, arc: 1.7, range: 78, dmg: 2, kb: 180 },
 };
+
+const createWeaponLevels = (): WeaponLevels => ({
+  katana: { damage: 0, speed: 0, range: 0, form: 0 },
+  bow: { damage: 0, speed: 0, range: 0, form: 0 },
+  hammer: { damage: 0, speed: 0, range: 0, form: 0 },
+  shield: { damage: 0, speed: 0, range: 0, form: 0 },
+  mine: { damage: 0, speed: 0, range: 0, form: 0 },
+  book: { damage: 0, speed: 0, range: 0, form: 0 },
+});
 
 export class Game {
   canvas: HTMLCanvasElement;
@@ -228,6 +250,9 @@ export class Game {
   // Weapons in slots (up to 4)
   weapons: Weapon[] = ["katana"];
   activeSlot = 0;
+  weaponLevels = createWeaponLevels();
+  magicType: MagicType = "fire";
+  magicCd = 0;
 
   atkT = 0;
   atkCd = 0;
@@ -608,6 +633,24 @@ export class Game {
     return true;
   }
 
+  buyWeaponUpgrade(weapon: Weapon, upgrade: WeaponUpgrade, cost: number): boolean {
+    if (!this.weapons.includes(weapon) || this.coins < cost) return false;
+    const max = upgrade === "form" ? 1 : 3;
+    if (this.weaponLevels[weapon][upgrade] >= max) return false;
+    if (upgrade === "form" && weapon !== "bow" && weapon !== "hammer") return false;
+    this.coins -= cost;
+    this.weaponLevels[weapon][upgrade]++;
+    Sfx.buy();
+    this.pushStats(true);
+    return true;
+  }
+
+  setMagicType(type: MagicType) {
+    this.magicType = type;
+    Sfx.equip();
+    this.pushStats(true);
+  }
+
   buyPowerUp(power: PowerUp, cost: number): boolean {
     if (this.coins < cost) return false;
     this.coins -= cost;
@@ -667,6 +710,9 @@ export class Game {
     this.speedBonus = 0;
     this.weapons = ["katana"];
     this.activeSlot = 0;
+    this.weaponLevels = createWeaponLevels();
+    this.magicType = "fire";
+    this.magicCd = 0;
     this.atkT = this.atkCd = this.atkWind = this.atkDur = this.atkRec = 0;
     this.atkChain = 0;
     this.atkChainT = 0;
@@ -761,13 +807,15 @@ export class Game {
       speedBonus: this.speedBonus,
       dashSpeedMult: this.dashSpeedMult,
       mineTutorial: this.mineTutorialT > 0,
+      weaponLevels: this.weaponLevels,
+      magicType: this.magicType,
     };
   }
 
   private pushStats(force = false) {
     this.waveLeft = Math.max(0, this.waveTotal - this.waveSpawned) + this.marks.length + this.enemies.length;
     const s = this.stats();
-    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}`;
+    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.weaponLevels)}|${s.magicType}`;
     if (force || key !== this.lastStats) {
       this.lastStats = key;
       this.onStats(s);
@@ -1062,11 +1110,9 @@ export class Game {
         const p =
           this.currentWeapon === "hammer"
             ? 60
-            : this.currentWeapon === "axe"
-              ? 74
-              : this.currentWeapon === "shield"
-                ? 80
-                : 88;
+            : this.currentWeapon === "shield"
+              ? 80
+              : 88;
         this.pvx += Math.cos(this.atkAngle) * p;
         this.pvy += Math.sin(this.atkAngle) * p;
         this.leanX = Math.cos(this.atkAngle) * 2;
@@ -1091,7 +1137,7 @@ export class Game {
       }
     } else if (this.atkT > 0) {
       this.atkT -= dt;
-      if (this.currentWeapon !== "bow" && this.currentWeapon !== "mine") {
+      if (this.currentWeapon !== "bow" && this.currentWeapon !== "mine" && this.currentWeapon !== "book") {
         this.doSwingHits();
       }
       if (this.atkT <= 0) {
@@ -1106,8 +1152,9 @@ export class Game {
     const wantAttack = this.attackHeld || !!this.aimStick;
     if (this.currentWeapon === "shield") this.atkAngle = this.aimAngle();
     if (this.currentWeapon === "bow") {
-      // hold to draw the string, release to let the arrow fly
       this.updateBow(wantAttack, dt);
+    } else if (this.currentWeapon === "book") {
+      this.updateMagic(wantAttack, dt);
     } else if (this.currentWeapon === "mine") {
       if (wantAttack && !this.mineHeld && this.atkCd <= 0 && this.dashT <= 0) this.placeMine();
       this.mineHeld = wantAttack;
@@ -1134,7 +1181,7 @@ export class Game {
       this.atkDur = 0.22;
       this.atkT = this.atkDur;
       this.atkRec = 0.08;
-      this.atkCd = 0.38;
+      this.atkCd = 0.38 / (1 + this.weaponLevels.shield.speed * 0.14);
       this.hitSet.clear();
       Sfx.shieldBash();
       return;
@@ -1168,7 +1215,21 @@ export class Game {
   }
 
   private swingData() {
-    return WEAPON_CONFIG[this.currentWeapon] ?? WEAPON_CONFIG.katana;
+    const weapon = this.currentWeapon;
+    const base = WEAPON_CONFIG[weapon] ?? WEAPON_CONFIG.katana;
+    const levels = this.weaponLevels[weapon];
+    const speed = 1 + levels.speed * 0.14;
+    const evolvedHammer = weapon === "hammer" && levels.form > 0;
+    return {
+      ...base,
+      wind: base.wind / speed,
+      strike: base.strike / speed,
+      rec: base.rec / speed,
+      cd: base.cd / speed,
+      range: base.range + levels.range * 5 + (evolvedHammer ? 28 : 0),
+      dmg: base.dmg + levels.damage * (weapon === "hammer" ? 2 : 1) + (evolvedHammer ? 5 : 0),
+      kb: base.kb + levels.range * 25 + (evolvedHammer ? 180 : 0),
+    };
   }
 
   private atkPhase(): 0 | 1 | 2 {
@@ -1234,11 +1295,24 @@ export class Game {
   /** Bow: while held, the string is drawn back; on release the arrow flies
    *  with speed / damage / pierce scaled by how far it was pulled. */
   private updateBow(want: boolean, dt: number) {
+    const levels = this.weaponLevels.bow;
+    const automatic = levels.form > 0;
+    const speed = 1 + levels.speed * 0.14;
+
+    if (automatic) {
+      this.bowHolding = want;
+      this.bowCharge = want ? 1 : 0;
+      this.bowFireCd = Math.max(0, this.bowFireCd - dt);
+      if (want && this.bowFireCd <= 0 && this.dashT <= 0) {
+        this.releaseBow(true);
+        this.bowFireCd = 0.2 / speed;
+      }
+      return;
+    }
+
     if (this.bowReleasing > 0) {
       this.bowReleasing -= dt;
-      if (this.bowReleasing <= 0) {
-        this.bowFireCd = 0.16;
-      }
+      if (this.bowReleasing <= 0) this.bowFireCd = 0.16 / speed;
       return;
     }
     if (this.bowFireCd > 0) {
@@ -1247,17 +1321,14 @@ export class Game {
       return;
     }
     if (this.dashT > 0) {
-      if (this.bowHolding) {
-        this.bowHolding = false;
-        this.bowCharge = 0;
-      }
+      this.bowHolding = false;
+      this.bowCharge = 0;
       return;
     }
     if (want) {
       const wasFull = this.bowCharge >= 1;
       this.bowHolding = true;
-      this.bowCharge = Math.min(1, this.bowCharge + dt / 0.45);
-      // creak while pulling; a tick the instant it hits full draw
+      this.bowCharge = Math.min(1, this.bowCharge + (dt * speed) / 0.45);
       this.bowDrawSfxT -= dt;
       if (this.bowCharge < 1 && this.bowDrawSfxT <= 0) {
         this.bowDrawSfxT = 0.12;
@@ -1269,30 +1340,29 @@ export class Game {
         this.glint = 1;
       }
     } else if (this.bowHolding) {
-      // let go
       this.bowHolding = false;
       this.bowFullSfx = false;
-      this.releaseBow();
+      this.releaseBow(false);
     } else {
-      // string relaxes back to rest
       this.bowCharge = Math.max(0, this.bowCharge - dt * 3.5);
     }
   }
 
-  private releaseBow() {
-    const charge = this.bowCharge;
+  private releaseBow(automatic = false) {
+    const levels = this.weaponLevels.bow;
+    const charge = automatic ? 0.55 : this.bowCharge;
     this.bowCharge = 0;
     const ang = this.aimAngle();
-    const sp = 300 + charge * 300;
-    const dmg = 2 + Math.round(charge * 4);
-    const pierce = 1 + Math.round(charge * 3);
-    this.bowReleasing = 0.14;
+    const sp = automatic ? 680 : 300 + charge * 300;
+    const dmg = automatic ? 2 + levels.damage : 2 + Math.round(charge * 4) + levels.damage;
+    const pierce = automatic ? 1 : 1 + Math.round(charge * 3);
+    this.bowReleasing = automatic ? 0.03 : 0.14;
     this.arrows.push({
       x: this.px + Math.cos(ang) * 12,
       y: this.py + Math.sin(ang) * 12,
       vx: Math.cos(ang) * sp,
       vy: Math.sin(ang) * sp,
-      life: 1.8,
+      life: 1.2 + levels.range * 0.25,
       pierce,
       rot: ang,
       dmg,
@@ -1300,12 +1370,59 @@ export class Game {
     });
     Sfx.bowShoot(charge);
     this.glint = 1;
-    if (charge >= 0.99) {
-      this.shake = Math.max(this.shake, 4);
-      this.burst(this.px + Math.cos(ang) * 16, this.py + Math.sin(ang) * 16, 8, "#ffd0a2", 120);
-    } else {
-      this.burst(this.px + Math.cos(ang) * 16, this.py + Math.sin(ang) * 16, 4, "#ffd0a2", 80);
+    this.burst(this.px + Math.cos(ang) * 16, this.py + Math.sin(ang) * 16, automatic ? 3 : charge >= 0.99 ? 8 : 4, "#ffd0a2", 110);
+    if (!automatic && charge >= 0.99) this.shake = Math.max(this.shake, 4);
+  }
+
+  private updateMagic(want: boolean, dt: number) {
+    this.magicCd = Math.max(0, this.magicCd - dt);
+    if (!want || this.magicCd > 0 || this.dashT > 0) return;
+    const speed = 1 + this.weaponLevels.book.speed * 0.14;
+    this.magicCd = 0.72 / speed;
+    this.castMagic();
+  }
+
+  private castMagic() {
+    const levels = this.weaponLevels.book;
+    const angle = this.aimAngle();
+    const baseRange = 72 + levels.range * 7;
+    const range = this.magicType === "fire" ? baseRange * 0.78 : this.magicType === "water" ? baseRange * 1.15 : baseRange;
+    const color = this.magicType === "fire" ? "#ff5a3d" : this.magicType === "ice" ? "#86e7ff" : this.magicType === "poison" ? "#8cdf55" : "#62a9ff";
+    let hits = 0;
+
+    for (const enemy of this.enemies.slice()) {
+      const dx = enemy.x - this.px;
+      const dy = enemy.y - this.py;
+      const distance = Math.hypot(dx, dy);
+      const enemyAngle = Math.atan2(dy, dx);
+      if (distance > range + enemy.r || Math.abs(angDiff(enemyAngle, angle)) > 0.72) continue;
+
+      const direct = this.magicType === "fire" ? 4 + levels.damage * 2 : this.magicType === "water" ? 2 + levels.damage : 1 + levels.damage;
+      const killed = this.damageEnemy(enemy, direct, enemyAngle);
+      hits++;
+      if (killed) continue;
+
+      if (this.magicType === "fire") {
+        enemy.fireT = Math.max(enemy.fireT, 3);
+        enemy.fireTick = Math.min(enemy.fireTick || 0.5, 0.5);
+      } else if (this.magicType === "poison") {
+        enemy.poisonT = Math.max(enemy.poisonT, 5);
+        enemy.poisonTick = Math.min(enemy.poisonTick || 0.5, 0.5);
+      } else if (this.magicType === "ice" && enemy.freezeImmune <= 0) {
+        enemy.freezeT = 2;
+        enemy.freezeImmune = 12;
+        enemy.slowT = 7;
+      } else if (this.magicType === "water") {
+        const push = 420 + levels.range * 45;
+        enemy.vx += Math.cos(enemyAngle) * push;
+        enemy.vy += Math.sin(enemyAngle) * push;
+      }
     }
+
+    this.shockwaves.push({ x: this.px, y: this.py, r: 8, maxR: range, life: 0.32, maxLife: 0.32 });
+    this.burst(this.px + Math.cos(angle) * 22, this.py + Math.sin(angle) * 22, 12 + hits * 2, color, 150);
+    this.shake = Math.max(this.shake, this.magicType === "water" ? 6 : 3);
+    Sfx.swing("book");
   }
 
   private doSwingHits() {
@@ -1357,7 +1474,7 @@ export class Game {
         life: 1.4,
         pierce: 1,
         rot: this.atkAngle,
-        dmg: 4,
+        dmg: 4 + this.weaponLevels.shield.damage * 2,
         hitSet: new Set(),
       });
       this.impacts.push({ x: s.x, y: s.y, a: ang, life: 0.22, max: 0.22, heavy: false });
@@ -1391,7 +1508,7 @@ export class Game {
       armT: 0.45,
       life: 24,
     });
-    this.atkCd = WEAPON_CONFIG.mine.cd;
+    this.atkCd = this.swingData().cd;
     Sfx.swing("mine");
   }
 
@@ -1404,13 +1521,15 @@ export class Game {
       if (!target && mine.life > 0) continue;
 
       this.mines.splice(i, 1);
-      this.shockwaves.push({ x: mine.x, y: mine.y, r: 5, maxR: 58, life: 0.3, maxLife: 0.3 });
+      const mineRange = 58 + this.weaponLevels.mine.range * 9;
+      const mineDamage = 6 + this.weaponLevels.mine.damage * 2;
+      this.shockwaves.push({ x: mine.x, y: mine.y, r: 5, maxR: mineRange, life: 0.3, maxLife: 0.3 });
       this.burst(mine.x, mine.y, 28, "#ff765d", 230);
       this.shake = Math.max(this.shake, 10);
       Sfx.mineExplode();
       for (const enemy of this.enemies.slice()) {
         const d = Math.hypot(enemy.x - mine.x, enemy.y - mine.y);
-        if (d <= 58 + enemy.r) this.damageEnemy(enemy, 6, Math.atan2(enemy.y - mine.y, enemy.x - mine.x));
+        if (d <= mineRange + enemy.r) this.damageEnemy(enemy, mineDamage, Math.atan2(enemy.y - mine.y, enemy.x - mine.x));
       }
     }
   }
@@ -1434,6 +1553,49 @@ export class Game {
         this.damageEnemy(e, 3, Math.atan2(e.y - y, e.x - x));
       }
     }
+  }
+
+  private updateEnemyStatus(e: Enemy, dt: number): boolean {
+    e.freezeImmune = Math.max(0, e.freezeImmune - dt);
+    e.freezeT = Math.max(0, e.freezeT - dt);
+    e.slowT = Math.max(0, e.slowT - dt);
+    e.speed = e.baseSpeed * (e.slowT > 0 && e.freezeT <= 0 ? 0.45 : 1);
+
+    if (e.fireT > 0) {
+      e.fireT = Math.max(0, e.fireT - dt);
+      e.fireTick -= dt;
+      if (e.fireTick <= 0) {
+        e.fireTick = 0.5;
+        if (!this.statusDamage(e, 2 + Math.floor(this.weaponLevels.book.damage / 2), "#ff5a3d")) return false;
+      }
+    }
+    if (e.poisonT > 0) {
+      e.poisonT = Math.max(0, e.poisonT - dt);
+      e.poisonTick -= dt;
+      if (e.poisonTick <= 0) {
+        e.poisonTick = 0.5;
+        if (!this.statusDamage(e, 3 + this.weaponLevels.book.damage, "#8cdf55")) return false;
+      }
+    }
+    return true;
+  }
+
+  private statusDamage(e: Enemy, damage: number, color: string): boolean {
+    if (!this.enemies.includes(e)) return false;
+    e.hp -= damage;
+    e.flash = 0.12;
+    this.burst(e.x, e.y, 4, color, 70);
+    if (e.hp <= 0) {
+      this.killEnemy(e, Math.atan2(e.y - this.py, e.x - this.px));
+      return false;
+    }
+    return true;
+  }
+
+  private shieldFacing(x: number, y: number): boolean {
+    if (this.currentWeapon !== "shield") return false;
+    const sourceAngle = Math.atan2(y - this.py, x - this.px);
+    return Math.abs(angDiff(sourceAngle, this.aimAngle())) <= 0.95;
   }
 
   private damageEnemy(e: Enemy, dmg: number, ang: number): boolean {
@@ -1575,8 +1737,8 @@ export class Game {
 
   private enemyStats(type: EnemyType) {
     const w = this.wave;
-    const hpB = Math.floor(w / 3);
-    const spB = w * 0.9;
+    const hpB = Math.floor(w / 3) + Math.floor(Math.max(0, w - 8) * 0.45);
+    const spB = w * 0.9 + Math.max(0, w - 10) * 0.65;
     switch (type) {
       case "grunt":
         return { hp: 2 + hpB, r: 6, speed: 52 + spB, score: 10, dmg: 1 };
@@ -1634,6 +1796,14 @@ export class Game {
       score: s.score,
       dmg: s.dmg,
       scaleY: 1,
+      baseSpeed: s.speed,
+      fireT: 0,
+      fireTick: 0,
+      poisonT: 0,
+      poisonTick: 0,
+      freezeT: 0,
+      freezeImmune: 0,
+      slowT: 0,
     });
     this.burst(x, y, 10, "#d83b4a", 110);
     Sfx.spawn();
@@ -1673,7 +1843,8 @@ export class Game {
 
   /** How many mobs a wave contains in total. */
   private waveQuota(w: number): number {
-    return Math.min(8 + (w - 1) * 3 + Math.floor((w - 1) * (w - 1) * 0.18), 72);
+    const lateWave = Math.max(0, w - 4);
+    return Math.min(8 + (w - 1) * 2 + Math.floor(lateWave * lateWave * 0.32), 110);
   }
 
   /** Arms the current wave: sets the quota and drops the first ring of marks. */
@@ -1729,7 +1900,7 @@ export class Game {
     }
 
     // trickle the remaining quota in while the arena isn't over capacity
-    const cap = Math.min(18 + this.wave * 3, 60);
+    const cap = Math.min(18 + this.wave * 3, 72);
     this.spawnTimer -= dt;
     if (this.spawnTimer <= 0 && this.waveSpawned < this.waveTotal && this.enemies.length + this.marks.length < cap) {
       const base = clamp(0.8 - this.wave * 0.03, 0.14, 0.8);
@@ -1783,6 +1954,7 @@ export class Game {
     const arr = this.enemies;
     for (let i = arr.length - 1; i >= 0; i--) {
       const e = arr[i];
+      if (!this.updateEnemyStatus(e, dt)) continue;
       e.t += dt;
       e.flash = Math.max(0, e.flash - dt);
       e.stun = Math.max(0, e.stun - dt);
@@ -1797,7 +1969,7 @@ export class Game {
       const ny = dy / dist;
       e.face = dx > 0 ? 1 : -1;
 
-      if (e.stun <= 0 && e.spawnT <= 0) {
+      if (e.freezeT <= 0 && e.stun <= 0 && e.spawnT <= 0) {
         switch (e.type) {
           case "grunt":
           case "skeleton":
@@ -1938,6 +2110,16 @@ export class Game {
       }
 
       if (dist < e.r + 8 && e.touchCd <= 0 && e.spawnT <= 0) {
+        if (this.shieldFacing(e.x, e.y)) {
+          const away = Math.atan2(e.y - this.py, e.x - this.px);
+          e.touchCd = 0.55;
+          e.vx += Math.cos(away) * 420;
+          e.vy += Math.sin(away) * 420;
+          e.stun = Math.max(e.stun, 0.22);
+          this.burst(e.x, e.y, 8, "#ffd0a2", 110);
+          Sfx.parry();
+          continue;
+        }
         e.touchCd = 0.8;
         this.hurtPlayer(e.dmg, nx, ny);
       }
@@ -1967,6 +2149,11 @@ export class Game {
       const d = Math.hypot(s.x - this.px, s.y - this.py);
       if (d < 9) {
         this.shots.splice(i, 1);
+        if (this.shieldFacing(s.x, s.y)) {
+          this.burst(s.x, s.y, 8, "#ffd0a2", 100);
+          Sfx.parry();
+          continue;
+        }
         this.hurtPlayer(1, (this.px - s.x) / (d || 1), (this.py - s.y) / (d || 1));
         continue;
       }
@@ -2527,7 +2714,7 @@ export class Game {
     }
 
     // Telegraph arc during windup
-    if (phase === 0 && this.currentWeapon !== "bow") {
+    if (phase === 0 && this.currentWeapon !== "bow" && this.currentWeapon !== "book") {
       const t = this.swingData();
       const p = clamp(this.phaseProgress(), 0, 1);
       const back = t.arc / 2 + 1.15;
@@ -2554,7 +2741,7 @@ export class Game {
     const by = this.py + this.leanY - bob;
 
     // Katana / Axe / Shield swing ribbon trail
-    if (this.trail.length > 1 && this.currentWeapon !== "bow") {
+    if (this.trail.length > 1 && this.currentWeapon !== "bow" && this.currentWeapon !== "book") {
       const n = this.trail.length;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
@@ -2601,14 +2788,14 @@ export class Game {
       this.blit(SPR.player, bx, by, this.face, 0, squash);
     }
 
-    if (phase === 1 && this.trail.length > 4 && this.currentWeapon !== "bow") {
+    if (phase === 1 && this.trail.length > 4 && this.currentWeapon !== "bow" && this.currentWeapon !== "book") {
       const n = this.trail.length;
       this.drawWeapon(this.trail[n - 4].a, this.bladeLen() * 0.92, 0.22);
       this.drawWeapon(this.trail[Math.max(0, n - 8)].a, this.bladeLen() * 0.84, 0.11);
     }
 
     // the bow always tracks the aim; melee weapons use the swing timeline
-    const weaponAngle = this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine"
+    const weaponAngle = this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book"
       ? this.aimAngle()
       : this.swingAngleNow();
     this.drawWeapon(weaponAngle, this.bladeLen(), 1);
@@ -2667,13 +2854,14 @@ export class Game {
           : 0,
       glint: this.atkT > 0 ? this.glint : 0,
       glintP: clamp(this.phaseProgress(), 0, 1),
+      form: this.weaponLevels[this.currentWeapon].form,
     });
 
     ctx.restore();
   }
 
   private pushTrail() {
-    if (this.atkT <= 0 || this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine") return;
+    if (this.atkT <= 0 || this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book") return;
     const a = this.swingAngleNow();
     const r = this.bladeLen();
     const last = this.trail[this.trail.length - 1];

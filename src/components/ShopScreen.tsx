@@ -1,6 +1,7 @@
 import { useState } from "react";
-import type { Weapon, PowerUp, HudStats } from "../game/engine";
-import type { Strings } from "../game/i18n";
+import type { HudStats, MagicType, PowerUp, Weapon, WeaponUpgrade } from "../game/engine";
+import { GAMEPLAY_TEXT, type GameplayStrings } from "../game/gameplayText";
+import type { Language, Strings } from "../game/i18n";
 import PixelSprite from "./PixelSprite";
 import WeaponPreview from "./WeaponPreview";
 import { CoinBox, PxButton, PxFrame } from "./PixelUi";
@@ -8,16 +9,14 @@ import { CoinBox, PxButton, PxFrame } from "./PixelUi";
 export const WEAPON_ICON: Record<Weapon, string> = {
   katana: "icoKatana",
   bow: "icoBow",
-  axe: "icoAxe",
   hammer: "icoHammer",
   shield: "icoShield",
   mine: "icoMine",
+  book: "icoBook",
 };
 
 interface WeaponShopInfo {
   id: Weapon;
-  nameKey: keyof Strings;
-  descKey: keyof Strings;
   cost: number;
   sellRefund: number;
   dmg: number;
@@ -26,78 +25,53 @@ interface WeaponShopInfo {
 }
 
 const ALL_WEAPONS: WeaponShopInfo[] = [
-  { id: "katana", nameKey: "katana", descKey: "katanaDesc", cost: 25, sellRefund: 15, dmg: 2, spd: 5, range: 3 },
-  { id: "bow", nameKey: "bow", descKey: "bowDesc", cost: 35, sellRefund: 20, dmg: 3, spd: 3, range: 5 },
-  { id: "axe", nameKey: "axe", descKey: "axeDesc", cost: 40, sellRefund: 22, dmg: 4, spd: 2, range: 4 },
-  { id: "hammer", nameKey: "hammer", descKey: "hammerDesc", cost: 50, sellRefund: 28, dmg: 5, spd: 1, range: 3 },
-  { id: "shield", nameKey: "shield", descKey: "shieldDesc", cost: 30, sellRefund: 18, dmg: 0, spd: 4, range: 2 },
-  { id: "mine", nameKey: "mine", descKey: "mineDesc", cost: 24, sellRefund: 14, dmg: 5, spd: 2, range: 4 },
+  { id: "katana", cost: 25, sellRefund: 15, dmg: 2, spd: 5, range: 3 },
+  { id: "bow", cost: 35, sellRefund: 20, dmg: 3, spd: 3, range: 5 },
+  { id: "hammer", cost: 55, sellRefund: 30, dmg: 5, spd: 1, range: 3 },
+  { id: "shield", cost: 35, sellRefund: 20, dmg: 0, spd: 4, range: 2 },
+  { id: "mine", cost: 28, sellRefund: 16, dmg: 5, spd: 2, range: 4 },
+  { id: "book", cost: 65, sellRefund: 36, dmg: 4, spd: 3, range: 4 },
 ];
 
-interface PowerUpShopInfo {
-  id: PowerUp;
-  nameKey: keyof Strings;
-  descKey: keyof Strings;
-  cost: number;
-  icon: string;
-}
-
-const ALL_POWERUPS: PowerUpShopInfo[] = [
+const ALL_POWERUPS: Array<{ id: PowerUp; nameKey: keyof Strings; descKey: keyof Strings; cost: number; icon: string }> = [
   { id: "speed", nameKey: "speedUp", descKey: "speedDesc", cost: 20, icon: "icoSpeed" },
   { id: "heart", nameKey: "heartUp", descKey: "heartDesc", cost: 30, icon: "icoHeart" },
   { id: "dashCd", nameKey: "dashCdUp", descKey: "dashCdDesc", cost: 25, icon: "icoClock" },
   { id: "dashDist", nameKey: "dashDistUp", descKey: "dashDistDesc", cost: 25, icon: "icoDash" },
 ];
 
-function Pips({ n, max = 5, color }: { n: number; max?: number; color: string }) {
-  return (
-    <span className="inline-flex gap-[3px]">
-      {Array.from({ length: max }).map((_, i) => (
-        <span
-          key={i}
-          className="inline-block h-[8px] w-[8px] border-2 border-[#070305]"
-          style={{ background: i < n ? color : "#2a0e13" }}
-        />
-      ))}
-    </span>
-  );
-}
+const MAGIC_TYPES: MagicType[] = ["fire", "ice", "poison", "water"];
+const UPGRADE_TYPES: WeaponUpgrade[] = ["damage", "speed", "range", "form"];
 
 function Price({ cost }: { cost: number }) {
-  return (
-    <span className="inline-flex items-center gap-1">
-      <PixelSprite name="coin" scale={1} />
-      {cost}
-    </span>
-  );
+  return <span className="inline-flex items-center gap-1"><PixelSprite name="coin" scale={1} />{cost}</span>;
 }
 
-function StatBar({ label, value, max, text, color }: { label: string; value: number; max: number; text: string; color: string }) {
-  const p = Math.max(0, Math.min(1, value / max));
-  return (
-    <div className="px-inset px-3 py-2">
-      <div className="mb-1 flex items-center justify-between">
-        <span className="font-pixel text-[7px] text-[#a35662]">{label}</span>
-        <span className="font-pixel text-[8px] text-[#ffe2c4]">{text}</span>
-      </div>
-      <div className="h-[10px] border-[3px] border-[#070305] bg-[#2a0e13]">
-        <div className="h-full" style={{ width: `${p * 100}%`, background: color }} />
-      </div>
-    </div>
-  );
+function Pips({ value, max = 5, color }: { value: number; max?: number; color: string }) {
+  return <span className="inline-flex gap-[3px]">{Array.from({ length: max }).map((_, i) => (
+    <span key={i} className="h-2 w-2 border-2 border-[#070305]" style={{ background: i < value ? color : "#2a0e13" }} />
+  ))}</span>;
+}
+
+function weaponName(w: Weapon, t: Strings, g: GameplayStrings) {
+  return w === "book" ? g.book : (t[w] as string);
+}
+
+function weaponDescription(w: Weapon, t: Strings, g: GameplayStrings) {
+  if (w === "book") return g.bookDesc;
+  return t[`${w}Desc` as keyof Strings] as string;
+}
+
+function upgradeCost(weapon: Weapon, kind: WeaponUpgrade, level: number) {
+  if (kind === "form") return weapon === "hammer" ? 130 : 100;
+  const base = kind === "damage" ? 20 : kind === "speed" ? 24 : 22;
+  return base + level * 18;
 }
 
 type Tab = "weapons" | "stats";
 
 export default function ShopScreen({
-  wave,
-  stats,
-  onBuyWeapon,
-  onSellWeapon,
-  onSelectSlot,
-  onBuyPowerUp,
-  onCloseShop,
-  t,
+  wave, stats, onBuyWeapon, onSellWeapon, onSelectSlot, onBuyPowerUp, onUpgradeWeapon, onMagicType, onCloseShop, language, t,
 }: {
   wave: number;
   stats: HudStats;
@@ -105,231 +79,136 @@ export default function ShopScreen({
   onSellWeapon: (slotIndex: number, refund: number) => void;
   onSelectSlot: (slotIndex: number) => void;
   onBuyPowerUp: (p: PowerUp, cost: number) => void;
+  onUpgradeWeapon: (w: Weapon, upgrade: WeaponUpgrade, cost: number) => void;
+  onMagicType: (type: MagicType) => void;
   onCloseShop: () => void;
+  language: Language;
   t: Strings;
 }) {
   const [tab, setTab] = useState<Tab>("weapons");
-  const [sel, setSel] = useState<Weapon>(stats.weapons[stats.activeSlot] ?? "katana");
-  const { coins, weapons, activeSlot } = stats;
-
-  const selInfo = ALL_WEAPONS.find((w) => w.id === sel)!;
-  const selOwnedIdx = weapons.indexOf(sel);
-  const selOwned = selOwnedIdx >= 0;
-  const selInHand = selOwnedIdx === activeSlot;
-  const isFull = weapons.length >= 4;
-  const canAfford = coins >= selInfo.cost;
+  const [selected, setSelected] = useState<Weapon>(stats.weapons[stats.activeSlot] ?? "katana");
+  const g = GAMEPLAY_TEXT[language];
+  const info = ALL_WEAPONS.find((weapon) => weapon.id === selected) ?? ALL_WEAPONS[0];
+  const ownedIndex = stats.weapons.indexOf(selected);
+  const owned = ownedIndex >= 0;
+  const active = ownedIndex === stats.activeSlot;
+  const full = stats.weapons.length >= 4;
+  const levels = stats.weaponLevels[selected];
 
   return (
-    <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
-      <div className="px-vignette pointer-events-none absolute inset-0" />
-
-      <PxFrame
-        title={`${t.waveCleared} · ${t.wave} ${wave}`}
-        icon="icoTrophy"
-        className="anim-pop relative my-auto flex max-h-[94vh] w-full max-w-3xl flex-col overflow-hidden p-4 pt-7 sm:p-5 sm:pt-8"
-      >
-        {/* header: tabs + coins */}
-        <div className="flex items-center justify-between gap-3">
+    <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-2 sm:p-5">
+      <PxFrame title={`${t.waveCleared} · ${t.wave} ${wave}`} icon="icoTrophy" className="anim-pop relative my-auto flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden p-3 pt-7 sm:p-5 sm:pt-8">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-1">
-            {(["weapons", "stats"] as Tab[]).map((id) => (
-              <button
-                key={id}
-                onClick={() => setTab(id)}
-                className={`font-pixel border-[3px] border-[#070305] px-4 py-2 text-[8px] sm:text-[9px] ${
-                  tab === id
-                    ? "bg-[#e0444d] text-[#2a0509] shadow-[inset_0_3px_0_0_rgba(255,255,255,0.3)]"
-                    : "bg-[#1d0a0e] text-[#a35662] shadow-[inset_0_-3px_0_0_rgba(0,0,0,0.4)]"
-                }`}
-              >
-                {id === "weapons" ? t.tabWeapons : t.tabStats}
-              </button>
-            ))}
+            <button className={`shop-tab ${tab === "weapons" ? "is-active" : ""}`} onClick={() => setTab("weapons")}>{t.tabWeapons} + {g.upgrades}</button>
+            <button className={`shop-tab ${tab === "stats" ? "is-active" : ""}`} onClick={() => setTab("stats")}>{t.tabStats}</button>
           </div>
-          <CoinBox coins={coins} />
+          <CoinBox coins={stats.coins} />
         </div>
 
         <div className="px-divider my-3" />
 
-        {/* ================= WEAPONS TAB ================= */}
-        {tab === "weapons" && (
-          <div className="anim-slide scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto sm:flex-row">
-            {/* left: catalogue list */}
-            <div className="flex shrink-0 flex-col gap-1 sm:w-44">
-              {ALL_WEAPONS.map((w) => {
-                const ownedIdx = weapons.indexOf(w.id);
-                const owned = ownedIdx >= 0;
-                const active = sel === w.id;
+        {tab === "weapons" ? (
+          <div className="scrollbar-thin grid min-h-0 flex-1 gap-3 overflow-y-auto lg:grid-cols-[190px_1fr_280px]">
+            <div className="flex flex-col gap-1">
+              <div className="font-pixel mb-1 text-[7px] text-[#ffd44a]">{t.weaponsTitle}</div>
+              {ALL_WEAPONS.map((weapon) => {
+                const index = stats.weapons.indexOf(weapon.id);
                 return (
-                  <button
-                    key={w.id}
-                    onClick={() => setSel(w.id)}
-                    className={`pxb pxb-menu font-pixel !py-2.5 text-[8px] ${active ? "is-active" : ""}`}
-                  >
-                    <PixelSprite name={WEAPON_ICON[w.id]} scale={1} />
-                    <span className="truncate">{t[w.nameKey] as string}</span>
-                    {owned && (
-                      <span className="ml-auto border-2 border-[#070305] bg-[#ffd44a] px-[4px] text-[6px] text-[#3a2200]">
-                        {ownedIdx + 1}
-                      </span>
-                    )}
+                  <button key={weapon.id} onClick={() => setSelected(weapon.id)} className={`pxb pxb-menu font-pixel !py-2 text-[7px] ${selected === weapon.id ? "is-active" : ""}`}>
+                    <PixelSprite name={WEAPON_ICON[weapon.id]} scale={1} />
+                    <span className="truncate">{weaponName(weapon.id, t, g, stats.weaponLevels[weapon.id].form)}</span>
+                    {index >= 0 && <span className="ml-auto bg-[#ffd44a] px-1 text-[6px] text-[#351c00]">{index + 1}</span>}
                   </button>
                 );
               })}
-
-              {/* equipped hotbar mirror */}
               <div className="mt-2 grid grid-cols-4 gap-1">
-                {[0, 1, 2, 3].map((i) => {
-                  const w = weapons[i];
-                  const isAct = i === activeSlot;
-                  if (!w) {
-                    return (
-                      <div key={i} className="px-empty flex h-9 items-center justify-center">
-                        <span className="font-pixel text-[6px] text-[#4a1420]">{i + 1}</span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        onSelectSlot(i);
-                        setSel(w);
-                      }}
-                      className={`flex h-9 items-center justify-center border-[3px] border-[#070305] ${
-                        isAct ? "bg-[#3a1219] shadow-[inset_0_0_0_2px_#ffd44a]" : "bg-[#120508] shadow-[inset_0_0_0_2px_#4a1420]"
-                      }`}
-                    >
-                      <PixelSprite name={WEAPON_ICON[w]} scale={1} />
+                {[0, 1, 2, 3].map((index) => {
+                  const weapon = stats.weapons[index];
+                  return weapon ? (
+                    <button key={index} onClick={() => { onSelectSlot(index); setSelected(weapon); }} className={`px-tile !h-11 !w-auto ${index === stats.activeSlot ? "outline outline-2 outline-[#ffd44a]" : ""}`}>
+                      <PixelSprite name={WEAPON_ICON[weapon]} scale={2} />
                     </button>
-                  );
+                  ) : <div key={index} className="px-empty flex h-11 items-center justify-center text-[7px] text-[#6c3a42]">{index + 1}</div>;
                 })}
               </div>
             </div>
 
-            {/* right: preview + details */}
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              <div className="px-inset relative flex items-center justify-center overflow-hidden py-3">
-                {/* stage backdrop */}
-                <div className="pointer-events-none absolute inset-0 opacity-40" style={{ background: "repeating-linear-gradient(0deg,#0c0407 0 2px,#140609 2px 4px)" }} />
-                <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-[6px] bg-[#2a0e13]" />
-                <span className="font-pixel absolute left-2 top-2 text-[6px] text-[#a35662]">{t.preview}</span>
-                <WeaponPreview weapon={sel} scale={3} angle={-35} className="relative" />
+            <div className="flex min-w-0 flex-col gap-2">
+              <div className="px-inset relative flex min-h-32 items-center justify-center overflow-hidden">
+                <WeaponPreview weapon={selected} scale={3} angle={-30} form={levels.form} />
+                <span className="font-pixel absolute left-3 top-3 text-[7px] text-[#ffd44a]">{weaponName(selected, t, g, levels.form)}</span>
+                <span className="font-pixel absolute bottom-3 right-3 text-[6px] text-[#a35662]">{g.weaponLevel} {levels.damage + levels.speed + levels.range + levels.form}</span>
               </div>
-
               <div className="px-inset p-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-pixel text-[10px] text-[#ffe2c4]">{t[selInfo.nameKey] as string}</span>
-                  {selOwned && (
-                    <span className="font-pixel border-2 border-[#070305] bg-[#153a1c] px-2 py-[2px] text-[6px] text-[#9be3a7]">
-                      {selInHand ? t.inHand : t.owned} · {selOwnedIdx + 1}
-                    </span>
-                  )}
-                </div>
-                <p className="font-pixel mt-2 text-[7px] leading-relaxed text-[#a35662]">
-                  {t[selInfo.descKey] as string}
-                </p>
-                <div className="font-pixel mt-3 grid grid-cols-3 gap-2 text-[6px] text-[#a35662]">
-                  <div className="flex flex-col gap-1">
-                    {t.dmg}
-                    <Pips n={selInfo.dmg} color="#e0444d" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {t.spd}
-                    <Pips n={selInfo.spd} color="#ffd44a" />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    {t.range}
-                    <Pips n={selInfo.range} color="#ff9a60" />
-                  </div>
+                <p className="font-pixel text-[7px] leading-5 text-[#d8a9a0]">{weaponDescription(selected, t, g)}</p>
+                {selected === "shield" && <p className="font-pixel mt-2 text-[6px] leading-4 text-[#7ed9d1]">{g.shieldHint}</p>}
+                <div className="mt-3 grid grid-cols-3 gap-2 text-[6px] text-[#a35662]">
+                  <span>{t.dmg}<Pips value={info.dmg + levels.damage} color="#e0444d" /></span>
+                  <span>{t.spd}<Pips value={Math.min(5, info.spd + levels.speed)} color="#ffd44a" /></span>
+                  <span>{t.range}<Pips value={Math.min(5, info.range + levels.range)} color="#62b7c8" /></span>
                 </div>
               </div>
-
-              {/* action */}
               <div className="flex gap-2">
-                {selOwned ? (
-                  <>
-                    {!selInHand && (
-                      <PxButton tone="gold" onClick={() => onSelectSlot(selOwnedIdx)} className="flex-1 py-3 text-[8px]">
-                        {t.equipped}
-                      </PxButton>
-                    )}
-                    <PxButton
-                      tone="dark"
-                      disabled={weapons.length <= 1}
-                      onClick={() => onSellWeapon(selOwnedIdx, selInfo.sellRefund)}
-                      className="flex-1 py-3 text-[8px]"
-                    >
-                      {t.sell} <Price cost={selInfo.sellRefund} />
-                    </PxButton>
-                  </>
-                ) : (
-                  <PxButton
-                    tone="gold"
-                    disabled={!canAfford || isFull}
-                    onClick={() => {
-                      onBuyWeapon(sel, selInfo.cost);
-                    }}
-                    className="flex-1 py-3 text-[8px]"
-                  >
-                    {isFull ? t.maxSlots : (
-                      <>
-                        {t.buy} <Price cost={selInfo.cost} />
-                      </>
-                    )}
-                  </PxButton>
-                )}
+                {owned ? <>
+                  {!active && <PxButton tone="gold" onClick={() => onSelectSlot(ownedIndex)} className="flex-1 py-3 text-[7px]">{t.equipped}</PxButton>}
+                  <PxButton tone="dark" disabled={stats.weapons.length <= 1} onClick={() => onSellWeapon(ownedIndex, info.sellRefund)} className="flex-1 py-3 text-[7px]">{t.sell} <Price cost={info.sellRefund} /></PxButton>
+                </> : <PxButton tone="gold" disabled={stats.coins < info.cost || full} onClick={() => onBuyWeapon(selected, info.cost)} className="w-full py-3 text-[8px]">{full ? t.maxSlots : <>{t.buy} <Price cost={info.cost} /></>}</PxButton>}
               </div>
             </div>
-          </div>
-        )}
 
-        {/* ================= STATS TAB ================= */}
-        {tab === "stats" && (
-          <div className="anim-slide scrollbar-thin flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto sm:flex-row">
-            {/* left: current ronin */}
-            <div className="flex shrink-0 flex-col gap-2 sm:w-52">
-              <div className="px-inset flex items-center gap-3 px-3 py-3">
-                <div className="px-tile">
-                  <PixelSprite name="player" scale={3} />
-                </div>
-                <span className="font-pixel text-[8px] text-[#ffe2c4]">{t.yourStats}</span>
-              </div>
-              <StatBar label={t.statHearts} value={stats.maxHp} max={12} text={`${stats.hp}/${stats.maxHp}`} color="#ff4353" />
-              <StatBar label={t.statSpeed} value={108 + stats.speedBonus} max={220} text={`${108 + stats.speedBonus}`} color="#ffd44a" />
-              <StatBar label={t.statDashCd} value={6.5 - stats.dashMax} max={5} text={`${stats.dashMax.toFixed(1)}s`} color="#f8d7a5" />
-              <StatBar label={t.statDashDist} value={stats.dashSpeedMult} max={2.5} text={`x${stats.dashSpeedMult.toFixed(2)}`} color="#ff9a60" />
-            </div>
-
-            {/* right: purchasable upgrades */}
-            <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
-              {ALL_POWERUPS.map((p) => {
-                const ok = coins >= p.cost;
+            <div className="flex flex-col gap-2">
+              <div className="font-pixel text-[7px] text-[#ffd44a]">{g.upgrades}</div>
+              {!owned ? <div className="px-inset p-4 text-center font-pixel text-[7px] leading-5 text-[#a35662]">{t.buy} {weaponName(selected, t, g, levels.form)}</div> : UPGRADE_TYPES.map((kind) => {
+                const allowed = kind !== "form" || selected === "bow" || selected === "hammer";
+                const level = levels[kind];
+                const max = kind === "form" ? 1 : 3;
+                const cost = upgradeCost(selected, kind, level);
+                if (!allowed) return kind === "form" ? <div key={kind} className="px-inset p-2 font-pixel text-[6px] leading-4 text-[#6c3a42]">{g.formLocked}</div> : null;
                 return (
-                  <div key={p.id} className="px-inset flex flex-col p-3">
-                    <div className="flex items-center gap-2">
-                      <div className="px-tile !h-10 !w-10">
-                        <PixelSprite name={p.icon} scale={2} />
-                      </div>
-                      <div className="font-pixel text-[8px] text-[#ffe2c4]">{t[p.nameKey] as string}</div>
+                  <div key={kind} className="px-inset flex items-center gap-2 p-2">
+                    <div className="min-w-0 grow">
+                      <div className="font-pixel text-[7px] text-[#ffe2c4]">{g[kind]}</div>
+                      <div className="mt-1 flex gap-1">{Array.from({ length: max }).map((_, i) => <i key={i} className={`h-2 w-5 border-2 border-[#070305] ${i < level ? "bg-[#e0444d]" : "bg-[#2a0e13]"}`} />)}</div>
                     </div>
-                    <div className="font-pixel mt-2 grow text-[6px] leading-relaxed text-[#a35662]">
-                      {t[p.descKey] as string}
-                    </div>
-                    <PxButton tone="red" disabled={!ok} onClick={() => onBuyPowerUp(p.id, p.cost)} className="mt-3 w-full py-2 text-[7px]">
-                      {t.buy} <Price cost={p.cost} />
-                    </PxButton>
+                    <PxButton tone="red" disabled={level >= max || stats.coins < cost} onClick={() => onUpgradeWeapon(selected, kind, cost)} className="px-2 py-2 text-[6px]">{level >= max ? g.max : <><Price cost={cost} /></>}</PxButton>
                   </div>
                 );
               })}
+
+              {owned && selected === "book" && <div className="px-inset p-2">
+                <div className="font-pixel mb-2 text-[7px] text-[#ffd44a]">{g.magic}</div>
+                <div className="grid grid-cols-2 gap-1">{MAGIC_TYPES.map((magic) => (
+                  <button key={magic} onClick={() => onMagicType(magic)} className={`magic-option ${stats.magicType === magic ? "is-active" : ""}`}>
+                    <strong>{g[magic]}</strong><span>{g[`${magic}Desc` as keyof typeof g]}</span>
+                  </button>
+                ))}</div>
+              </div>}
             </div>
+          </div>
+        ) : (
+          <div className="scrollbar-thin grid min-h-0 flex-1 gap-3 overflow-y-auto md:grid-cols-2">
+            <div className="px-inset p-4">
+              <div className="font-pixel mb-3 text-[9px] text-[#ffd44a]">{t.yourStats}</div>
+              <div className="grid grid-cols-2 gap-2 font-pixel text-[7px]">
+                <div className="stat-readout"><span>{t.statHearts}</span><strong>{stats.hp}/{stats.maxHp}</strong></div>
+                <div className="stat-readout"><span>{t.statSpeed}</span><strong>{108 + stats.speedBonus}</strong></div>
+                <div className="stat-readout"><span>{t.statDashCd}</span><strong>{stats.dashMax.toFixed(1)}s</strong></div>
+                <div className="stat-readout"><span>{t.statDashDist}</span><strong>x{stats.dashSpeedMult.toFixed(2)}</strong></div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{ALL_POWERUPS.map((power) => (
+              <div key={power.id} className="px-inset flex flex-col p-3">
+                <div className="flex items-center gap-2"><PixelSprite name={power.icon} scale={2} /><strong className="font-pixel text-[7px]">{t[power.nameKey] as string}</strong></div>
+                <p className="font-pixel my-2 grow text-[6px] leading-4 text-[#a35662]">{t[power.descKey] as string}</p>
+                <PxButton tone="red" disabled={stats.coins < power.cost} onClick={() => onBuyPowerUp(power.id, power.cost)} className="py-2 text-[7px]">{g.improve} <Price cost={power.cost} /></PxButton>
+              </div>
+            ))}</div>
           </div>
         )}
 
         <div className="px-divider my-3" />
-
-        <PxButton tone="green" onClick={onCloseShop} className="w-full py-3.5 text-[10px] sm:text-[11px]">
-          ▶ {t.nextWave} — {t.wave} {wave + 1}
-        </PxButton>
+        <PxButton tone="green" onClick={onCloseShop} className="w-full py-3 text-[9px] sm:text-[10px]">▶ {t.nextWave} · {t.wave} {wave + 1}</PxButton>
       </PxFrame>
     </div>
   );
