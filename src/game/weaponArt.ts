@@ -23,7 +23,7 @@ export const WEAPON_REST_LEN: Record<Weapon, number> = {
   axe: 38,
   hammer: 36,
   shield: 28,
-  mine: 12,
+  mine: 9,
 };
 
 export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: WeaponDrawOpts) {
@@ -206,16 +206,16 @@ function drawShield(ctx: CanvasRenderingContext2D) {
 
 function drawMine(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#070508";
-  ctx.fillRect(1, -7, 15, 14);
+  ctx.fillRect(2, -5, 10, 10);
   ctx.fillStyle = "#3d4147";
-  ctx.fillRect(3, -5, 11, 10);
+  ctx.fillRect(3, -4, 8, 8);
   ctx.fillStyle = "#777f86";
-  ctx.fillRect(5, -3, 7, 6);
+  ctx.fillRect(5, -2, 4, 4);
   ctx.fillStyle = "#e0444d";
-  ctx.fillRect(8, -1, 2, 2);
+  ctx.fillRect(6, -1, 2, 2);
   ctx.fillStyle = "#c9b9aa";
   ctx.fillRect(0, -1, 3, 2);
-  ctx.fillRect(14, -1, 3, 2);
+  ctx.fillRect(11, -1, 3, 2);
 }
 
 /**

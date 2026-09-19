@@ -154,6 +154,13 @@ export default function App() {
     }
   }, []);
 
+  const pauseFromFocusLoss = useCallback(() => {
+    const g = gameRef.current;
+    if (g?.phase !== "playing") return;
+    g.pause();
+    setPhase("paused");
+  }, []);
+
   const toMenu = useCallback(() => {
     const g = gameRef.current;
     if (!g) return;
@@ -284,18 +291,18 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [start, togglePause, toggleMute]);
 
-  /* pause on tab hide */
+  /* pause when the player leaves the game window/tab */
   useEffect(() => {
     const onVis = () => {
-      const g = gameRef.current;
-      if (document.hidden && g?.phase === "playing") {
-        g.pause();
-        setPhase("paused");
-      }
+      if (document.hidden) pauseFromFocusLoss();
     };
+    window.addEventListener("blur", pauseFromFocusLoss);
     document.addEventListener("visibilitychange", onVis);
-    return () => document.removeEventListener("visibilitychange", onVis);
-  }, []);
+    return () => {
+      window.removeEventListener("blur", pauseFromFocusLoss);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, [pauseFromFocusLoss]);
 
   const best = scores.length ? scores[0].score : 0;
   const t = I18N[opts.language];
