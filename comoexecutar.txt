@@ -1,0 +1,60 @@
+COMO EXECUTAR O JOGO NO NAVEGADOR
+
+1. Abra o terminal na pasta do projeto:
+
+   D:\Estudo\programacao\PROJETOS EM DEV\pixel-art-sword-arena-game (2)
+
+2. Instale as dependencias do projeto:
+
+   npm install
+
+3. Inicie o servidor de desenvolvimento:
+
+   npm run dev
+
+4. Abra no navegador o endereco que aparecer no terminal.
+   Normalmente sera:
+
+   http://localhost:5173
+
+5. Para parar o servidor, volte ao terminal e pressione:
+
+   Ctrl+C
+
+   Se o terminal pedir confirmacao, pressione S e depois Enter.
+
+
+PARA ACESSAR POR OUTRO DISPOSITIVO NA MESMA REDE
+
+1. Inicie o servidor permitindo acesso pela rede:
+
+   npm run dev -- --host 0.0.0.0
+
+2. No terminal, procure o endereco "Network" mostrado pelo Vite.
+   Ele sera parecido com:
+
+   http://192.168.0.10:5173
+
+3. Abra esse endereco no navegador do outro dispositivo.
+
+Observacao: se nao abrir, verifique se o firewall do Windows permitiu o acesso ao Node.js ou ao Vite.
+
+
+PARA TESTAR A VERSAO FINAL COMPILADA
+
+1. Gere a versao final:
+
+   npm run build
+
+2. Abra a previa da versao compilada:
+
+   npm run preview
+
+3. Abra no navegador o endereco mostrado no terminal.
+   Normalmente sera:
+
+   http://localhost:4173
+
+4. Para parar a previa, volte ao terminal e pressione:
+
+   Ctrl+C

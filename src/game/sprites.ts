@@ -1,0 +1,645 @@
+// Pixel-art sprite factory: builds tiny canvases from string maps, with auto outline.
+
+export interface Sprite {
+  canvas: HTMLCanvasElement;
+  white: HTMLCanvasElement; // white silhouette for hit-flash
+  w: number;
+  h: number;
+}
+
+const OUTLINE = "#09070b";
+
+function makeCanvas(w: number, h: number) {
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  return c;
+}
+
+export function makeSprite(rows: string[], palette: Record<string, string>): Sprite {
+  const iw = rows[0].length;
+  const ih = rows.length;
+  const w = iw + 2;
+  const h = ih + 2;
+
+  const grid: (string | null)[][] = [];
+  for (let y = 0; y < ih; y++) {
+    const line: (string | null)[] = [];
+    for (let x = 0; x < iw; x++) {
+      const ch = rows[y][x];
+      line.push(palette[ch] ? palette[ch] : null);
+    }
+    grid.push(line);
+  }
+
+  const canvas = makeCanvas(w, h);
+  const ctx = canvas.getContext("2d")!;
+  // outline pass
+  ctx.fillStyle = OUTLINE;
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      if (!grid[y][x]) continue;
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [-0, -1],
+      ]) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const empty = nx < 0 || ny < 0 || nx >= iw || ny >= ih || !grid[ny][nx];
+        if (empty) ctx.fillRect(nx + 1, ny + 1, 1, 1);
+      }
+    }
+  }
+  for (let y = 0; y < ih; y++) {
+    for (let x = 0; x < iw; x++) {
+      const col = grid[y][x];
+      if (!col) continue;
+      ctx.fillStyle = col;
+      ctx.fillRect(x + 1, y + 1, 1, 1);
+    }
+  }
+
+  // white silhouette
+  const white = makeCanvas(w, h);
+  const wctx = white.getContext("2d")!;
+  wctx.drawImage(canvas, 0, 0);
+  wctx.globalCompositeOperation = "source-in";
+  wctx.fillStyle = "#ffffff";
+  wctx.fillRect(0, 0, w, h);
+
+  return { canvas, white, w, h };
+}
+
+/* ---------------- sprite definitions ---------------- */
+
+export const SPR: Record<string, Sprite> = {};
+
+let built = false;
+
+export function ensureSprites() {
+  if (built) return;
+  buildSprites();
+}
+
+export function buildSprites() {
+  if (built) return;
+  built = true;
+
+  // The player is a masked ronin with a red headband and dark lacquer armor.
+  SPR.player = makeSprite(
+    [
+      "....rrrr....",
+      "...rrrrrr...",
+      "..hhhhhhhh..",
+      "..hkkkkkkh..",
+      "..hkeeeekh..",
+      "...aaaaaa...",
+      "..saaaaaas..",
+      "..saaaaaas..",
+      "...bbbbbb...",
+      "...llllll...",
+      "...ll..ll...",
+      "...ll..ll...",
+      "..ff....ff..",
+    ],
+    {
+      r: "#d9343f",
+      h: "#e6b89c",
+      k: "#19131c",
+      e: "#ffbf70",
+      a: "#481923",
+      s: "#7f2631",
+      b: "#9c2634",
+      l: "#25101a",
+      f: "#100b11",
+    },
+  );
+
+  SPR.grunt = makeSprite(
+    [
+      "..gggggg..",
+      ".gggggggg.",
+      "gg.gggg.gg",
+      "ggeggggegg",
+      "gggggggggg",
+      "gg.wwww.gg",
+      ".gggggggg.",
+      "..gg..gg..",
+      "..gg..gg..",
+      ".dd....dd.",
+    ],
+    { g: "#8d2734", e: "#ffd0a2", w: "#f4c7ad", d: "#260e17" },
+  );
+
+  SPR.bat = makeSprite(
+    [
+      "ww........ww",
+      "wwww.bb.wwww",
+      ".wwwbbbbwww.",
+      "..wwbeebww..",
+      "...wbbbbw...",
+      "....bbbb....",
+      ".....bb.....",
+    ],
+    { w: "#531b36", b: "#210d1d", e: "#ff5361" },
+  );
+
+  SPR.brute = makeSprite(
+    [
+      "....hhhhhhhh....",
+      "...hhhhhhhhhh...",
+      "..hhhhhhhhhhhh..",
+      "..hheeehheeehh..",
+      "..hhhhhhhhhhhh..",
+      "..hh.wwwwww.hh..",
+      "...hhhhhhhhhh...",
+      ".aabbbbbbbbbbaa.",
+      "aaabbbbbbbbbbaaa",
+      "aaabbbbbbbbbbaaa",
+      ".aabbbbbbbbbbaa.",
+      "...bbbbbbbbbb...",
+      "...bbbb..bbbb...",
+      "...llll..llll...",
+      "...llll..llll...",
+      "..dddd....dddd..",
+    ],
+    {
+      h: "#9f3840",
+      e: "#ffd0a2",
+      w: "#f4c7ad",
+      a: "#541422",
+      b: "#6e1c2a",
+      l: "#260d17",
+      d: "#0e0810",
+    },
+  );
+
+  SPR.spitter = makeSprite(
+    [
+      "...cccc...",
+      "..cccccc..",
+      ".cccccccc.",
+      ".cc.ee.cc.",
+      ".cccccccc.",
+      "..cccccc..",
+      ".rrrrrrrr.",
+      "rrrrrrrrrr",
+      "rrrrrrrrrr",
+      ".rrrrrrrr.",
+      ".rrrrrrrr.",
+      "..rr..rr..",
+    ],
+    { c: "#260f22", e: "#ff934f", r: "#722039" },
+  );
+
+  // Additional enemies
+  SPR.ninja = makeSprite(
+    [
+      "...rrrr...",
+      "..rkkkkr..",
+      ".kkkeekkk.",
+      ".kkkkkkkk.",
+      "..kkkkkk..",
+      ".rrkkkkrr.",
+      "...kkk....",
+      "..kk.kk...",
+      ".dd...dd..",
+    ],
+    { r: "#f0444e", k: "#150b14", e: "#ffbf70", d: "#300f1b" },
+  );
+
+  SPR.hound = makeSprite(
+    [
+      "....hh....",
+      "...hhhh...",
+      ".hheehhhh.",
+      "hhhhhhhhhh",
+      "hh.rrrr.hh",
+      ".hhhhhhhh.",
+      "...hh.hh..",
+      "..dd...dd.",
+    ],
+    { h: "#6e1e2b", e: "#ffcf9c", r: "#c93240", d: "#180b11" },
+  );
+
+  SPR.wisp = makeSprite(
+    [
+      "...ppp...",
+      ".ppppppp.",
+      ".pp.e.pp.",
+      "ppppppppp",
+      ".ppppppp.",
+      "...ppp...",
+      "....p....",
+    ],
+    { p: "#821f46", e: "#ff6d78" },
+  );
+
+  SPR.archer = makeSprite(
+    [
+      "...aaaa...",
+      "..aaaaaa..",
+      ".a.eeee.a.",
+      ".aaaaaaaa.",
+      "...tttt...",
+      "..tttttt..",
+      "..tt..tt..",
+      ".dd....dd.",
+    ],
+    { a: "#502039", e: "#ffd19e", t: "#8c2737", d: "#1b0d17" },
+  );
+
+  SPR.oni = makeSprite(
+    [
+      "..hh..hh..",
+      ".hhhhhhhh.",
+      "hhhhhhhhhh",
+      "hhee..eehh",
+      "hhhhhhhhhh",
+      "hh.wwww.hh",
+      ".hhhhhhhh.",
+      "..hh..hh..",
+      ".dd....dd.",
+    ],
+    { h: "#b43742", e: "#ffe0ad", w: "#40101c", d: "#1a0911" },
+  );
+
+  SPR.shield = makeSprite(
+    [
+      "...sssss...",
+      "..sssssss..",
+      ".ss.eee.ss.",
+      ".sssssssss.",
+      ".sshhhhsss.",
+      ".sshhhhsss.",
+      ".sshhhhsss.",
+      "...s...s...",
+      "..dd...dd..",
+    ],
+    { s: "#4a1727", e: "#ffcc91", h: "#932c39", d: "#160a11" },
+  );
+
+  SPR.slime = makeSprite(
+    [
+      "...ssss...",
+      ".ssssssss.",
+      "ssssssssss",
+      "sseessssss",
+      "ssssssssss",
+      ".ssssssss.",
+      "..s....s..",
+    ],
+    { s: "#70233b", e: "#ffdfaf" },
+  );
+
+  SPR.monk = makeSprite(
+    [
+      "....mmmm....",
+      "...mmmmmm...",
+      "..mm.eemm...",
+      "..mmmmmmmm..",
+      "...yyyyyy...",
+      "..yyyyyyyy..",
+      "..yyyyyyyy..",
+      "...yy..yy...",
+      "..dd....dd..",
+    ],
+    { m: "#36152b", e: "#ffcc9d", y: "#8f2938", d: "#180a12" },
+  );
+
+  SPR.demon = makeSprite(
+    [
+      "..dd....dd..",
+      ".dddd..dddd.",
+      "dddddddddddd",
+      "ddeeddddeedd",
+      "dddddddddddd",
+      ".dd.wwww.dd.",
+      ".dddddddddd.",
+      "...dd..dd...",
+      "..dd....dd..",
+    ],
+    { d: "#be303d", e: "#fff0b8", w: "#4a1020" },
+  );
+
+  SPR.skeleton = makeSprite(
+    [
+      "...bbbb...",
+      ".bbbbb.bb.",
+      ".b.eeee.b.",
+      ".bbbbbbbb.",
+      "...b.bb...",
+      ".rrbbbbrr.",
+      "...bb.bb..",
+      "..dd...dd.",
+    ],
+    { b: "#dac0aa", e: "#ff4b5b", r: "#631b2b", d: "#190e13" },
+  );
+
+  SPR.boss = makeSprite(
+    [
+      ".......rrrrrrrr.......",
+      "......rrrrrrrrrr......",
+      ".....rhhhhhhhhhhhr....",
+      "....rhhhhhhhhhhhhhr...",
+      "....hhheeehhheeehhh...",
+      "...hhhhhhhhhhhhhhhh...",
+      "...hhh.wwwwwwww.hhh...",
+      "....hhhhhhhhhhhhhh....",
+      "..aaaabbbbbbbbbbaaaa..",
+      ".aaaabbbbbbbbbbbbaaaa.",
+      "aaaabbbbbbbbbbbbaaaaa",
+      ".aaaabbbbbbbbbbbbaaaa.",
+      "...bbbbbbbbbbbbbbbb...",
+      "...bbbbbbb..bbbbbbb...",
+      "...llllll....llllll...",
+      "..dddddd......dddddd..",
+    ],
+    {
+      r: "#ec4b53",
+      h: "#c44248",
+      e: "#ffe7b8",
+      w: "#3a0c1a",
+      a: "#6d1b2b",
+      b: "#8e2635",
+      l: "#2b0c18",
+      d: "#0b070c",
+    },
+  );
+
+  // Pickups & Icons
+  SPR.heart = makeSprite(["..r.r..", ".rrrrr.", ".rrrrr.", "..rrr..", "...r..."], {
+    r: "#ff4353",
+  });
+
+  SPR.coin = makeSprite(
+    [
+      "..yyyy..",
+      ".yyyyyy.",
+      "yy.dd.yy",
+      "yy.dd.yy",
+      ".yyyyyy.",
+      "..yyyy..",
+    ],
+    { y: "#ffcf48", d: "#9b6a15" }
+  );
+
+  /* ---------- UI icons (weapons / powerups), 12x12 ---------- */
+  SPR.icoKatana = makeSprite(
+    [
+      "..........ww",
+      ".........wsw",
+      "........wsw.",
+      ".......wsw..",
+      "......wsw...",
+      ".....wsw....",
+      "....wsw.....",
+      "..ggsw......",
+      ".grgg.......",
+      "rrrg........",
+      "rr..........",
+      "............",
+    ],
+    { w: "#fff0dc", s: "#c9b9aa", g: "#f2c58d", r: "#891f2d" },
+  );
+  SPR.icoBow = makeSprite(
+    [
+      "..g.........",
+      ".gb.........",
+      "..b.b.......",
+      "...b.b......",
+      "....brb.....",
+      "wwwwwwwwws..",
+      "....brb.....",
+      "...b.b......",
+      "..b.b.......",
+      ".gb.........",
+      "..g.........",
+      "............",
+    ],
+    { b: "#9c2931", r: "#681923", w: "#f3dfbd", s: "#d8e0df", g: "#f2c58d" },
+  );
+  SPR.icoAxe = makeSprite(
+    [
+      "...ss..ss...",
+      "..ssssssss..",
+      ".ssmmrrmmss.",
+      ".ssmmrrmmss.",
+      "..sssrrsss..",
+      "....hrrh....",
+      "...hh..hh...",
+      "..hh........",
+      ".hh.........",
+      "hh..........",
+      "h...........",
+      "............",
+    ],
+    { s: "#dbe3df", m: "#6f7880", r: "#8e2430", h: "#69241f" },
+  );
+  SPR.icoHammer = makeSprite(
+    [
+      "....mmmmmm..",
+      "....mmmmmm..",
+      "....mrrrrm..",
+      "....mmmmmm..",
+      "....mmmmmm..",
+      "......hh....",
+      "......hh....",
+      "......hh....",
+      "......hh....",
+      "......hh....",
+      "......hh....",
+      "............",
+    ],
+    { m: "#5f1a27", r: "#ba3742", h: "#64201e" },
+  );
+  SPR.icoShield = makeSprite(
+    [
+      "..ssssssss..",
+      ".ssrrrrrrss.",
+      ".ssr....rss.",
+      ".ssr.gg.rss.",
+      ".ssr.gg.rss.",
+      ".ssr....rss.",
+      ".ssrrrrrrss.",
+      "..ssssssss..",
+      "...ssssss...",
+      "....ssss....",
+      ".....ss.....",
+      "............",
+    ],
+    { s: "#721e29", r: "#b53842", g: "#ffd0a2" },
+  );
+  SPR.icoMine = makeSprite(
+    [
+      "............",
+      ".....rr.....",
+      "....ssss....",
+      "..ssssssss..",
+      ".sswwsswwss.",
+      "ssssrrrrssss",
+      ".ssssssssss.",
+      "..ssssssss..",
+      "...ssssss...",
+      "............",
+      "............",
+      "............",
+    ],
+    { s: "#555d63", w: "#aab1b5", r: "#e0444d" },
+  );
+  SPR.icoSpeed = makeSprite(
+    [
+      "......yy....",
+      ".....yy.....",
+      "....yy......",
+      "...yyyyyy...",
+      "..yyyyyy....",
+      ".....yy.....",
+      "....yy......",
+      "...yy.......",
+      "..yy........",
+      "............",
+      "............",
+      "............",
+    ],
+    { y: "#ffd44a" },
+  );
+  SPR.icoHeart = makeSprite(
+    [
+      "..rr...rr...",
+      ".rrrr.rrrr..",
+      "rrwrrrrrrrr.",
+      "rrrrrrrrrrr.",
+      "rrrrrrrrrrr.",
+      ".rrrrrrrrr..",
+      "..rrrrrrr...",
+      "...rrrrr....",
+      "....rrr.....",
+      ".....r......",
+      "............",
+      "............",
+    ],
+    { r: "#ff4353", w: "#ffd2b5" },
+  );
+  SPR.icoClock = makeSprite(
+    [
+      "...cccccc...",
+      "..c......c..",
+      ".c...w....c.",
+      "c....w.....c",
+      "c....w.....c",
+      "c....wwww..c",
+      "c..........c",
+      "c..........c",
+      ".c........c.",
+      "..c......c..",
+      "...cccccc...",
+      "............",
+    ],
+    { c: "#f8d7a5", w: "#ff6a63" },
+  );
+  SPR.icoDash = makeSprite(
+    [
+      "............",
+      "..y....y....",
+      "...y....y...",
+      "....y....y..",
+      ".....y....y.",
+      "....y....y..",
+      "...y....y...",
+      "..y....y....",
+      "............",
+      "............",
+      "............",
+      "............",
+    ],
+    { y: "#ff8a62" },
+  );
+  SPR.icoSkull = makeSprite(
+    [
+      "...wwwwww...",
+      "..wwwwwwww..",
+      ".wwwwwwwwww.",
+      ".ww.wwww.ww.",
+      ".ww.wwww.ww.",
+      ".wwwwwwwwww.",
+      "..wwwwwwww..",
+      "...w.ww.w...",
+      "...wwwwww...",
+      "............",
+      "............",
+      "............",
+    ],
+    { w: "#ffe2c4" },
+  );
+  SPR.icoGear = makeSprite(
+    [
+      "....g..g....",
+      "...gggggg...",
+      "..gg.gg.gg..",
+      "gggg....gggg",
+      ".gg......gg.",
+      ".gg......gg.",
+      "gggg....gggg",
+      "..gg.gg.gg..",
+      "...gggggg...",
+      "....g..g....",
+      "............",
+      "............",
+    ],
+    { g: "#ffe2c4" },
+  );
+  SPR.icoGlobe = makeSprite(
+    [
+      "...gggggg...",
+      "..g.g..g.g..",
+      ".g..g..g..g.",
+      "gggggggggggg",
+      "g...g..g...g",
+      "g...g..g...g",
+      "gggggggggggg",
+      ".g..g..g..g.",
+      "..g.g..g.g..",
+      "...gggggg...",
+      "............",
+      "............",
+    ],
+    { g: "#ffe2c4" },
+  );
+  SPR.icoTrophy = makeSprite(
+    [
+      ".yyyyyyyyyy.",
+      "yy.yyyyyy.yy",
+      "y..yyyyyy..y",
+      "yy.yyyyyy.yy",
+      "..yyyyyyyy..",
+      "...yyyyyy...",
+      "....yyyy....",
+      ".....yy.....",
+      "....yyyy....",
+      "..yyyyyyyy..",
+      "............",
+      "............",
+    ],
+    { y: "#ffd44a" },
+  );
+  SPR.icoPlay = makeSprite(
+    [
+      "p...........",
+      "ppp.........",
+      "ppppp.......",
+      "ppppppp.....",
+      "ppppppppp...",
+      "ppppppppppp.",
+      "ppppppppp...",
+      "ppppppp.....",
+      "ppppp.......",
+      "ppp.........",
+      "p...........",
+      "............",
+    ],
+    { p: "#2a0509" },
+  );
+}
