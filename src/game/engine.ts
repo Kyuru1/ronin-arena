@@ -1497,7 +1497,7 @@ export class Game {
 
     const sourceX = this.px + Math.cos(angle) * 16;
     const sourceY = this.py + Math.sin(angle) * 16;
-    this.spawnMagicSparks(sourceX, sourceY, angle, color, 24 + hits * 4);
+    this.spawnMagicSparks(sourceX, sourceY, angle, this.magicType, 24 + hits * 4);
     this.burst(sourceX, sourceY, 10 + hits * 2, color, 130);
     this.shake = Math.max(this.shake, this.magicType === "water" ? 6 : 3);
     Sfx.swing("book");
@@ -1553,27 +1553,58 @@ export class Game {
     return this.magicType === "fire" ? "#ff5a3d" : this.magicType === "ice" ? "#86e7ff" : this.magicType === "poison" ? "#8cdf55" : "#62a9ff";
   }
 
-  private spawnMagicSparks(x: number, y: number, angle: number, color: string, count: number) {
+  private spawnMagicSparks(x: number, y: number, angle: number, type: MagicType, count: number) {
     for (let i = 0; i < count; i++) {
-      const sparkAngle = angle + rnd(-0.74, 0.74);
-      const speed = rnd(90, 235);
-      this.parts.push({ x: x + Math.cos(sparkAngle) * rnd(0, 10), y: y + Math.sin(sparkAngle) * rnd(0, 10), vx: Math.cos(sparkAngle) * speed, vy: Math.sin(sparkAngle) * speed, life: rnd(0.2, 0.45), max: 0.45, size: 2, color: i % 5 === 0 ? "#ffffff" : color, drag: 3.5, kind: i % 3 === 0 ? 3 : 2, rot: sparkAngle });
+      const spread = type === "water" ? 0.42 : type === "poison" ? 0.98 : 0.74;
+      const sparkAngle = angle + rnd(-spread, spread);
+      const speed = type === "ice" ? rnd(130, 285) : type === "water" ? rnd(85, 190) : rnd(90, 235);
+      const fire = type === "fire";
+      const poison = type === "poison";
+      const ice = type === "ice";
+      const water = type === "water";
+      this.parts.push({
+        x: x + Math.cos(sparkAngle) * rnd(0, 10),
+        y: y + Math.sin(sparkAngle) * rnd(0, 10),
+        vx: Math.cos(sparkAngle) * speed,
+        vy: Math.sin(sparkAngle) * speed + (fire ? -rnd(20, 70) : poison ? -rnd(8, 42) : water ? rnd(-30, 30) : 0),
+        life: fire ? rnd(0.22, 0.5) : poison ? rnd(0.35, 0.7) : rnd(0.18, 0.42),
+        max: poison ? 0.7 : 0.5,
+        size: fire ? rnd(2, 4) : poison ? rnd(2, 5) : ice ? rnd(1, 3) : 2,
+        color: i % 6 === 0 ? "#ffffff" : fire ? pick(["#ff5a3d", "#ffb347", "#ffd44a"]) : poison ? pick(["#8cdf55", "#d8ff6a", "#4d9b52"]) : ice ? pick(["#86e7ff", "#d9fbff", "#4aaee8"]) : pick(["#62a9ff", "#c1f6ff", "#3992d8"]),
+        drag: poison ? 2.1 : 3.5,
+        kind: fire ? (i % 3 === 0 ? 3 : 0) : poison ? 0 : ice ? 2 : (i % 2 === 0 ? 3 : 2),
+        rot: water ? angle + (i % 2 ? Math.PI / 2 : -Math.PI / 2) : sparkAngle,
+      });
     }
   }
 
   private spawnPsychicGroundFx(x: number, y: number, r: number, type: MagicType, hits: number) {
-    const color = this.magicColor();
-    const count = 30 + hits * 3;
+    const count = 36 + hits * 4;
     for (let i = 0; i < count; i++) {
       const a = Math.random() * TAU;
       const d = Math.sqrt(Math.random()) * r;
       const px = x + Math.cos(a) * d;
       const py = y + Math.sin(a) * d * 0.56;
-      const upward = type === "fire" ? -rnd(50, 130) : type === "ice" ? -rnd(20, 70) : rnd(-45, 45);
-      this.parts.push({ x: px, y: py, vx: Math.cos(a) * rnd(15, 90), vy: upward, life: rnd(0.25, 0.6), max: 0.6, size: type === "water" ? 2 : 3, color: i % 6 === 0 ? "#ffffff" : color, drag: 2.8, kind: type === "water" ? 2 : 0, rot: a });
+      const fire = type === "fire";
+      const poison = type === "poison";
+      const ice = type === "ice";
+      const water = type === "water";
+      const color = fire ? pick(["#ff5a3d", "#ffb347", "#ffd44a"]) : poison ? pick(["#8cdf55", "#d8ff6a", "#4d9b52"]) : ice ? pick(["#86e7ff", "#d9fbff", "#4aaee8"]) : pick(["#62a9ff", "#c1f6ff", "#3992d8"]);
+      this.parts.push({
+        x: px,
+        y: py,
+        vx: fire ? rnd(-45, 45) : water ? Math.cos(a) * rnd(45, 120) : Math.cos(a) * rnd(15, 90),
+        vy: fire ? -rnd(70, 165) : poison ? -rnd(12, 65) : ice ? -rnd(35, 115) : Math.sin(a) * rnd(20, 75),
+        life: fire ? rnd(0.3, 0.65) : poison ? rnd(0.45, 0.8) : rnd(0.25, 0.58),
+        max: poison ? 0.8 : 0.65,
+        size: fire ? rnd(2, 5) : poison ? rnd(3, 6) : ice ? rnd(1, 3) : 2,
+        color,
+        drag: poison ? 1.8 : 2.8,
+        kind: fire ? (i % 4 === 0 ? 3 : 0) : poison ? 0 : ice ? 2 : (i % 2 === 0 ? 3 : 2),
+        rot: water ? a + Math.PI / 2 : a,
+      });
     }
   }
-
   private cutDuringDash() {
     const angle = Math.atan2(this.dashDy, this.dashDx);
     const damage = 4 + this.weaponLevels.katana.damage * 2;
@@ -2591,23 +2622,34 @@ export class Game {
   private drawPsychicZones(ctx: CanvasRenderingContext2D) {
     for (const zone of this.psychicZones) {
       const p = clamp(zone.life / zone.maxLife, 0, 1);
-      const color = zone.type === "fire" ? "#ff5a3d" : zone.type === "ice" ? "#86e7ff" : zone.type === "poison" ? "#8cdf55" : "#62a9ff";
+      const fire = zone.type === "fire";
+      const poison = zone.type === "poison";
+      const ice = zone.type === "ice";
+      const color = fire ? "#ff5a3d" : poison ? "#8cdf55" : ice ? "#86e7ff" : "#62a9ff";
       ctx.save();
-      ctx.globalAlpha = 0.25 + p * 0.35;
-      for (let i = 0; i < 18; i++) {
-        const a = (i / 18) * TAU + zone.life * 5;
-        const d = zone.r * (0.25 + ((i * 7) % 10) / 14);
+      ctx.globalAlpha = 0.22 + p * 0.42;
+      for (let i = 0; i < 28; i++) {
+        const a = (i / 28) * TAU + zone.life * (fire ? 8 : poison ? -4 : 5);
+        const d = zone.r * (0.12 + ((i * 11) % 17) / 19);
         const x = Math.round(zone.x + Math.cos(a) * d);
-        const y = Math.round(zone.y + Math.sin(a) * d * 0.55);
-        ctx.fillStyle = i % 5 === 0 ? "#ffffff" : color;
-        if (zone.type === "fire") ctx.fillRect(x, y - 4 - (i % 3), 3, 6 + (i % 4));
-        else if (zone.type === "ice") {
-          ctx.fillRect(x, y, 2, 5);
-          ctx.fillRect(x - 2, y + 3, 6, 1);
-        } else if (zone.type === "water") {
-          ctx.fillRect(x - 3, y, 7, 2);
-          ctx.fillRect(x - 1, y - 2, 3, 1);
-        } else ctx.fillRect(x - 2, y - 2, 4, 4);
+        const y = Math.round(zone.y + Math.sin(a) * d * 0.56);
+        ctx.fillStyle = i % 7 === 0 ? "#ffffff" : color;
+        if (fire) {
+          ctx.fillRect(x - 1, y - 5 - (i % 4), 3, 7 + (i % 5));
+          ctx.fillStyle = "#ffd44a";
+          ctx.fillRect(x, y - 3 - (i % 3), 1, 4);
+        } else if (poison) {
+          ctx.fillRect(x - 3, y - 2, 6, 4);
+          ctx.fillStyle = "#d8ff6a";
+          ctx.fillRect(x - 1, y - 3, 3, 2);
+        } else if (ice) {
+          ctx.fillRect(x, y - 5, 2, 8);
+          ctx.fillRect(x - 3, y + 2, 8, 1);
+        } else {
+          ctx.fillRect(x - 4, y, 9, 2);
+          ctx.fillRect(x - 2, y - 2, 5, 1);
+          ctx.fillRect(x, y + 2, 2, 2);
+        }
       }
       ctx.restore();
     }
