@@ -3,18 +3,19 @@ import type { HudStats } from "../game/engine";
 import type { Language, Strings } from "../game/i18n";
 import { formatTime } from "../game/storage";
 import PixelSprite from "./PixelSprite";
-import { WEAPON_ICON } from "./ShopScreen";
+import WeaponPreview from "./WeaponPreview";
 
 function Heart({ filled }: { filled: boolean }) {
   return <svg viewBox="0 0 7 6" className="h-3 w-4 sm:h-4 sm:w-5" shapeRendering="crispEdges"><g fill={filled ? "#ff4353" : "#2a0e13"}><rect x="1" y="0" width="2" height="1" /><rect x="4" y="0" width="2" height="1" /><rect x="0" y="1" width="7" height="2" /><rect x="1" y="3" width="5" height="1" /><rect x="2" y="4" width="3" height="1" /><rect x="3" y="5" width="1" height="1" /></g>{filled && <rect x="1" y="1" width="1" height="1" fill="#ffd2b5" />}</svg>;
 }
 
-export default function Hud({ stats, best, onPause, onMute, onSelectSlot, muted, hudScale, language, t }: {
+export default function Hud({ stats, best, onPause, onMute, onSelectSlot, onDash, muted, hudScale, language, t }: {
   stats: HudStats;
   best: number;
   onPause: () => void;
   onMute: () => void;
   onSelectSlot: (slot: number) => void;
+  onDash: () => void;
   muted: boolean;
   hudScale: 0.65 | 0.85 | 1 | 1.25 | 1.5;
   language: Language;
@@ -58,11 +59,11 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, muted,
       {stats.mineTutorial && <div className="font-pixel absolute bottom-28 left-1/2 w-[min(90%,460px)] -translate-x-1/2 border-4 border-[#070305] bg-[#10282b]/95 px-4 py-3 text-center text-[7px] leading-5 text-[#ffd44a] shadow-[0_5px_0_#070305]">{t.mineTutorial}</div>}
 
       <div className="pointer-events-auto mx-auto flex max-w-full items-end justify-center gap-2 pb-1" style={{ transform: `scale(${hudScale})`, transformOrigin: "bottom center" }}>
-        <div className="dash-gauge" title={`${g.dash}: ${stats.dashReady ? t.ready : `${stats.dashCd.toFixed(1)}s`}`}>
+        <button onClick={onDash} className={`dash-gauge dash-action ${stats.dashReady ? "is-ready" : ""}`} title={`${g.dash}: ${stats.dashReady ? t.ready : `${stats.dashCd.toFixed(1)}s`}`} aria-label={g.dash}>
           <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="#0b1215" stroke="#352029" strokeWidth="5" /><circle cx="26" cy="26" r="22" fill="none" stroke={stats.dashReady ? "#ffd44a" : "#e0444d"} strokeWidth="5" strokeDasharray={`${dashProgress * 138.23} 138.23`} /></svg>
           <PixelSprite name="player" scale={2} className={stats.dashReady ? "anim-bob" : "opacity-50"} />
-          <strong>{stats.dashReady ? "SHIFT" : `${Math.ceil(stats.dashCd)}s`}</strong>
-        </div>
+          <strong>{stats.dashReady ? "DASH" : `${Math.ceil(stats.dashCd)}s`}</strong>
+        </button>
 
         <div className="weapon-rail">{[0, 1, 2, 3].map((index) => {
           const weapon = stats.weapons[index];
@@ -72,7 +73,7 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, muted,
           const totalLevel = levels.damage + levels.speed + levels.range + levels.form;
           const label = weapon === "book" ? g.book : weapon === "bow" && levels.form > 0 ? g.automaticPistol : weapon === "hammer" && levels.form > 0 ? g.titanHammer : (t[weapon] as string);
           return <button key={index} onClick={() => onSelectSlot(index)} className={`weapon-slot ${active ? "is-active" : ""}`} title={label}>
-            <span className="slot-key">{index + 1}</span><PixelSprite name={WEAPON_ICON[weapon]} scale={active ? 3 : 2} /><span className="slot-name">{label}</span><span className="slot-level">{g.level}{totalLevel}{weapon === "book" ? ` · ${g[stats.magicType]}` : ""}</span>
+            <span className="slot-key">{index + 1}</span><WeaponPreview weapon={weapon} form={levels.form} scale={active ? 2 : 1} className="weapon-slot-preview" /><span className="slot-name">{label}</span><span className="slot-level">{g.level}{totalLevel}{weapon === "book" ? ` · ${g[stats.magicType]}` : ""}</span>
           </button>;
         })}</div>
       </div>

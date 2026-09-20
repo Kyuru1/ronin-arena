@@ -57,6 +57,7 @@ const defaultOpts: UiOpts = {
   vsync: true,
   language: "pt",
   hudScale: 1,
+  textScale: 1,
   keyboardOnly: false,
 };
 
@@ -363,7 +364,7 @@ export default function App() {
   const t = I18N[opts.language];
 
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[#070305]">
+    <div className={`relative flex h-full w-full items-center justify-center overflow-hidden bg-[#070305] ui-text-${opts.textScale === 0.85 ? "small" : opts.textScale === 1.15 ? "large" : "normal"}`}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(117,16,29,0.25),transparent_65%)]" />
 
       <div ref={wrapRef} className="relative h-full w-full max-w-[1500px]">
@@ -377,26 +378,14 @@ export default function App() {
             onMute={toggleMute}
             onPause={togglePause}
             onSelectSlot={selectSlot}
+            onDash={() => gameRef.current?.touchDash()}
             hudScale={opts.hudScale}
             language={opts.language}
             t={t}
           />
         )}
 
-        {isTouch && phase === "playing" && (
-          <button
-            onPointerDown={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              gameRef.current?.touchDash();
-            }}
-            className={`pxb font-pixel absolute bottom-16 right-4 z-10 h-16 w-16 text-[9px] ${
-              stats.dashReady ? "pxb-red" : "pxb-dark"
-            }`}
-          >
-            {stats.dashReady ? t.dashLabel : `${Math.ceil(stats.dashCd)}s`}
-          </button>
-        )}
+
 
         {phase === "menu" && (
           <div className={menuClosing ? "anim-menu-out" : ""}>

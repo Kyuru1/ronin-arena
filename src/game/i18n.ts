@@ -36,6 +36,11 @@ export interface Strings {
   hudHuge: string;
   hudSmall: string;
   hudTiny: string;
+  textSize: string;
+  textSmall: string;
+  textNormal: string;
+  textLarge: string;
+  install: string;
   accessibility: string;
   keyboardOnly: string;
   on: string;
@@ -167,7 +172,7 @@ export const I18N = {
     hudNormal: "NORMAL",
     hudLarge: "GRANDE",
     hudHuge: "ENORME",
-    hudSmall: "PEQUENA", hudTiny: "MINÚSCULA", accessibility: "ACESSIBILIDADE", keyboardOnly: "SOMENTE TECLADO",
+    hudSmall: "PEQUENA", hudTiny: "MINÚSCULA", textSize: "TAMANHO DO TEXTO", textSmall: "PEQUENO", textNormal: "NORMAL", textLarge: "GRANDE", install: "INSTALAR JOGO", accessibility: "ACESSIBILIDADE", keyboardOnly: "SOMENTE TECLADO",
     on: "LIGADO",
     off: "DESLIGADO",
     noScores: "SEM RECORDES AINDA",
@@ -285,7 +290,7 @@ export const I18N = {
     hudNormal: "NORMAL",
     hudLarge: "LARGE",
     hudHuge: "HUGE",
-    hudSmall: "SMALL", hudTiny: "TINY", accessibility: "ACCESSIBILITY", keyboardOnly: "KEYBOARD ONLY",
+    hudSmall: "SMALL", hudTiny: "TINY", textSize: "TEXT SIZE", textSmall: "SMALL", textNormal: "NORMAL", textLarge: "LARGE", install: "INSTALL GAME", accessibility: "ACCESSIBILITY", keyboardOnly: "KEYBOARD ONLY",
     on: "ON",
     off: "OFF",
     noScores: "NO SCORES YET",
@@ -403,7 +408,7 @@ export const I18N = {
     hudNormal: "NORMALE",
     hudLarge: "GRANDE",
     hudHuge: "ÉNORME",
-    hudSmall: "PETITE", hudTiny: "MINUSCULE", accessibility: "ACCESSIBILITÉ", keyboardOnly: "CLAVIER UNIQUEMENT",
+    hudSmall: "PETITE", hudTiny: "MINUSCULE", textSize: "TAILLE DU TEXTE", textSmall: "PETIT", textNormal: "NORMAL", textLarge: "GRAND", install: "INSTALLER LE JEU", accessibility: "ACCESSIBILITÉ", keyboardOnly: "CLAVIER UNIQUEMENT",
     on: "ACTIVÉ",
     off: "DÉSACTIVÉ",
     noScores: "AUCUN SCORE",
@@ -499,7 +504,7 @@ I18N.de = {
   graphics: "GRAFIK", quality: "QUALITÄT", qualityHigh: "HOCH", qualityLow: "NIEDRIG", fullscreen: "VOLLBILD",
   enter: "ÖFFNEN", exit: "BEENDEN", sound: "TON", volume: "LAUTSTÄRKE", screenShake: "BILDSCHIRMWACKELN",
   screenFlash: "BILDSCHIRMBLITZ", on: "AN", off: "AUS", noScores: "NOCH KEINE ERGEBNISSE", wave: "WELLE",
-  hudSize: "HUD-GRÖSSE", hudNormal: "NORMAL", hudLarge: "GROSS", hudHuge: "RIESIG", hudSmall: "KLEIN", hudTiny: "WINZIG", accessibility: "BARRIEREFREIHEIT", keyboardOnly: "NUR TASTATUR",
+  hudSize: "HUD-GRÖSSE", hudNormal: "NORMAL", hudLarge: "GROSS", hudHuge: "RIESIG", hudSmall: "KLEIN", hudTiny: "WINZIG", textSize: "TEXTGRÖSSE", textSmall: "KLEIN", textNormal: "NORMAL", textLarge: "GROSS", install: "SPIEL INSTALLIEREN", accessibility: "BARRIEREFREIHEIT", keyboardOnly: "NUR TASTATUR",
   rank: "PLATZ", name: "NAME", score: "PUNKTE", clear: "RANGLISTE LÖSCHEN", paused: "PAUSIERT",
   resume: "FORTSETZEN", quit: "BEENDEN", youDied: "DU BIST GESTORBEN", newRecord: "NEUER REKORD",
   finalScore: "PUNKTE", kills: "BESIEGT", time: "ZEIT", enterName: "NAMEN EINGEBEN", save: "SPEICHERN",
@@ -531,7 +536,7 @@ I18N.zh = {
   touchStart: "点击开始", best: "最高纪录", coins: "金币", graphics: "画面", quality: "画质", qualityHigh: "高",
   qualityLow: "低", fullscreen: "全屏", enter: "进入", exit: "退出", sound: "声音", volume: "音量",
   screenShake: "屏幕震动", screenFlash: "屏幕闪光", on: "开", off: "关", noScores: "暂无纪录", wave: "波次",
-  hudSize: "界面大小", hudNormal: "普通", hudLarge: "大", hudHuge: "特大", hudSmall: "小", hudTiny: "极小", accessibility: "无障碍", keyboardOnly: "仅键盘",
+  hudSize: "界面大小", hudNormal: "普通", hudLarge: "大", hudHuge: "特大", hudSmall: "小", hudTiny: "极小", textSize: "文字大小", textSmall: "小", textNormal: "普通", textLarge: "大", install: "安装游戏", accessibility: "无障碍", keyboardOnly: "仅键盘",
   rank: "排名", name: "名字", score: "分数", clear: "清除排行榜", paused: "已暂停", resume: "继续", quit: "退出",
   youDied: "你已阵亡", newRecord: "新纪录", finalScore: "最终分数", kills: "击杀", time: "时间",
   enterName: "输入名字", save: "保存", skip: "跳过", playAgain: "再玩一次", menu: "菜单",

@@ -116,7 +116,7 @@ export default function ShopScreen({
 
   return (
     <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-2 sm:p-5">
-      <PxFrame title={t.waveClearedTitle.replace("{wave}", String(wave))} icon="icoTrophy" className="anim-pop relative my-auto flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden p-3 pt-7 sm:p-5 sm:pt-8">
+      <PxFrame title={t.waveClearedTitle.replace("{wave}", String(wave))} icon="icoTrophy" className="shop-frame anim-pop relative my-auto flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden p-3 pt-10 sm:p-5 sm:pt-11">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-1">
             <button className={`shop-tab ${tab === "weapons" ? "is-active" : ""}`} onClick={() => setTab("weapons")}>{t.tabWeapons} + {g.upgrades}</button>
@@ -128,14 +128,14 @@ export default function ShopScreen({
         <div className="px-divider my-3" />
 
         {tab === "weapons" ? (
-          <div className="scrollbar-thin grid min-h-0 flex-1 gap-3 overflow-y-auto lg:grid-cols-[190px_1fr_280px]">
+          <div className="shop-layout scrollbar-thin grid min-h-0 flex-1 gap-3 overflow-y-auto lg:grid-cols-[190px_1fr_280px]">
             <div className="flex flex-col gap-1">
               <div className="font-pixel mb-1 text-[7px] text-[#ffd44a]">{t.weaponsTitle}</div>
               {ALL_WEAPONS.map((weapon) => {
                 const index = stats.weapons.indexOf(weapon.id);
                 return (
                   <button key={weapon.id} onClick={() => setSelected(weapon.id)} className={`pxb pxb-menu font-pixel !py-2 text-[7px] ${selected === weapon.id ? "is-active" : ""}`}>
-                    <PixelSprite name={WEAPON_ICON[weapon.id]} scale={1} />
+                    <WeaponPreview weapon={weapon.id} form={stats.weaponLevels[weapon.id].form} scale={1} className="shop-weapon-icon" />
                     <span className="truncate">{weaponName(weapon.id, t, g, stats.weaponLevels[weapon.id].form)}</span>
                     {index >= 0 && <span className="ml-auto bg-[#ffd44a] px-1 text-[6px] text-[#351c00]">{index + 1}</span>}
                   </button>
@@ -146,7 +146,7 @@ export default function ShopScreen({
                   const weapon = stats.weapons[index];
                   return weapon ? (
                     <button key={index} onClick={() => { onSelectSlot(index); setSelected(weapon); }} className={`px-tile !h-11 !w-auto ${index === stats.activeSlot ? "outline outline-2 outline-[#ffd44a]" : ""}`}>
-                      <PixelSprite name={WEAPON_ICON[weapon]} scale={2} />
+                      <WeaponPreview weapon={weapon} form={stats.weaponLevels[weapon].form} scale={1} className="shop-slot-preview" />
                     </button>
                   ) : <div key={index} className="px-empty flex h-11 items-center justify-center text-[7px] text-[#6c3a42]">{index + 1}</div>;
                 })}

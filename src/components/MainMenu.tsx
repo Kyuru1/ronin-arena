@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Difficulty } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
 import { formatTime, type ScoreEntry } from "../game/storage";
@@ -14,10 +14,16 @@ export interface UiOpts {
   vsync: boolean;
   language: Language;
   hudScale: 0.65 | 0.85 | 1 | 1.25 | 1.5;
+  textScale: 0.85 | 1 | 1.15;
   keyboardOnly: boolean;
 }
 
 type MenuTab = "main" | "settings" | "language" | "ranking";
+
+interface InstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }> ;
+}
 
 export default function MainMenu({ onStart, difficulty, onDifficulty, scores, best, opts, onOpts, onClearScores, onFullscreen }: {
   onStart: (difficulty?: Difficulty) => void;
@@ -32,6 +38,21 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
 }) {
   const [tab, setTab] = useState<MenuTab>("main");
   const [difficultyOpen, setDifficultyOpen] = useState(false);
+  const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
+  useEffect(() => {
+    const onBeforeInstall = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as InstallPromptEvent);
+    };
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+  }, []);
+  const installGame = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    await installPrompt.userChoice;
+    setInstallPrompt(null);
+  };
   const t = I18N[opts.language];
 
   if (tab !== "main") {
@@ -49,7 +70,7 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
               <PxRow label={t.fullscreen}><PxChip on onClick={onFullscreen}>{t.enter}</PxChip></PxRow>
             </div>
             <div className="px-inset p-3"><div className="mb-2 flex justify-between font-pixel text-[7px]"><span>{t.volume}</span><span className="text-[#ffd44a]">{Math.round(opts.volume * 100)}%</span></div><input type="range" min={0} max={100} value={Math.round(opts.volume * 100)} onChange={(event) => onOpts({ volume: Number(event.target.value) / 100 })} className="slider w-full" /></div>
-            <div className="px-inset p-3"><div className="mb-2 font-pixel text-[7px]">{t.hudSize}</div><div className="flex flex-wrap gap-1">{([0.65, 0.85, 1, 1.25, 1.5] as const).map((size) => <PxChip key={size} on={opts.hudScale === size} onClick={() => onOpts({ hudScale: size })}>{size === 0.65 ? t.hudTiny : size === 0.85 ? t.hudSmall : size === 1 ? t.hudNormal : size === 1.25 ? t.hudLarge : t.hudHuge}</PxChip>)}</div></div>
+            <div className="px-inset p-3"><div className="mb-2 font-pixel text-[7px]">{t.hudSize}</div><div className="flex flex-wrap gap-1">{([0.65, 0.85, 1, 1.25, 1.5] as const).map((size) => <PxChip key={size} on={opts.hudScale === size} onClick={() => onOpts({ hudScale: size })}>{size === 0.65 ? t.hudTiny : size === 0.85 ? t.hudSmall : size === 1 ? t.hudNormal : size === 1.25 ? t.hudLarge : t.hudHuge}</PxChip>)}</div></div><div className="px-inset p-3"><div className="mb-2 font-pixel text-[7px]">{t.textSize}</div><div className="flex flex-wrap gap-1">{([0.85, 1, 1.15] as const).map((size) => <PxChip key={size} on={opts.textScale === size} onClick={() => onOpts({ textScale: size })}>{size === 0.85 ? t.textSmall : size === 1 ? t.textNormal : t.textLarge}</PxChip>)}</div></div>
             <div className="px-inset p-3"><div className="mb-2 font-pixel text-[7px]">{t.accessibility}</div><PxRow label={t.keyboardOnly}><PxChip on={opts.keyboardOnly} onClick={() => onOpts({ keyboardOnly: !opts.keyboardOnly })}>{opts.keyboardOnly ? t.on : t.off}</PxChip></PxRow></div>
           </div>}
 
@@ -105,7 +126,7 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
         <footer className="flex w-full max-w-sm flex-col gap-2 border-t-4 border-[#35141b] pt-5">
           <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
-          <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>{installPrompt && <PxButton tone="gold" onClick={() => void installGame()} className="justify-center text-[8px]">↓ {t.install}</PxButton>}
           <div className="menu-record mt-2 text-center"><span>{t.best}</span><strong>{best.toLocaleString()}</strong></div>
         </footer>
       </div>

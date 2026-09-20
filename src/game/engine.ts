@@ -341,6 +341,7 @@ export class Game {
   impacts: Impact[] = [];
   arrows: PlayerArrow[] = [];
   dashHitSet = new Set<Enemy>();
+  dashSlashes: { x: number; y: number; a: number; life: number; max: number }[] = [];
   shockwaves: Shockwave[] = [];
   psychicZones: PsychicZone[] = [];
   mines: LandMine[] = [];
@@ -784,6 +785,7 @@ export class Game {
     this.shockwaves.length = 0;
     this.psychicZones.length = 0;
     this.dashHitSet.clear();
+    this.dashSlashes.length = 0;
     this.mines.length = 0;
     this.pickups.length = 0;
     this.marks.length = 0;
@@ -1021,6 +1023,10 @@ export class Game {
     this.flash = Math.max(0, this.flash - dt * 4.2);
     this.bannerT = Math.max(0, this.bannerT - dt);
     this.vignettePulse = Math.max(0, this.vignettePulse - dt * 2);
+    for (let i = this.dashSlashes.length - 1; i >= 0; i--) {
+      this.dashSlashes[i].life -= dt;
+      if (this.dashSlashes[i].life <= 0) this.dashSlashes.splice(i, 1);
+    }
     for (let i = this.afterimages.length - 1; i >= 0; i--) {
       this.afterimages[i].life -= dt * 3.2;
       if (this.afterimages[i].life <= 0) this.afterimages.splice(i, 1);
@@ -1167,7 +1173,10 @@ export class Game {
       this.py = this.H - M;
       this.pvy = 0;
     }
-    if (this.dashT > 0 && this.currentWeapon === "katana" && this.weaponLevels.katana.form > 0) this.cutDuringDash();
+    if (this.dashT > 0 && this.currentWeapon === "katana" && this.weaponLevels.katana.form > 0) {
+      this.cutDuringDash();
+      if (this.dashSlashes.length < 18) this.dashSlashes.push({ x: this.px, y: this.py, a: Math.atan2(this.dashDy, this.dashDx), life: 0.24, max: 0.24 });
+    }
 
     this.iframe = Math.max(0, this.iframe - dt);
     this.dashCd = Math.max(0, this.dashCd - dt);
@@ -1191,6 +1200,7 @@ export class Game {
         this.dashDy = dy / l;
         this.dashT = 0.17;
         this.dashHitSet.clear();
+    this.dashSlashes.length = 0;
         this.dashCd = this.dashMax;
         this.iframe = Math.max(this.iframe, 0.26);
         this.shake = Math.max(this.shake, 3);
@@ -2809,6 +2819,26 @@ export class Game {
       ctx.restore();
     }
 
+    // Evolved katana leaves a bright cutting thread along the entire dash.
+    for (const slash of this.dashSlashes) {
+      const fade = clamp(slash.life / slash.max, 0, 1);
+      const length = 28 + fade * 20;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = fade * 0.72;
+      ctx.strokeStyle = "#ba9cff";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(slash.x - Math.cos(slash.a) * length * 0.58, slash.y - Math.sin(slash.a) * length * 0.58);
+      ctx.lineTo(slash.x + Math.cos(slash.a) * length * 0.42, slash.y + Math.sin(slash.a) * length * 0.42);
+      ctx.stroke();
+      ctx.globalAlpha = fade;
+      ctx.strokeStyle = "#fff3dc";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
     // Afterimages
     for (const a of this.afterimages) {
       ctx.globalAlpha = a.life * 0.35;
@@ -2939,7 +2969,10 @@ export class Game {
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
+    ctx.save();
+    ctx.filter = "saturate(1.65) contrast(1.12)";
     this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY);
+    ctx.restore();
     if (e.maxHp > 2 && (e.hp < e.maxHp || e.type === "boss")) {
       const w = e.type === "boss" ? 46 : 14;
       const x = Math.round(e.x - w / 2);
