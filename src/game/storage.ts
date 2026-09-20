@@ -83,14 +83,6 @@ export function saveScore(entry: ScoreEntry): { list: ScoreEntry[]; rank: number
   return { list: trimmed, rank: trimmed.findIndex((item) => item === entry) };
 }
 
-export function clearScores() {
-  try {
-    localStorage.removeItem(KEY);
-  } catch {
-    /* ignore */
-  }
-}
-
 function saveLocal(list: ScoreEntry[]) {
   try {
     localStorage.setItem(KEY, JSON.stringify(list));

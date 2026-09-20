@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Game, type Difficulty, type HudStats, type MagicType, type PowerUp, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
 import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
-import { clearScores, loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
+import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
 import Hud from "./components/Hud";
 import { GameOverScreen, PauseScreen } from "./components/Screens";
@@ -410,10 +410,7 @@ export default function App() {
               opts={opts}
               onOpts={applyOpts}
               onFullscreen={toggleFullscreen}
-              onClearScores={() => {
-                clearScores();
-                setScores([]);
-              }}
+
             />
           </div>
         )}
