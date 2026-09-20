@@ -28,6 +28,7 @@ interface InstallPromptEvent extends Event {
 export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, best, opts, onOpts, onFullscreen }: {
   onStart: (difficulty?: Difficulty) => void;
   onPerk: (perk: Perk | null) => void;
+
   difficulty: Difficulty;
   onDifficulty: (difficulty: Difficulty) => void;
   scores: ScoreEntry[];
@@ -135,6 +136,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
   return (
     <div className="menu-arena absolute inset-0 z-20 overflow-y-auto">
+      {installPrompt && <PxButton tone="gold" onClick={() => void installGame()} className="absolute right-3 top-3 z-10 text-[7px] shadow-[0_4px_0_#070305] sm:right-6 sm:top-6">↓ {t.install}</PxButton>}
       <div className="menu-grid mx-auto flex min-h-full w-full max-w-4xl flex-col items-center justify-center px-4 py-6 sm:px-8">
         <header className="w-full border-b-4 border-[#6b2530] pb-5 text-center">
           <div className="font-pixel text-[8px] tracking-[0.35em] text-[#e6535c]">KYU</div>
@@ -150,7 +152,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
         <footer className="flex w-full max-w-sm flex-col gap-2 border-t-4 border-[#35141b] pt-5">
           <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
-          <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>{installPrompt && <PxButton tone="gold" onClick={() => void installGame()} className="justify-center text-[8px]">↓ {t.install}</PxButton>}
+          <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
           <div className="menu-record mt-2 text-center"><span>{t.best}</span><strong>{best.toLocaleString()}</strong></div>
         </footer>
       </div>

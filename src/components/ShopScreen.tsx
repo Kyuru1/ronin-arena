@@ -80,7 +80,7 @@ function weaponDescription(w: Weapon, t: Strings, g: GameplayStrings) {
 }
 
 function upgradeCost(weapon: Weapon, kind: WeaponUpgrade, level: number) {
-  if (kind === "form") return weapon === "hammer" ? 130 : weapon === "book" ? 120 : weapon === "katana" ? 115 : 100;
+  if (kind === "form") return weapon === "hammer" ? 130 : weapon === "book" ? 120 : weapon === "katana" ? 115 : weapon === "staff" ? 110 : weapon === "bow" ? 105 : 100;
   const base = kind === "damage" ? 20 : kind === "speed" ? 24 : 22;
   return base + level * 18;
 }

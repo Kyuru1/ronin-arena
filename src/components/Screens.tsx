@@ -142,6 +142,7 @@ export function GameOverScreen({
                 {t.save}
               </PxButton>
               <PxButton type="button" tone="dark" onClick={onRestart} className="mt-2 w-full py-2.5 text-[8px]">▶ {t.playAgain}</PxButton>
+              <PxButton type="button" tone="dark" onClick={onMenu} className="mt-2 w-full py-2.5 text-[8px]">← {t.menu}</PxButton>
             </form>
           ) : (
             <>

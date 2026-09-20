@@ -9,7 +9,7 @@ function Heart({ filled }: { filled: boolean }) {
   return <svg viewBox="0 0 7 6" className="h-3 w-4 sm:h-4 sm:w-5" shapeRendering="crispEdges"><g fill={filled ? "#ff4353" : "#2a0e13"}><rect x="1" y="0" width="2" height="1" /><rect x="4" y="0" width="2" height="1" /><rect x="0" y="1" width="7" height="2" /><rect x="1" y="3" width="5" height="1" /><rect x="2" y="4" width="3" height="1" /><rect x="3" y="5" width="1" height="1" /></g>{filled && <rect x="1" y="1" width="1" height="1" fill="#ffd2b5" />}</svg>;
 }
 
-export default function Hud({ stats, best, onPause, onMute, onSelectSlot, onDash, muted, hudScale, language, t }: {
+export default function Hud({ stats, best, onPause, onSelectSlot, onDash, hudScale, language, t }: {
   stats: HudStats;
   best: number;
   onPause: () => void;
@@ -50,7 +50,7 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, onDash
           <span className="hud-label">{t.score}</span>
           <strong className="font-pixel block text-[15px] text-white sm:text-[20px]">{stats.score.toLocaleString()}</strong>
           <span className="font-pixel text-[6px] text-[#b78c91]">{t.best} {best.toLocaleString()}</span>
-          <div className="pointer-events-auto mt-1 flex justify-end gap-1"><button onClick={onMute} className="hud-icon" aria-label={t.mute}>{muted ? "X" : "♪"}</button><button onClick={onPause} className="hud-icon" aria-label={t.pause}>II</button></div>
+          <div className="pointer-events-auto mt-1 flex justify-end gap-1"><button onClick={onPause} className="hud-icon" aria-label={t.pause}>II</button></div>
         </section>
       </div>
 
