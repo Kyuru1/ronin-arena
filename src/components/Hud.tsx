@@ -71,7 +71,7 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, onDash
           if (!weapon) return <div key={index} className="weapon-slot is-empty"><span>{index + 1}</span></div>;
           const levels = stats.weaponLevels[weapon];
           const totalLevel = levels.damage + levels.speed + levels.range + levels.form;
-          const label = weapon === "book" ? g.book : weapon === "bow" && levels.form > 0 ? g.automaticPistol : weapon === "hammer" && levels.form > 0 ? g.titanHammer : (t[weapon] as string);
+          const label = weapon === "book" ? g.book : weapon === "bow" && levels.form > 0 ? g.automaticPistol : weapon === "hammer" && levels.form > 0 ? g.titanHammer : weapon === "staff" && levels.form > 0 ? g.necromancerStaff : weapon === "staff" ? g.staff : (t[weapon] as string);
           return <button key={index} onClick={() => onSelectSlot(index)} className={`weapon-slot ${active ? "is-active" : ""}`} title={label}>
             <span className="slot-key">{index + 1}</span><WeaponPreview weapon={weapon} form={levels.form} scale={active ? 2 : 1} className="weapon-slot-preview" /><span className="slot-name">{label}</span><span className="slot-level">{g.level}{totalLevel}{weapon === "book" ? ` · ${g[stats.magicType]}` : ""}</span>
           </button>;

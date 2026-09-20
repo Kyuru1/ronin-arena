@@ -113,7 +113,7 @@ type EnemyType =
   | "skeleton"
   | "boss";
 
-interface Enemy {
+interface Summon {`r`n  x: number; y: number; vx: number; vy: number; r: number; life: number; maxLife: number;`r`n  kind: "summoned" | "revived"; type: EnemyType; attackCd: number; flash: number;`r`n}`r`n`r`ninterface Enemy {
   type: EnemyType;
   x: number;
   y: number;
@@ -349,7 +349,7 @@ export class Game {
   mines: LandMine[] = [];
 
   // World entities
-  enemies: Enemy[] = [];
+  enemies: Enemy[] = [];`r`n  summons: Summon[] = [];
   parts: Particle[] = [];
   texts: FloatText[] = [];
   shots: Projectile[] = [];
@@ -779,7 +779,7 @@ export class Game {
   /* ----------------------------- lifecycle ----------------------------- */
 
   reset() {
-    this.enemies.length = 0;
+    this.enemies.length = 0;`r`n    this.summons.length = 0;
     this.parts.length = 0;
     this.texts.length = 0;
     this.shots.length = 0;
@@ -1009,7 +1009,7 @@ export class Game {
     }
 
     this.updatePlayer(dt);
-    this.updateEnemies(dt);
+    this.updateEnemies(dt);`r`n    this.updateSummons(dt);
     this.updateShots(dt);
     this.updatePlayerProjectiles(dt);
     this.updateMines(dt);
@@ -1303,7 +1303,7 @@ export class Game {
     }
   }
 
-  private startAttack() {
+  private updateStaff(wantAttack: boolean, dt: number) {`r`n    if (!wantAttack || this.atkCd > 0 || this.dashT > 0 || this.summons.length >= 6) return;`r`n    const a = this.aimAngle();`r`n    this.spawnSummon(this.px + Math.cos(a) * 18, this.py + Math.sin(a) * 18, "summoned");`r`n    this.atkCd = 0.62 / (1 + this.weaponLevels.staff.speed * 0.12);`r`n    this.atkAngle = a;`r`n    this.glint = 1;`r`n    Sfx.swing("staff");`r`n  }`r`n`r`n  private spawnSummon(x: number, y: number, kind: "summoned" | "revived", type: EnemyType = "skeleton") {`r`n    if (this.summons.length >= 6) return;`r`n    this.summons.push({ x, y, vx: 0, vy: 0, r: 8, life: kind === "revived" ? 22 : 16, maxLife: kind === "revived" ? 22 : 16, kind, type, attackCd: 0.4, flash: 0 });`r`n    this.burst(x, y, 12, kind === "revived" ? "#9f63ff" : "#4db9ff", 100);`r`n  }`r`n`r`n  private updateSummons(dt: number) {`r`n    for (let i = this.summons.length - 1; i >= 0; i--) {`r`n      const s = this.summons[i]; s.life -= dt; s.attackCd -= dt;`r`n      if (s.life <= 0) { this.summons.splice(i, 1); continue; }`r`n      let target: Enemy | null = null; let best = Infinity;`r`n      for (const e of this.enemies) { const d = Math.hypot(e.x - s.x, e.y - s.y); if (d < best) { best = d; target = e; } }`r`n      if (target) { const a = Math.atan2(target.y - s.y, target.x - s.x); if (best > 20) { s.vx += Math.cos(a) * 260 * dt; s.vy += Math.sin(a) * 260 * dt; } const sp = Math.hypot(s.vx, s.vy); if (sp > 74) { s.vx = s.vx / sp * 74; s.vy = s.vy / sp * 74; } if (best < target.r + 10 && s.attackCd <= 0) { target.hp -= 1 + Math.floor(this.weaponLevels.staff.damage / 2); target.flash = 0.12; s.attackCd = s.kind === "revived" ? 0.55 : 0.72; this.burst(target.x, target.y, 4, s.kind === "revived" ? "#b276ff" : "#69d7ff", 60); if (target.hp <= 0) this.killEnemy(target, a, false); } }`r`n      s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.92; s.vy *= 0.92;`r`n    }`r`n  }`r`n`r`n  private startAttack() {
     let a = this.aimAngle();
     if (this.currentWeapon === "shield") {
       this.atkAngle = a;
@@ -1867,9 +1867,9 @@ export class Game {
     }
   }
 
-  private killEnemy(e: Enemy, ang: number) {
+  private killEnemy(e: Enemy, ang: number, allowRevive = true) {
     const idx = this.enemies.indexOf(e);
-    if (idx >= 0) this.enemies.splice(idx, 1);
+    if (idx >= 0) this.enemies.splice(idx, 1);`r`n    if (allowRevive && this.currentWeapon === "staff" && this.weaponLevels.staff.form > 0 && Math.random() < 0.5) this.spawnSummon(e.x, e.y, "revived", e.type);
 
     this.combo++;
     this.comboT = 3.2;
@@ -2796,7 +2796,7 @@ export class Game {
 
     // Enemies sorted by Y
     const list = [...this.enemies].sort((a, b) => a.y - b.y);
-    for (const e of list) this.drawEnemy(e);
+    for (const e of list) this.drawEnemy(e);`r`n    for (const s of this.summons) this.drawSummon(s);
 
     // Enemy Projectiles
     for (const s of this.shots) {
@@ -2949,7 +2949,7 @@ export class Game {
     }
   }
 
-  private drawEnemy(e: Enemy) {
+  private drawSummon(s: Summon) {`r`n    const ctx = this.ctx; const color = s.kind === "revived" ? "#a56cff" : "#55c9ff";`r`n    ctx.save(); ctx.filter = s.kind === "revived" ? "hue-rotate(245deg) saturate(2) brightness(.72)" : "hue-rotate(165deg) saturate(2)";`r`n    this.blit(SPR[s.type], s.x, s.y + Math.sin(this.elapsed * 8 + s.x) * 1.2, 1, 0, 1); ctx.restore();`r`n    ctx.globalAlpha = 0.6; ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(s.x, s.y + 2, 10 + Math.sin(this.elapsed * 7) * 1.5, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;`r`n  }`r`n`r`n  private drawEnemy(e: Enemy) {
     const ctx = this.ctx;
     const spr = SPR[e.type];
     const bob =

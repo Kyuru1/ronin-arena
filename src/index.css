@@ -554,7 +554,7 @@ input,
 .menu-control strong, .menu-control span { display: block; font-family: "Press Start 2P", monospace; }
 .menu-control strong { color: #f4e4cf; font-size: 7px; }
 .menu-control span { margin-top: 6px; color: #7db7b1; font-size: 6px; line-height: 1.5; }
-.menu-record { display: flex; min-width: 135px; flex-direction: column; justify-content: center; border: 3px solid #070305; background: #2a1a04; padding: 6px 12px; text-align: right; }
+.menu-record { display: flex; min-width: 135px; flex-direction: column; justify-content: center; border: 3px solid #070305; background: rgba(42, 26, 4, .62); padding: 6px 12px; text-align: right; }
 .menu-record span, .menu-record strong { font-family: "Press Start 2P", monospace; }
 .menu-record span { color: #a78d64; font-size: 6px; }
 .menu-record strong { margin-top: 4px; color: #ffd44a; font-size: 11px; }
