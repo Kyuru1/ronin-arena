@@ -53,8 +53,11 @@ function Pips({ value, max = 5, color }: { value: number; max?: number; color: s
   ))}</span>;
 }
 
-function weaponName(w: Weapon, t: Strings, g: GameplayStrings) {
-  return w === "book" ? g.book : (t[w] as string);
+function weaponName(w: Weapon, t: Strings, g: GameplayStrings, form = 0) {
+  if (w === "book") return g.book;
+  if (w === "bow" && form > 0) return g.automaticPistol;
+  if (w === "hammer" && form > 0) return g.titanHammer;
+  return t[w] as string;
 }
 
 function weaponDescription(w: Weapon, t: Strings, g: GameplayStrings) {

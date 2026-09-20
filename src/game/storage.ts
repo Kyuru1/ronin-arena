@@ -9,8 +9,8 @@ export interface ScoreEntry {
 
 export const MAX = 50;
 const KEY = "ronin.ranking.v2";
-const env = typeof import.meta !== "undefined" && import.meta.env ? import.meta.env : {};
-const API_URL = (env.VITE_RANKING_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
+const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
+const API_URL = (env?.VITE_RANKING_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
 
 function compareEntries(a: ScoreEntry, b: ScoreEntry): number {
   return b.score - a.score || b.wave - a.wave || b.kills - a.kills || b.time - a.time;

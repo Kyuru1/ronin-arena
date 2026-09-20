@@ -16,7 +16,7 @@ test("ranking allows only the top 50 and uses score order", () => {
   assert.equal(trimmed.length, 50);
   assert.equal(trimmed[0].score, 60);
   assert.equal(trimmed.at(-1)?.score, 11);
-  assert.equal(getRankingThreshold(scores).score, 11);
+  assert.equal(getRankingThreshold(scores)!.score, 11);
   assert.equal(qualifies(10, scores), false);
   assert.equal(qualifies(12, scores), true);
 });

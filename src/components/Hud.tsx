@@ -24,13 +24,18 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, muted,
   const comboMult = Math.min(1 + stats.combo * 0.12, 6);
   const dashProgress = stats.dashReady ? 1 : 1 - stats.dashCd / stats.dashMax;
   const waveProgress = stats.waveTotal ? 1 - stats.waveLeft / stats.waveTotal : 0;
+  const healthSegments = 10;
+  const filledHealthSegments = Math.ceil((stats.hp / Math.max(1, stats.maxHp)) * healthSegments);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-2 sm:p-3">
       <div className="combat-topbar grid grid-cols-[1fr_auto_1fr] items-start gap-2">
         <section className="combat-panel justify-self-start">
-          <span className="hud-label">HP</span>
-          <div className="flex gap-[2px]">{Array.from({ length: stats.maxHp }).map((_, index) => <Heart key={index} filled={index < stats.hp} />)}</div>
+          <div className="flex items-center justify-between gap-2">
+            <span className="hud-label">HP</span>
+            <span className="font-pixel text-[6px] text-[#ffd2b5]">{stats.hp}/{stats.maxHp}</span>
+          </div>
+          <div className="flex gap-[2px]">{Array.from({ length: healthSegments }).map((_, index) => <Heart key={index} filled={index < filledHealthSegments} />)}</div>
           <div className="mt-1 flex items-center gap-2"><PixelSprite name="coin" scale={2} /><span className="font-pixel text-[10px] text-[#ffd44a]">{stats.coins}</span><span className="font-pixel text-[5px] text-[#7db7b1]">{g.shopSoon}</span></div>
         </section>
 

@@ -12,7 +12,7 @@ export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
 export const STAT_LIMITS = {
   maxHp: 20,
-  speed: 190,
+  speed: 200,
   dashMax: 2,
   dashSpeedMult: 3,
 } as const;
@@ -156,6 +156,7 @@ interface Projectile {
   vy: number;
   life: number;
   r: number;
+  dmg: number;
 }
 
 interface PlayerArrow {
@@ -357,6 +358,7 @@ export class Game {
   onStats: (s: HudStats) => void = () => {};
   onGameOver: (s: HudStats) => void = () => {};
   onUpgrade: (offer: UpgradeOffer) => void = () => {};
+  onPause: () => void = () => {};
 
   private raf = 0;
   private last = 0;
@@ -712,11 +714,16 @@ export class Game {
 
   closeShop() {
     this.wave++;
+    if ((this.wave - 1) % 3 === 0) this.clearDecals();
     this.phase = "playing";
     this.last = performance.now();
     // re-center the player and give a short breather before the ring closes in
     this.iframe = Math.max(this.iframe, 0.8);
     this.beginWave();
+  }
+
+  private clearDecals() {
+    this.dctx?.clearRect(0, 0, this.W, this.H);
   }
 
   /* ----------------------------- lifecycle ----------------------------- */
@@ -780,7 +787,7 @@ export class Game {
     this.deathT = 0;
     this.banner = "";
     this.bannerT = 0;
-    if (this.dctx) this.dctx.clearRect(0, 0, this.W, this.H);
+    this.clearDecals();
     this.pushStats(true);
   }
 
@@ -808,7 +815,10 @@ export class Game {
   }
 
   pause() {
-    if (this.phase === "playing") this.phase = "paused";
+    if (this.phase === "playing") {
+      this.phase = "paused";
+      this.onPause();
+    }
   }
   resume() {
     if (this.phase === "paused") {
@@ -1775,37 +1785,38 @@ export class Game {
     const w = this.wave;
     const hpB = Math.floor(w / 3) + Math.floor(Math.max(0, w - 8) * 0.45);
     const spB = w * 0.9 + Math.max(0, w - 10) * 0.65;
+    const dmgB = Math.floor(Math.max(0, w - 1) / 2);
     switch (type) {
       case "grunt":
-        return { hp: 2 + hpB, r: 6, speed: 52 + spB, score: 10, dmg: 1 };
+        return { hp: 2 + hpB, r: 6, speed: 52 + spB, score: 10, dmg: 1 + dmgB };
       case "bat":
-        return { hp: 1 + Math.floor(hpB / 2), r: 6, speed: 70 + spB, score: 15, dmg: 1 };
+        return { hp: 1 + Math.floor(hpB / 2), r: 6, speed: 70 + spB, score: 15, dmg: 1 + dmgB };
       case "spitter":
-        return { hp: 3 + hpB, r: 6, speed: 40 + spB * 0.4, score: 20, dmg: 1 };
+        return { hp: 3 + hpB, r: 6, speed: 40 + spB * 0.4, score: 20, dmg: 1 + dmgB };
       case "brute":
-        return { hp: 9 + hpB * 2, r: 10, speed: 36 + spB * 0.5, score: 45, dmg: 2 };
+        return { hp: 9 + hpB * 2, r: 10, speed: 36 + spB * 0.5, score: 45, dmg: 2 + dmgB };
       case "ninja":
-        return { hp: 3 + hpB, r: 6, speed: 96 + spB, score: 28, dmg: 2 };
+        return { hp: 3 + hpB, r: 6, speed: 96 + spB, score: 28, dmg: 2 + dmgB };
       case "hound":
-        return { hp: 3 + hpB, r: 7, speed: 88 + spB, score: 25, dmg: 1 };
+        return { hp: 3 + hpB, r: 7, speed: 88 + spB, score: 25, dmg: 1 + dmgB };
       case "wisp":
-        return { hp: 3 + Math.floor(hpB * 0.7), r: 6, speed: 60 + spB * 0.5, score: 30, dmg: 1 };
+        return { hp: 3 + Math.floor(hpB * 0.7), r: 6, speed: 60 + spB * 0.5, score: 30, dmg: 1 + dmgB };
       case "archer":
-        return { hp: 4 + hpB, r: 7, speed: 40 + spB * 0.4, score: 34, dmg: 2 };
+        return { hp: 4 + hpB, r: 7, speed: 40 + spB * 0.4, score: 34, dmg: 2 + dmgB };
       case "oni":
-        return { hp: 11 + hpB * 2, r: 9, speed: 44 + spB * 0.5, score: 55, dmg: 2 };
+        return { hp: 11 + hpB * 2, r: 9, speed: 44 + spB * 0.5, score: 55, dmg: 2 + dmgB };
       case "shield":
-        return { hp: 13 + hpB * 2, r: 9, speed: 38 + spB * 0.4, score: 60, dmg: 2 };
+        return { hp: 13 + hpB * 2, r: 9, speed: 38 + spB * 0.4, score: 60, dmg: 2 + dmgB };
       case "slime":
-        return { hp: 5 + hpB, r: 8, speed: 42 + spB * 0.5, score: 32, dmg: 1 };
+        return { hp: 5 + hpB, r: 8, speed: 42 + spB * 0.5, score: 32, dmg: 1 + dmgB };
       case "monk":
-        return { hp: 6 + hpB, r: 7, speed: 52 + spB * 0.6, score: 42, dmg: 2 };
+        return { hp: 6 + hpB, r: 7, speed: 52 + spB * 0.6, score: 42, dmg: 2 + dmgB };
       case "demon":
-        return { hp: 12 + hpB * 2, r: 9, speed: 60 + spB * 0.7, score: 70, dmg: 2 };
+        return { hp: 12 + hpB * 2, r: 9, speed: 60 + spB * 0.7, score: 70, dmg: 2 + dmgB };
       case "skeleton":
-        return { hp: 6 + hpB, r: 7, speed: 58 + spB * 0.6, score: 38, dmg: 2 };
+        return { hp: 6 + hpB, r: 7, speed: 58 + spB * 0.6, score: 38, dmg: 2 + dmgB };
       case "boss":
-        return { hp: 55 + w * 6, r: 18, speed: 34 + w * 0.6, score: 1500, dmg: 3 };
+        return { hp: 68 + w * 8, r: 18, speed: 34 + w * 0.7, score: 1500, dmg: 4 + dmgB };
     }
   }
 
@@ -1908,9 +1919,12 @@ export class Game {
         this.queueMark(p.x, p.y, 1.0, "brute");
       }
     }
-    if (this.wave % 10 === 0) {
-      const p = this.randomEdge();
-      this.queueMark(p.x, p.y, 1.3, "boss");
+    if (this.wave % 5 === 0) {
+      const bosses = this.wave >= 15 ? 2 : 1;
+      for (let i = 0; i < bosses; i++) {
+        const p = this.randomEdge();
+        this.queueMark(p.x, p.y, 1.3 + i * 0.25, "boss");
+      }
       this.banner = I18N[this.opts.language].shogunArrived;
       this.bannerT = 2;
       Sfx.boss();
@@ -2063,7 +2077,7 @@ export class Game {
               const volley = e.type === "monk" ? 3 : 1;
               for (let v = 0; v < volley; v++) {
                 const a = Math.atan2(ny, nx) + (v - (volley - 1) / 2) * 0.24;
-                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 4, r: 3 });
+                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 4, r: 3, dmg: e.dmg });
               }
               this.burst(e.x + nx * 6, e.y + ny * 6, 4, "#ff764f", 60);
               Sfx.shoot();
@@ -2085,7 +2099,7 @@ export class Game {
               e.cd = 3.2;
               for (let v = 0; v < 8; v++) {
                 const a = (v / 8) * TAU + e.t * 0.25;
-                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 115, vy: Math.sin(a) * 115, life: 4, r: 4 });
+                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 115, vy: Math.sin(a) * 115, life: 4, r: 4, dmg: e.dmg });
               }
               this.shake = Math.max(this.shake, 4);
               this.burst(e.x, e.y, 18, "#ff3c4a", 120);
@@ -2190,7 +2204,7 @@ export class Game {
           Sfx.parry();
           continue;
         }
-        this.hurtPlayer(1, (this.px - s.x) / (d || 1), (this.py - s.y) / (d || 1));
+        this.hurtPlayer(s.dmg, (this.px - s.x) / (d || 1), (this.py - s.y) / (d || 1));
         continue;
       }
       if (s.life <= 0 || s.x < 8 || s.y < 8 || s.x > this.W - 8 || s.y > this.H - 8) {

@@ -118,6 +118,9 @@ export default function App() {
       setUpgrade(offer);
       setPhase("upgrade");
     };
+    game.onPause = () => {
+      setPhase((current) => (current === "playing" ? "paused" : current));
+    };
 
     let pending = 0;
     const ro = new ResizeObserver((entries) => {
@@ -338,16 +341,19 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [start, togglePause, toggleMute]);
 
-  /* pause when the player leaves the game window/tab */
+  /* Keep the visible pause screen in sync when the browser suspends the game. */
   useEffect(() => {
-    const onVis = () => {
+    const onVisibilityChange = () => {
       if (document.hidden) pauseFromFocusLoss();
     };
+    const onPageHide = () => pauseFromFocusLoss();
     window.addEventListener("blur", pauseFromFocusLoss);
-    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("blur", pauseFromFocusLoss);
-      document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [pauseFromFocusLoss]);
 
