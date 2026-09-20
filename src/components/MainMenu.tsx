@@ -89,14 +89,14 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
   if (perkOpen) {
     const perks: { id: Perk; title: string; desc: string }[] = [
-      { id: "bladeMonk", title: "Monge da Lamina Unica", desc: "Uma arma, muito dano e cadencia." },
-      { id: "bloodContract", title: "Contrato de Sangue", desc: "Pouca vida aumenta dano e velocidade." },
-      { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Carrega mais armas, mas move menos." },
-      { id: "predatorInstinct", title: "Instinto Predador", desc: "Abates renovam velocidade e cadencia." },
-      { id: "sharpGlass", title: "Vidro Afiado", desc: "Dano critico maior, menos vida." },
-      { id: "kyuEcho", title: "Eco de Kyu", desc: "Ataques periodicamente recebem um eco." },
-      { id: "cursedArsenal", title: "Arsenal Amaldicoado", desc: "Poder extra com penalidade leve." },
-      { id: "lastBullet", title: "Ultima Bala", desc: "O ultimo disparo causa dano enorme." },
+      { id: "bladeMonk", title: "Monge da Lamina Unica", desc: "Carrega apenas 1 arma. Ela recebe muito mais dano, cadencia e recarga." },
+      { id: "bloodContract", title: "Contrato de Sangue", desc: "Abaixo de 30% da vida, voce causa mais dano e ataca mais rapido. Ficar ferido fica muito perigoso." },
+      { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Permite carregar ate 6 armas ou equipamentos, mas reduz sua velocidade de movimento." },
+      { id: "predatorInstinct", title: "Instinto Predador", desc: "Cada abate da velocidade e cadencia por pouco tempo. Abates seguidos renovam o efeito." },
+      { id: "sharpGlass", title: "Vidro Afiado", desc: "Aumenta bastante o dano dos ataques, mas voce comeca com menos vida maxima." },
+      { id: "kyuEcho", title: "Eco de Kyu", desc: "A cada alguns segundos, seu proximo ataque causa dano extra como um eco em linha reta." },
+      { id: "cursedArsenal", title: "Arsenal Amaldicoado", desc: "Todas as armas ganham poder, mas voce perde um pouco de velocidade para controlar a maldicao." },
+      { id: "lastBullet", title: "Ultima Bala", desc: "O disparo totalmente carregado causa dano enorme. Ideal para arco e pistola automatica." },
     ];
     const available = difficulty === "hard" ? perks.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : perks;
     return (

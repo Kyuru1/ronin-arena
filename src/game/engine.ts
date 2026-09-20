@@ -2128,8 +2128,8 @@ export class Game {
     if (w >= 5) add("hound", 12);
     if (w >= 6) add("ninja", 12);
     if (w >= 7) add("slime", 10);
-    if (w >= 8) add("wisp", 10);
-    if (w >= 9) add("archer", 11);
+    if (w >= 5) add("wisp", 7);
+    if (w >= 3) add("archer", 7);
     if (w >= 11) add("skeleton", 12);
     if (w >= 13) add("shield", 9);
     if (w >= 15) add("monk", 10);
