@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { HudStats, MagicType, PowerUp, Weapon, WeaponUpgrade } from "../game/engine";
+import { STAT_LIMITS, type HudStats, type MagicType, type PowerUp, type Weapon, type WeaponUpgrade } from "../game/engine";
 import { GAMEPLAY_TEXT, type GameplayStrings } from "../game/gameplayText";
 import type { Language, Strings } from "../game/i18n";
 import PixelSprite from "./PixelSprite";
@@ -94,6 +94,12 @@ export default function ShopScreen({
   const active = ownedIndex === stats.activeSlot;
   const full = stats.weapons.length >= 4;
   const levels = stats.weaponLevels[selected];
+  const isPowerUpMaxed = (power: PowerUp) => {
+    if (power === "speed") return 108 + stats.speedBonus >= STAT_LIMITS.speed;
+    if (power === "heart") return stats.maxHp >= STAT_LIMITS.maxHp;
+    if (power === "dashCd") return stats.dashMax <= STAT_LIMITS.dashMax;
+    return stats.dashSpeedMult >= STAT_LIMITS.dashSpeedMult;
+  };
 
   return (
     <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-2 sm:p-5">
@@ -199,9 +205,14 @@ export default function ShopScreen({
             </div>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">{ALL_POWERUPS.map((power) => (
               <div key={power.id} className="px-inset flex flex-col p-3">
+                {(() => {
+                  const maxed = isPowerUpMaxed(power.id);
+                  return <>
                 <div className="flex items-center gap-2"><PixelSprite name={power.icon} scale={2} /><strong className="font-pixel text-[7px]">{t[power.nameKey] as string}</strong></div>
                 <p className="font-pixel my-2 grow text-[6px] leading-4 text-[#a35662]">{t[power.descKey] as string}</p>
-                <PxButton tone="red" disabled={stats.coins < power.cost} onClick={() => onBuyPowerUp(power.id, power.cost)} className="py-2 text-[7px]">{g.improve} <Price cost={power.cost} /></PxButton>
+                <PxButton tone="red" disabled={maxed || stats.coins < power.cost} onClick={() => onBuyPowerUp(power.id, power.cost)} className="py-2 text-[7px]">{maxed ? g.max : <>{g.improve} <Price cost={power.cost} /></>}</PxButton>
+                  </>;
+                })()}
               </div>
             ))}</div>
           </div>

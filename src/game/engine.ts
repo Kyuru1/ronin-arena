@@ -10,6 +10,13 @@ export type WeaponUpgrade = "damage" | "speed" | "range" | "form";
 export type MagicType = "fire" | "ice" | "poison" | "water";
 export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
+export const STAT_LIMITS = {
+  maxHp: 20,
+  speed: 190,
+  dashMax: 2,
+  dashSpeedMult: 3,
+} as const;
+
 export interface UpgradeOffer {
   wave: number;
 }
@@ -653,20 +660,26 @@ export class Game {
 
   buyPowerUp(power: PowerUp, cost: number): boolean {
     if (this.coins < cost) return false;
+    if (
+      (power === "speed" && 108 + this.speedBonus >= STAT_LIMITS.speed) ||
+      (power === "heart" && this.maxHp >= STAT_LIMITS.maxHp) ||
+      (power === "dashCd" && this.dashMax <= STAT_LIMITS.dashMax) ||
+      (power === "dashDist" && this.dashSpeedMult >= STAT_LIMITS.dashSpeedMult)
+    ) return false;
     this.coins -= cost;
     if (power === "speed") {
-      this.speedBonus += 18;
+      this.speedBonus = Math.min(STAT_LIMITS.speed - 108, this.speedBonus + 18);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].speedBoost, "#ffae57");
     } else if (power === "heart") {
-      this.maxHp += 1;
+      this.maxHp = Math.min(STAT_LIMITS.maxHp, this.maxHp + 1);
       this.hp = Math.min(this.maxHp, this.hp + 2);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].healthBoost, "#ff4f58");
     } else if (power === "dashCd") {
-      this.dashMax = Math.max(1.5, this.dashMax - 0.8);
+      this.dashMax = Math.max(STAT_LIMITS.dashMax, this.dashMax - 0.8);
       this.dashCd = 0;
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashCooldownBoost, "#f8d7a5");
     } else if (power === "dashDist") {
-      this.dashSpeedMult += 0.25;
+      this.dashSpeedMult = Math.min(STAT_LIMITS.dashSpeedMult, this.dashSpeedMult + 0.25);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashDistanceBoost, "#f8d7a5");
     }
     Sfx.buy();
