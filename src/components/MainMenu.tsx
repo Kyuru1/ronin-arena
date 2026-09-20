@@ -89,14 +89,14 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
   if (perkOpen) {
     const perks: { id: Perk; title: string; desc: string }[] = [
-      { id: "bladeMonk", title: "Monge da Lamina Unica", desc: "Carrega apenas 1 arma. Ela recebe muito mais dano, cadencia e recarga." },
-      { id: "bloodContract", title: "Contrato de Sangue", desc: "Abaixo de 30% da vida, voce causa mais dano e ataca mais rapido. Ficar ferido fica muito perigoso." },
+      { id: "bladeMonk", title: "Monge da Lâmina Única", desc: "Carrega apenas 1 arma. Ela recebe muito mais dano, cadência e recarga." },
+      { id: "bloodContract", title: "Contrato de Sangue", desc: "Abaixo de 30% da vida, você causa mais dano e ataca mais rápido. Ficar ferido fica muito perigoso." },
       { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Permite carregar ate 6 armas ou equipamentos, mas reduz sua velocidade de movimento." },
-      { id: "predatorInstinct", title: "Instinto Predador", desc: "Cada abate da velocidade e cadencia por pouco tempo. Abates seguidos renovam o efeito." },
-      { id: "sharpGlass", title: "Vidro Afiado", desc: "Aumenta bastante o dano dos ataques, mas voce comeca com menos vida maxima." },
-      { id: "kyuEcho", title: "Eco de Kyu", desc: "A cada alguns segundos, seu proximo ataque causa dano extra como um eco em linha reta." },
-      { id: "cursedArsenal", title: "Arsenal Amaldicoado", desc: "Todas as armas ganham poder, mas voce perde um pouco de velocidade para controlar a maldicao." },
-      { id: "lastBullet", title: "Ultima Bala", desc: "O disparo totalmente carregado causa dano enorme. Ideal para arco e pistola automatica." },
+      { id: "predatorInstinct", title: "Instinto Predador", desc: "Cada abate dá velocidade e cadência por pouco tempo. Abates seguidos renovam o efeito." },
+      { id: "sharpGlass", title: "Vidro Afiado", desc: "Aumenta bastante o dano dos ataques, mas você começa com menos vida máxima." },
+      { id: "kyuEcho", title: "Eco de Kyu", desc: "A cada alguns segundos, seu próximo ataque causa dano extra como um eco em linha reta." },
+      { id: "cursedArsenal", title: "Arsenal Amaldiçoado", desc: "Todas as armas ganham poder, mas você perde um pouco de velocidade para controlar a maldição." },
+      { id: "lastBullet", title: "Última Bala", desc: "O disparo totalmente carregado causa dano enorme. Ideal para arco e pistola automática." },
     ];
     const available = difficulty === "hard" ? perks.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : perks;
     return (
