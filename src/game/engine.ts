@@ -1639,8 +1639,16 @@ export class Game {
     const angle = this.aimAngle();
     const reach = 64 + levels.range * 9;
     const radius = 30 + levels.range * 5;
-    const x = clamp(this.px + Math.cos(angle) * reach, 18, this.W - 18);
-    const y = clamp(this.py + Math.sin(angle) * reach, 18, this.H - 18);
+    // Place the psychic field at the cursor when aiming with a mouse. The
+    // range remains a maximum, so a nearby cursor creates a nearby spell.
+    const aimX = this.mouseActive ? this.mouseX : this.px + Math.cos(angle) * reach;
+    const aimY = this.mouseActive ? this.mouseY : this.py + Math.sin(angle) * reach;
+    const dx = aimX - this.px;
+    const dy = aimY - this.py;
+    const distance = Math.hypot(dx, dy);
+    const scale = distance > reach ? reach / distance : 1;
+    const x = clamp(this.px + dx * scale, 18, this.W - 18);
+    const y = clamp(this.py + dy * scale, 18, this.H - 18);
     let hits = 0;
 
     for (const enemy of this.enemies.slice()) {
