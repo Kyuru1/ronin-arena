@@ -27,6 +27,17 @@ export function isPowerUpAtLimit(
   return stats.dashSpeedMult >= STAT_LIMITS.dashSpeedMult;
 }
 
+function clampPowerUpStats(
+  stats: Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult">,
+): Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult"> {
+  return {
+    maxHp: Math.min(stats.maxHp, STAT_LIMITS.maxHp),
+    speedBonus: Math.min(stats.speedBonus, STAT_LIMITS.speed - 108),
+    dashMax: Math.max(stats.dashMax, STAT_LIMITS.dashMax),
+    dashSpeedMult: Math.min(stats.dashSpeedMult, STAT_LIMITS.dashSpeedMult),
+  };
+}
+
 export interface UpgradeOffer {
   wave: number;
 }
@@ -687,6 +698,13 @@ export class Game {
       this.dashSpeedMult = Math.min(STAT_LIMITS.dashSpeedMult, this.dashSpeedMult + 0.25);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashDistanceBoost, "#f8d7a5");
     }
+
+    const clamped = clampPowerUpStats(this);
+    this.maxHp = clamped.maxHp;
+    this.speedBonus = clamped.speedBonus;
+    this.dashMax = clamped.dashMax;
+    this.dashSpeedMult = clamped.dashSpeedMult;
+
     Sfx.buy();
     this.pushStats(true);
     return true;
