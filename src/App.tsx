@@ -414,7 +414,6 @@ export default function App() {
               difficulty={difficulty}
               onDifficulty={setDifficulty}
               scores={scores}
-              best={best}
               opts={opts}
               onOpts={applyOpts}
               onFullscreen={toggleFullscreen}
