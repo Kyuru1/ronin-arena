@@ -176,6 +176,17 @@ export default function App() {
     }, 220);
   }, [difficulty, launchRun]);
 
+  const restartRun = useCallback(() => {
+    const game = gameRef.current;
+    if (!game) return;
+    game.setDifficulty(difficulty);
+    game.startGame();
+    setRank(-1);
+    setPendingScore(false);
+    setPhase("playing");
+    setMenuClosing(false);
+  }, [difficulty]);
+
   const finishTutorial = useCallback((neverAgain: boolean) => {
     if (neverAgain) {
       try {
@@ -416,7 +427,7 @@ export default function App() {
             pendingScore={pendingScore}
             defaultName={lastName}
             onSubmitName={submitName}
-            onRestart={start}
+            onRestart={restartRun}
             onMenu={toMenu}
             t={t}
           />
