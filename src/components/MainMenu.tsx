@@ -21,7 +21,7 @@ export interface UiOpts {
 type MenuTab = "main" | "settings" | "language" | "ranking";
 
 export default function MainMenu({ onStart, difficulty, onDifficulty, scores, best, isTouch, opts, onOpts, onClearScores, onFullscreen }: {
-  onStart: () => void;
+  onStart: (difficulty?: Difficulty) => void;
   difficulty: Difficulty;
   onDifficulty: (difficulty: Difficulty) => void;
   scores: ScoreEntry[];
@@ -33,6 +33,7 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
   onFullscreen: () => void;
 }) {
   const [tab, setTab] = useState<MenuTab>("main");
+  const [difficultyOpen, setDifficultyOpen] = useState(false);
   const t = I18N[opts.language];
   const g = GAMEPLAY_TEXT[opts.language];
 
@@ -65,6 +66,31 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
     );
   }
 
+  if (difficultyOpen) {
+    return (
+      <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
+        <PxFrame title={t.difficulty} className="anim-pop w-full max-w-2xl p-4 sm:p-6">
+          <div className="mb-4 text-center font-pixel text-[7px] leading-5 text-[#91b9b5] sm:text-[8px]">
+            {t.start}
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {(["easy", "medium", "hard"] as const).map((level) => {
+              const titleKey = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard";
+              const descKey = `${titleKey}Desc` as "difficultyEasyDesc" | "difficultyMediumDesc" | "difficultyHardDesc";
+              return (
+                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => { onDifficulty(level); onStart(level); }} className="min-h-32 flex-col items-center justify-center gap-3 px-3 py-4 text-center">
+                  <strong className="font-pixel text-[9px]">{t[titleKey]}</strong>
+                  <span className="font-pixel text-[5px] leading-4 text-[#a9c3be]">{t[descKey]}</span>
+                </PxButton>
+              );
+            })}
+          </div>
+          <PxButton tone="dark" onClick={() => setDifficultyOpen(false)} className="mt-5 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
+        </PxFrame>
+      </div>
+    );
+  }
+
   const basics = [
     { icon: "player", title: g.move, detail: isTouch ? g.touchMove : g.moveHelp },
     { icon: "icoCrosshair", title: g.aim, detail: isTouch ? g.touchAim : g.aimHelp },
@@ -74,8 +100,8 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
 
   return (
     <div className="menu-arena absolute inset-0 z-20 overflow-y-auto">
-      <div className="menu-grid mx-auto flex min-h-full w-full max-w-6xl flex-col justify-center px-4 py-6 sm:px-8">
-        <header className="flex items-end justify-between border-b-4 border-[#6b2530] pb-4">
+      <div className="menu-grid mx-auto flex min-h-full w-full max-w-4xl flex-col items-center justify-center px-4 py-6 sm:px-8">
+        <header className="flex w-full items-end justify-between border-b-4 border-[#6b2530] pb-4">
           <div>
             <div className="font-pixel text-[8px] text-[#e6535c]">RONIN</div>
             <h1 className="font-pixel mt-2 text-[24px] leading-none text-[#f4e4cf] sm:text-[42px]">ARENA <span className="text-[#e6535c]">CARMESIM</span></h1>
@@ -84,19 +110,8 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
           <div className="hidden items-end gap-2 sm:flex"><PixelSprite name="grunt" scale={3} className="opacity-70" /><PixelSprite name="player" scale={5} className="anim-bob" /><PixelSprite name="boss" scale={2} className="opacity-80" /></div>
         </header>
 
-        <main className="py-5">
-          <section className="mb-4">
-            <div className="mb-2 font-pixel text-[7px] text-[#ffd44a]">{t.difficulty}</div>
-            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-              {(["easy", "medium", "hard"] as const).map((level) => (
-                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => onDifficulty(level)} className="min-h-14 flex-col items-start gap-1 px-3 py-3 text-left">
-                  <strong className="font-pixel text-[8px]">{t[`difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"]}</strong>
-                  <span className="font-pixel text-[5px] leading-4 text-[#a9c3be]">{t[`difficulty${level[0].toUpperCase()}${level.slice(1)}Desc` as "difficultyEasyDesc" | "difficultyMediumDesc" | "difficultyHardDesc"]}</span>
-                </PxButton>
-              ))}
-            </div>
-          </section>
-          <button onClick={onStart} className="menu-play group w-full">
+        <main className="w-full max-w-3xl py-5">
+          <button onClick={() => setDifficultyOpen(true)} className="menu-play group w-full">
             <span className="font-pixel text-[16px] sm:text-[24px]">▶ {t.play}</span>
             <span className="font-pixel text-[7px] text-[#3c171b]">{isTouch ? t.touchStart : t.start}</span>
           </button>
@@ -106,7 +121,7 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
           <div className="mt-3 flex items-center gap-3 border-l-4 border-[#ffd44a] bg-[#10282b] px-4 py-3"><PixelSprite name="coin" scale={2} /><div className="font-pixel text-[7px] leading-5 text-[#b6ddd8]"><strong className="text-[#ffd44a]">{g.shopSoon}</strong><br />{g.shopHelp}</div></div>
         </main>
 
-        <footer className="grid gap-2 border-t-4 border-[#35141b] pt-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
+        <footer className="grid w-full gap-2 border-t-4 border-[#35141b] pt-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
           <PxButton tone="menu" onClick={() => setTab("settings")} className="text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("ranking")} className="text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>

@@ -155,9 +155,9 @@ export default function App() {
     setMenuClosing(false);
   }, []);
 
-  const start = useCallback(() => {
+  const start = useCallback((selectedDifficulty: Difficulty = difficulty) => {
     if (!gameRef.current) return;
-    gameRef.current.setDifficulty(difficulty);
+    gameRef.current.setDifficulty(selectedDifficulty);
     unlockAudio();
     setMenuClosing(true);
     window.setTimeout(() => {
@@ -337,9 +337,6 @@ export default function App() {
         if (g.phase === "playing" || g.phase === "paused") togglePause();
       } else if (k === "m") {
         toggleMute();
-      } else if (g.phase === "menu" && (k === "enter" || k === " ")) {
-        e.preventDefault();
-        start();
       }
     };
     window.addEventListener("keydown", onKey);
