@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { GAMEPLAY_TEXT } from "../game/gameplayText";
 import type { Difficulty } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
 import { formatTime, type ScoreEntry } from "../game/storage";
@@ -20,13 +19,12 @@ export interface UiOpts {
 
 type MenuTab = "main" | "settings" | "language" | "ranking";
 
-export default function MainMenu({ onStart, difficulty, onDifficulty, scores, best, isTouch, opts, onOpts, onClearScores, onFullscreen }: {
+export default function MainMenu({ onStart, difficulty, onDifficulty, scores, best, opts, onOpts, onClearScores, onFullscreen }: {
   onStart: (difficulty?: Difficulty) => void;
   difficulty: Difficulty;
   onDifficulty: (difficulty: Difficulty) => void;
   scores: ScoreEntry[];
   best: number;
-  isTouch: boolean;
   opts: UiOpts;
   onOpts: (o: Partial<UiOpts>) => void;
   onClearScores: () => void;
@@ -35,7 +33,6 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
   const [tab, setTab] = useState<MenuTab>("main");
   const [difficultyOpen, setDifficultyOpen] = useState(false);
   const t = I18N[opts.language];
-  const g = GAMEPLAY_TEXT[opts.language];
 
   if (tab !== "main") {
     return (
@@ -91,41 +88,25 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
     );
   }
 
-  const basics = [
-    { icon: "player", title: g.move, detail: isTouch ? g.touchMove : g.moveHelp },
-    { icon: "icoCrosshair", title: g.aim, detail: isTouch ? g.touchAim : g.aimHelp },
-    { icon: "icoKatana", title: g.attack, detail: isTouch ? g.touchAttack : g.attackHelp },
-    { icon: "icoDash", title: g.dash, detail: isTouch ? g.touchDash : g.dashHelp },
-  ];
-
   return (
     <div className="menu-arena absolute inset-0 z-20 overflow-y-auto">
       <div className="menu-grid mx-auto flex min-h-full w-full max-w-4xl flex-col items-center justify-center px-4 py-6 sm:px-8">
-        <header className="flex w-full items-end justify-between border-b-4 border-[#6b2530] pb-4">
-          <div>
-            <div className="font-pixel text-[8px] text-[#e6535c]">RONIN</div>
-            <h1 className="font-pixel mt-2 text-[24px] leading-none text-[#f4e4cf] sm:text-[42px]">ARENA <span className="text-[#e6535c]">CARMESIM</span></h1>
-            <p className="font-pixel mt-3 max-w-2xl text-[7px] leading-5 text-[#91b9b5] sm:text-[8px]">{g.menuLead}</p>
-          </div>
-          <div className="hidden items-end gap-2 sm:flex"><PixelSprite name="grunt" scale={3} className="opacity-70" /><PixelSprite name="player" scale={5} className="anim-bob" /><PixelSprite name="boss" scale={2} className="opacity-80" /></div>
+        <header className="w-full border-b-4 border-[#6b2530] pb-5 text-center">
+          <div className="font-pixel text-[8px] tracking-[0.35em] text-[#e6535c]">KYU</div>
+          <h1 className="font-pixel mt-3 text-[28px] leading-none text-[#f4e4cf] sm:text-[46px]">KYU<span className="text-[#e6535c]">-ARENA</span></h1>
         </header>
 
-        <main className="w-full max-w-3xl py-5">
+        <main className="flex w-full max-w-sm flex-col items-center gap-3 py-7">
           <button onClick={() => setDifficultyOpen(true)} className="menu-play group w-full">
-            <span className="font-pixel text-[16px] sm:text-[24px]">▶ {t.play}</span>
-            <span className="font-pixel text-[7px] text-[#3c171b]">{isTouch ? t.touchStart : t.start}</span>
+            <span className="font-pixel text-[16px] sm:text-[22px]">▶ {t.play}</span>
           </button>
-
-          <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">{basics.map((item) => <div key={item.title} className="menu-control"><PixelSprite name={item.icon} scale={2} /><div><strong>{item.title}</strong><span>{item.detail}</span></div></div>)}</div>
-
-          <div className="mt-3 flex items-center gap-3 border-l-4 border-[#ffd44a] bg-[#10282b] px-4 py-3"><PixelSprite name="coin" scale={2} /><div className="font-pixel text-[7px] leading-5 text-[#b6ddd8]"><strong className="text-[#ffd44a]">{g.shopSoon}</strong><br />{g.shopHelp}</div></div>
         </main>
 
-        <footer className="grid w-full gap-2 border-t-4 border-[#35141b] pt-4 sm:grid-cols-[1fr_1fr_1fr_auto]">
-          <PxButton tone="menu" onClick={() => setTab("settings")} className="text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
-          <PxButton tone="menu" onClick={() => setTab("language")} className="text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
-          <PxButton tone="menu" onClick={() => setTab("ranking")} className="text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
-          <div className="menu-record"><span>{t.best}</span><strong>{best.toLocaleString()}</strong></div>
+        <footer className="flex w-full max-w-sm flex-col gap-2 border-t-4 border-[#35141b] pt-5">
+          <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
+          <div className="menu-record mt-2 text-center"><span>{t.best}</span><strong>{best.toLocaleString()}</strong></div>
         </footer>
       </div>
     </div>

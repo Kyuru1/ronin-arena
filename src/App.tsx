@@ -406,7 +406,6 @@ export default function App() {
               onDifficulty={setDifficulty}
               scores={scores}
               best={best}
-              isTouch={isTouch}
               opts={opts}
               onOpts={applyOpts}
               onFullscreen={toggleFullscreen}

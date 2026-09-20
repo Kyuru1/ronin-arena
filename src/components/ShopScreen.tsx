@@ -89,6 +89,13 @@ export default function ShopScreen({
   t: Strings;
 }) {
   const [tab, setTab] = useState<Tab>("weapons");
+  const [showShopIntro, setShowShopIntro] = useState(() => {
+    try {
+      return localStorage.getItem("kyu-arena.shop-intro-seen.v1") !== "1";
+    } catch {
+      return true;
+    }
+  });
   const [selected, setSelected] = useState<Weapon>(stats.weapons[stats.activeSlot] ?? "katana");
   const g = GAMEPLAY_TEXT[language];
   const info = ALL_WEAPONS.find((weapon) => weapon.id === selected) ?? ALL_WEAPONS[0];
@@ -98,6 +105,14 @@ export default function ShopScreen({
   const full = stats.weapons.length >= 4;
   const levels = stats.weaponLevels[selected];
   const isPowerUpMaxed = (power: PowerUp) => isPowerUpAtLimit(stats, power, stats.difficulty);
+  const dismissShopIntro = () => {
+    try {
+      localStorage.setItem("kyu-arena.shop-intro-seen.v1", "1");
+    } catch {
+      /* ignore */
+    }
+    setShowShopIntro(false);
+  };
 
   return (
     <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-2 sm:p-5">
@@ -219,6 +234,16 @@ export default function ShopScreen({
         <div className="px-divider my-3" />
         <PxButton tone="green" onClick={onCloseShop} className="w-full py-3 text-[9px] sm:text-[10px]">▶ {t.nextWave} · {t.wave} {wave + 1}</PxButton>
       </PxFrame>
+      {showShopIntro && <div className="absolute inset-0 z-40 flex items-center justify-center bg-[#070305]/75 p-3 sm:p-6">
+        <PxFrame title={t.shopTitle} className="anim-pop w-full max-w-md p-4 sm:p-6">
+          <p className="font-pixel text-[7px] leading-5 text-[#d8a9a0]">{t.shopSubtitle}</p>
+          <div className="mt-4 grid gap-2 sm:grid-cols-2">
+            <div className="shop-intro-category"><strong>{t.tabWeapons}</strong><span>{g.upgrades}</span></div>
+            <div className="shop-intro-category"><strong>{t.tabStats}</strong><span>{t.powerupsTitle}</span></div>
+          </div>
+          <PxButton tone="red" onClick={dismissShopIntro} className="mt-5 w-full py-3 text-[8px]">{t.enter}</PxButton>
+        </PxFrame>
+      </div>}
     </div>
   );
 }
