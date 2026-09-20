@@ -229,6 +229,7 @@ interface Pickup {
   t: number;
   kind: "heart" | "gem" | "coin";
   magnet: boolean;
+  credited?: boolean;
 }
 
 interface SpawnMark {
@@ -2284,8 +2285,15 @@ export class Game {
       this.banner = I18N[this.opts.language].waveCleared;
       this.bannerT = 1.4;
       Sfx.crit(4);
-      // vacuum coins so nothing gets lost
-      for (const p of this.pickups) p.magnet = true;
+      // Credit every coin immediately, while keeping the pickup animation alive.
+      const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
+      for (const p of this.pickups) {
+        if (p.kind === "coin" && !p.credited) {
+          this.coins += coinValue;
+          p.credited = true;
+        }
+        p.magnet = true;
+      }
     }
     if (this.waveClearT >= 0) {
       this.waveClearT -= dt;
@@ -2599,7 +2607,7 @@ export class Game {
           Sfx.heal();
         } else if (p.kind === "coin") {
           const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
-          this.coins += coinValue;
+          if (!p.credited) this.coins += coinValue;
           this.addScore(5 * coinValue, p.x, p.y - 6, `+${coinValue}`, "#ffd747");
           this.burst(p.x, p.y, 6, "#ffd747", 75);
           Sfx.coin();

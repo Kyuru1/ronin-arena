@@ -140,21 +140,41 @@ function musicDrum(accent: boolean) {
   o.stop(t + 0.22);
 }
 
-/** Original procedural battle theme: taiko pulse and D-minor pentatonic lead. */
+function musicHat(open = false) {
+  const c = ac();
+  if (!c || !master || !musicGain) return;
+  const t = c.currentTime;
+  const src = c.createBufferSource();
+  src.buffer = noiseBuffer(c, open ? 0.12 : 0.045);
+  const filter = c.createBiquadFilter();
+  filter.type = "highpass";
+  filter.frequency.value = open ? 4200 : 6500;
+  const g = c.createGain();
+  g.gain.setValueAtTime(open ? 0.16 : 0.1, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + (open ? 0.12 : 0.045));
+  src.connect(filter).connect(g).connect(musicGain);
+  src.start(t);
+  src.stop(t + (open ? 0.14 : 0.06));
+}
+
+/** Fast procedural arcade theme: driving bass, syncopated drums and a playful lead. */
 export function startMusic() {
   if (musicTimer || typeof window === "undefined") return;
-  const lead = [293.66, 349.23, 392, 440, 523.25, 440, 392, 349.23, 293.66, 392, 440, 587.33, 523.25, 440, 392, 349.23];
-  const bass = [73.42, 73.42, 87.31, 98, 73.42, 110, 98, 87.31];
+  const lead = [440, 523.25, 659.25, 783.99, 659.25, 523.25, 440, 392, 440, 523.25, 698.46, 783.99, 880, 783.99, 698.46, 523.25];
+  const bass = [110, 110, 130.81, 146.83, 110, 164.81, 146.83, 130.81];
   const tick = () => {
     const step = musicStep++ % 32;
+    const bar = Math.floor(musicStep / 32);
     if (step % 4 === 0) musicDrum(step % 8 === 0);
-    if (step % 2 === 0) musicNote(bass[Math.floor(step / 4) % bass.length], 0.28, 0.22, 0, "sawtooth");
-    const phrase = lead[(step + Math.floor(musicStep / 32) * 3) % lead.length];
-    if (step % 4 !== 3) musicNote(phrase, step % 2 ? 0.1 : 0.16, 0.14, 0, step % 8 === 6 ? "square" : "triangle");
-    if (step === 14 || step === 30) musicNote(phrase * 2, 0.22, 0.09, 0.02, "triangle");
+    if (step % 4 === 2 || step % 8 === 6) musicDrum(false);
+    musicHat(step % 8 === 7);
+    if (step % 2 === 0) musicNote(bass[(Math.floor(step / 2) + bar) % bass.length], 0.16, 0.2, 0, "sawtooth");
+    const phrase = lead[(step + bar * 2) % lead.length];
+    if (step % 4 !== 3) musicNote(phrase, step % 2 ? 0.08 : 0.12, 0.12, 0, step % 8 === 6 ? "square" : "triangle");
+    if (step === 7 || step === 15 || step === 23 || step === 31) musicNote(phrase * 2, 0.13, 0.08, 0.01, "square");
   };
   tick();
-  musicTimer = window.setInterval(tick, 125);
+  musicTimer = window.setInterval(tick, 100);
 }
 
 export type Weapon = "katana" | "bow" | "hammer" | "shield" | "mine" | "book" | "staff";
