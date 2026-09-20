@@ -153,6 +153,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
           <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
+          {installPrompt && <PxButton tone="gold" onClick={() => void installGame()} className="justify-center text-[8px]">↓ {t.install}</PxButton>}
           <div className="menu-record mt-2 text-center"><span>{t.best}</span><strong>{best.toLocaleString()}</strong></div>
         </footer>
       </div>

@@ -103,6 +103,7 @@ export default function ShopScreen({
   t: Strings;
 }) {
   const [tab, setTab] = useState<Tab>("weapons");
+  const [showWeaponPicker, setShowWeaponPicker] = useState(false);
   const [showShopIntro, setShowShopIntro] = useState(() => {
     try {
       return localStorage.getItem("kyu-arena.shop-intro-seen.v1") !== "1";
@@ -146,7 +147,7 @@ export default function ShopScreen({
           <div className="shop-layout scrollbar-thin grid min-h-0 flex-1 gap-3 overflow-y-auto lg:grid-cols-[190px_1fr_280px]">
             <div className="flex flex-col gap-1">
               <div className="font-pixel mb-1 text-[7px] text-[#ffd44a]">{t.weaponsTitle}</div>
-              {ALL_WEAPONS.map((weapon) => {
+              {showWeaponPicker && ALL_WEAPONS.map((weapon) => {
                 const index = stats.weapons.indexOf(weapon.id);
                 return (
                   <button key={weapon.id} onClick={() => setSelected(weapon.id)} className={`pxb pxb-menu font-pixel !py-2 text-[7px] ${selected === weapon.id ? "is-active" : ""}`}>
@@ -156,6 +157,8 @@ export default function ShopScreen({
                   </button>
                 );
               })}
+              {!showWeaponPicker && <PxButton tone="menu" onClick={() => setShowWeaponPicker(true)} className="mt-2 py-2 text-[6px]">{t.tabWeapons} · TROCAR</PxButton>}
+              {showWeaponPicker && <PxButton tone="dark" onClick={() => setShowWeaponPicker(false)} className="mt-2 py-2 text-[6px]">◀ ARMA ATUAL</PxButton>}
               <div className="mt-2 grid grid-cols-4 gap-1">
                 {[0, 1, 2, 3].map((index) => {
                   const weapon = stats.weapons[index];

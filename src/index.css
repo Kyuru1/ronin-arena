@@ -649,7 +649,7 @@ input,
 .weapon-slot.is-active .weapon-slot-preview { max-height: 34px; max-width: 54px; }
 .shop-weapon-icon { max-height: 20px; max-width: 28px; object-fit: contain; }
 .shop-slot-preview { max-height: 28px; max-width: 34px; object-fit: contain; }
-.shop-frame > .absolute.left-1\/2 { top: 7px !important; transform: translateX(-50%) !important; }
+.shop-frame > .absolute.left-1\/2 { top: 11px !important; z-index: 5; transform: translateX(-50%) !important; }
 .shop-frame .px-ribbon { max-width: calc(100vw - 42px); overflow: hidden; text-overflow: ellipsis; }
 .shop-layout > div { min-width: 0; }
 .shop-layout .px-inset { border-left-width: 3px; }
@@ -669,8 +669,8 @@ input,
   .weapon-slot.is-active { height: 58px; width: 58px; flex-basis: 58px; }
   .slot-name { font-size: 4px; }
   .slot-level { display: none; }
-  .shop-frame { width: calc(100vw - 12px) !important; max-height: calc(100dvh - 12px) !important; padding: 34px 10px 10px !important; }
-  .shop-frame > .absolute.left-1\/2 { top: 5px !important; }
+  .shop-frame { width: calc(100vw - 12px) !important; max-height: calc(100dvh - 12px) !important; padding: 46px 10px 10px !important; }
+  .shop-frame > .absolute.left-1\/2 { top: 10px !important; }
   .shop-frame .px-ribbon { font-size: 7px; }
   .shop-layout { gap: 10px; }
   .shop-layout > div:first-child { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
