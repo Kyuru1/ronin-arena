@@ -683,17 +683,21 @@ input,
   .weapon-slot.is-active { height: 58px; width: 58px; flex-basis: 58px; }
   .slot-name { font-size: 4px; }
   .slot-level { display: none; }
-  .shop-frame { width: calc(100vw - 12px) !important; max-height: calc(100dvh - 12px) !important; padding: 46px 10px 10px !important; }
-  .shop-frame > .absolute.left-1\/2 { top: 10px !important; }
-  .shop-frame .px-ribbon { font-size: 7px; }
-  .shop-layout { gap: 10px; }
+  .shop-frame { width: calc(100vw - 34px) !important; max-height: 78dvh !important; padding: 34px 7px 7px !important; }
+  .shop-frame > .absolute.left-1\/2 { top: 8px !important; }
+  .shop-frame .px-ribbon { font-size: 6px; }
+  .shop-layout { gap: 5px; }
   .shop-layout > div:first-child { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; }
-  .shop-layout > div:first-child > div:first-child { grid-column: 1 / -1; }
-  .shop-layout > div:first-child .mt-2 { grid-column: 1 / -1; margin-top: 2px; }
-  .shop-layout .px-inset { padding: 9px; }
-  .shop-layout .pxb { min-height: 38px; }
-  .shop-tab { min-height: 38px; padding: 8px 10px; font-size: 7px; }
-  .px-coinbox { transform: scale(.9); transform-origin: right center; }
+  .shop-layout > div:first-child > div:first-child { grid-column: 1 / -1; font-size: 6px; }
+  .shop-layout > div:first-child .mt-2 { grid-column: 1 / -1; margin-top: 1px; }
+  .shop-layout .px-inset { padding: 6px; }
+  .shop-layout .pxb { min-height: 30px; padding-top: 5px; padding-bottom: 5px; }
+  .shop-tab { min-height: 30px; padding: 5px 6px; font-size: 6px; }
+  .px-coinbox { transform: scale(.75); transform-origin: right center; }
+  .shop-frame > .px-divider { margin-top: 5px; margin-bottom: 5px; }
+  .shop-frame > .pxb-green { min-height: 32px; padding-top: 6px; padding-bottom: 6px; font-size: 7px; }
+  .mobile-dash-button { height: 68px; width: 68px; border: 2px solid rgba(255,212,74,.7); border-radius: 50%; background: rgba(16,40,43,.58); }
+  .mobile-dash-button strong { bottom: 2px; font-size: 7px; color: #ffd44a; }
 }
 .ranking-row-four { grid-template-columns: 28px minmax(70px,1fr) 55px 90px 55px; }
 
