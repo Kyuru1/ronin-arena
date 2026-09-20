@@ -27,6 +27,10 @@ export interface Strings {
   hudNormal: string;
   hudLarge: string;
   hudHuge: string;
+  hudSmall: string;
+  hudTiny: string;
+  accessibility: string;
+  keyboardOnly: string;
   on: string;
   off: string;
   // ranking
@@ -94,6 +98,7 @@ export interface Strings {
   tabWeapons: string;
   tabStats: string;
   waveCleared: string;
+  waveClearedTitle: string;
   enemiesLeft: string;
   yourStats: string;
   statSpeed: string;
@@ -150,6 +155,7 @@ export const I18N = {
     hudNormal: "NORMAL",
     hudLarge: "GRANDE",
     hudHuge: "ENORME",
+    hudSmall: "PEQUENA", hudTiny: "MINÚSCULA", accessibility: "ACESSIBILIDADE", keyboardOnly: "SOMENTE TECLADO",
     on: "LIGADO",
     off: "DESLIGADO",
     noScores: "SEM RECORDES AINDA",
@@ -209,7 +215,7 @@ export const I18N = {
     slotHint: "Troque com 1/2/3/4 ou scroll",
     tabWeapons: "ARMAS",
     tabStats: "ESTATÍSTICAS",
-    waveCleared: "ONDA LIMPA",
+    waveCleared: "ONDA LIMPA", waveClearedTitle: "ONDA {wave} LIMPA",
     enemiesLeft: "INIMIGOS",
     yourStats: "SEU RONIN",
     statSpeed: "VELOCIDADE",
@@ -262,6 +268,7 @@ export const I18N = {
     hudNormal: "NORMAL",
     hudLarge: "LARGE",
     hudHuge: "HUGE",
+    hudSmall: "SMALL", hudTiny: "TINY", accessibility: "ACCESSIBILITY", keyboardOnly: "KEYBOARD ONLY",
     on: "ON",
     off: "OFF",
     noScores: "NO SCORES YET",
@@ -321,7 +328,7 @@ export const I18N = {
     slotHint: "Switch with 1/2/3/4 or scroll",
     tabWeapons: "WEAPONS",
     tabStats: "STATS",
-    waveCleared: "WAVE CLEARED",
+    waveCleared: "WAVE CLEARED", waveClearedTitle: "WAVE {wave} CLEARED",
     enemiesLeft: "ENEMIES",
     yourStats: "YOUR RONIN",
     statSpeed: "SPEED",
@@ -374,6 +381,7 @@ export const I18N = {
     hudNormal: "NORMALE",
     hudLarge: "GRANDE",
     hudHuge: "ÉNORME",
+    hudSmall: "PETITE", hudTiny: "MINUSCULE", accessibility: "ACCESSIBILITÉ", keyboardOnly: "CLAVIER UNIQUEMENT",
     on: "ACTIVÉ",
     off: "DÉSACTIVÉ",
     noScores: "AUCUN SCORE",
@@ -433,7 +441,7 @@ export const I18N = {
     slotHint: "Changer avec 1/2/3/4 ou molette",
     tabWeapons: "ARMES",
     tabStats: "STATISTIQUES",
-    waveCleared: "VAGUE NETTOYÉE",
+    waveCleared: "VAGUE NETTOYÉE", waveClearedTitle: "VAGUE {wave} NETTOYÉE",
     enemiesLeft: "ENNEMIS",
     yourStats: "VOTRE RONIN",
     statSpeed: "VITESSE",
@@ -469,7 +477,7 @@ I18N.de = {
   graphics: "GRAFIK", quality: "QUALITÄT", qualityHigh: "HOCH", qualityLow: "NIEDRIG", fullscreen: "VOLLBILD",
   enter: "ÖFFNEN", exit: "BEENDEN", sound: "TON", volume: "LAUTSTÄRKE", screenShake: "BILDSCHIRMWACKELN",
   screenFlash: "BILDSCHIRMBLITZ", on: "AN", off: "AUS", noScores: "NOCH KEINE ERGEBNISSE", wave: "WELLE",
-  hudSize: "HUD-GRÖSSE", hudNormal: "NORMAL", hudLarge: "GROSS", hudHuge: "RIESIG",
+  hudSize: "HUD-GRÖSSE", hudNormal: "NORMAL", hudLarge: "GROSS", hudHuge: "RIESIG", hudSmall: "KLEIN", hudTiny: "WINZIG", accessibility: "BARRIEREFREIHEIT", keyboardOnly: "NUR TASTATUR",
   rank: "PLATZ", name: "NAME", score: "PUNKTE", clear: "RANGLISTE LÖSCHEN", paused: "PAUSIERT",
   resume: "FORTSETZEN", quit: "BEENDEN", youDied: "DU BIST GESTORBEN", newRecord: "NEUER REKORD",
   finalScore: "PUNKTE", kills: "BESIEGT", time: "ZEIT", enterName: "NAMEN EINGEBEN", save: "SPEICHERN",
@@ -486,7 +494,7 @@ I18N.de = {
   speedUp: "+ TEMPO", speedDesc: "+18 Bewegungstempo.", heartUp: "+ HERZ / HEILUNG", heartDesc: "+1 maximales Herz und 2 Heilung.",
   dashCdUp: "- DASH-AUFLADUNG", dashCdDesc: "-0,8 s Dash-Aufladezeit.", dashDistUp: "+ DASH-DISTANZ",
   dashDistDesc: "+25 % Dash-Tempo und Reichweite.", tagline: "Eine karminrote Arena. Eine Klinge. Überlebe.", ready: "BEREIT",
-  slotHint: "Wechseln mit 1/2/3/4 oder Mausrad", tabWeapons: "WAFFEN", tabStats: "WERTE", waveCleared: "WELLE GESCHAFFT",
+  slotHint: "Wechseln mit 1/2/3/4 oder Mausrad", tabWeapons: "WAFFEN", tabStats: "WERTE", waveCleared: "WELLE GESCHAFFT", waveClearedTitle: "WELLE {wave} GESCHAFFT",
   enemiesLeft: "GEGNER", yourStats: "DEIN RONIN", statSpeed: "TEMPO", statHearts: "HERZEN", statDashCd: "DASH-AUFLADUNG",
   statDashDist: "DASH-REICHWEITE", owned: "IM INVENTAR", inHand: "IN DER HAND", preview: "VORSCHAU", dmg: "SCHADEN",
   spd: "TEMPO", range: "REICHW.", weaponDetails: "DETAILS", mute: "TON UMSCHALTEN", pause: "PAUSE",
@@ -501,7 +509,7 @@ I18N.zh = {
   touchStart: "点击开始", best: "最高纪录", coins: "金币", graphics: "画面", quality: "画质", qualityHigh: "高",
   qualityLow: "低", fullscreen: "全屏", enter: "进入", exit: "退出", sound: "声音", volume: "音量",
   screenShake: "屏幕震动", screenFlash: "屏幕闪光", on: "开", off: "关", noScores: "暂无纪录", wave: "波次",
-  hudSize: "界面大小", hudNormal: "普通", hudLarge: "大", hudHuge: "特大",
+  hudSize: "界面大小", hudNormal: "普通", hudLarge: "大", hudHuge: "特大", hudSmall: "小", hudTiny: "极小", accessibility: "无障碍", keyboardOnly: "仅键盘",
   rank: "排名", name: "名字", score: "分数", clear: "清除排行榜", paused: "已暂停", resume: "继续", quit: "退出",
   youDied: "你已阵亡", newRecord: "新纪录", finalScore: "最终分数", kills: "击杀", time: "时间",
   enterName: "输入名字", save: "保存", skip: "跳过", playAgain: "再玩一次", menu: "菜单",
@@ -515,7 +523,7 @@ I18N.zh = {
   speedUp: "+ 移动速度", speedDesc: "+18移动速度。", heartUp: "+ 生命 / 治疗", heartDesc: "+1最大生命并恢复2点生命。",
   dashCdUp: "- 冲刺冷却", dashCdDesc: "冲刺冷却减少0.8秒。", dashDistUp: "+ 冲刺距离", dashDistDesc: "冲刺速度和距离增加25%。",
   tagline: "猩红竞技场。一把刀。活下去。", dashLabel: "冲刺", ready: "就绪", slotHint: "按1/2/3/4或滚轮切换",
-  tabWeapons: "武器", tabStats: "属性", waveCleared: "波次完成", enemiesLeft: "敌人", yourStats: "浪人属性",
+  tabWeapons: "武器", tabStats: "属性", waveCleared: "波次完成", waveClearedTitle: "第{wave}波完成", enemiesLeft: "敌人", yourStats: "浪人属性",
   statSpeed: "速度", statHearts: "生命", statDashCd: "冲刺冷却", statDashDist: "冲刺距离", owned: "背包中",
   inHand: "手持", preview: "预览", dmg: "伤害", spd: "速度", range: "范围", weaponDetails: "详情",
   mute: "切换声音", pause: "暂停", speedBoost: "速度 +", healthBoost: "生命 +", dashCooldownBoost: "冲刺冷却 -",

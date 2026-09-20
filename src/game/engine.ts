@@ -74,6 +74,7 @@ export interface GameOpts {
   quality: "high" | "low";
   vsync: boolean;
   language: Language;
+  keyboardOnly: boolean;
 }
 
 type EnemyType =
@@ -343,13 +344,14 @@ export class Game {
   bannerT = 0;
   deathT = 0;
   vignettePulse = 0;
-  opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt" };
+  opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt", keyboardOnly: false };
 
   // Input
   keys = new Set<string>();
   mouseX = 0;
   mouseY = 0;
   mouseActive = false;
+  keyboardAimAngle = 0;
   attackHeld = false;
   dashQueued = false;
   moveStick: { id: number; ox: number; oy: number; x: number; y: number } | null = null;
@@ -385,6 +387,11 @@ export class Game {
 
   setOpts(o: Partial<GameOpts>) {
     Object.assign(this.opts, o);
+    if (this.opts.keyboardOnly) {
+      this.mouseActive = false;
+      this.attackHeld = false;
+      this.aimStick = null;
+    }
     setVolume(this.opts.volume);
   }
 
@@ -559,6 +566,7 @@ export class Game {
   }
 
   private onPointerDown = (e: PointerEvent) => {
+    if (this.opts.keyboardOnly) return;
     unlockAudio();
     if (this.phase !== "playing") return;
     const p = this.toCanvas(e);
@@ -579,6 +587,7 @@ export class Game {
   };
 
   private onPointerMove = (e: PointerEvent) => {
+    if (this.opts.keyboardOnly) return;
     const p = this.toCanvas(e);
     if (e.pointerType === "mouse") {
       this.mouseX = p.x;
@@ -596,6 +605,7 @@ export class Game {
   };
 
   private onPointerUp = (e: PointerEvent) => {
+    if (this.opts.keyboardOnly) return;
     if (e.pointerType === "mouse") {
       this.attackHeld = false;
       return;
@@ -756,6 +766,7 @@ export class Game {
     this.weaponLevels = createWeaponLevels();
     this.magicType = "fire";
     this.magicCd = 0;
+    this.keyboardAimAngle = 0;
     this.atkT = this.atkCd = this.atkWind = this.atkDur = this.atkRec = 0;
     this.atkChain = 0;
     this.atkChainT = 0;
@@ -831,7 +842,16 @@ export class Game {
     else if (this.phase === "paused") this.resume();
   }
 
+  private enforceStatLimits() {
+    const clamped = clampPowerUpStats(this);
+    this.maxHp = clamped.maxHp;
+    this.speedBonus = clamped.speedBonus;
+    this.dashMax = clamped.dashMax;
+    this.dashSpeedMult = clamped.dashSpeedMult;
+    this.hp = clamp(this.hp, 0, this.maxHp);
+  }
   stats(): HudStats {
+    this.enforceStatLimits();
     return {
       hp: this.hp,
       maxHp: this.maxHp,
@@ -987,6 +1007,7 @@ export class Game {
       const dy = this.aimStick.y - this.aimStick.oy;
       if (Math.hypot(dx, dy) > 6) return Math.atan2(dy, dx);
     }
+    if (this.opts.keyboardOnly) return this.keyboardAimAngle;
     if (this.mouseActive) return Math.atan2(this.mouseY - this.py, this.mouseX - this.px);
     const near = this.nearestEnemy(240);
     if (near) return Math.atan2(near.y - this.py, near.x - this.px);
@@ -1031,6 +1052,7 @@ export class Game {
       mx /= ml;
       my /= ml;
     }
+    if (this.opts.keyboardOnly && ml > 0.01) this.keyboardAimAngle = Math.atan2(my, mx);
 
     const SPEED = 108 + this.speedBonus;
     const accel = 1100;
@@ -1232,19 +1254,21 @@ export class Game {
       Sfx.shieldBash();
       return;
     }
-    let best: Enemy | null = null;
-    let bestScore = Infinity;
-    for (const e of this.enemies) {
-      const d = Math.hypot(e.x - this.px, e.y - this.py);
-      if (d > 70) continue;
-      const ang = Math.atan2(e.y - this.py, e.x - this.px);
-      const diff = Math.abs(angDiff(ang, a));
-      if (diff < 0.85 && d + diff * 30 < bestScore) {
-        bestScore = d + diff * 30;
-        best = e;
+    if (!this.opts.keyboardOnly) {
+      let best: Enemy | null = null;
+      let bestScore = Infinity;
+      for (const e of this.enemies) {
+        const d = Math.hypot(e.x - this.px, e.y - this.py);
+        if (d > 70) continue;
+        const ang = Math.atan2(e.y - this.py, e.x - this.px);
+        const diff = Math.abs(angDiff(ang, a));
+        if (diff < 0.85 && d + diff * 30 < bestScore) {
+          bestScore = d + diff * 30;
+          best = e;
+        }
       }
+      if (best) a = Math.atan2(best.y - this.py, best.x - this.px);
     }
-    if (best) a = Math.atan2(best.y - this.py, best.x - this.px);
 
     this.atkChain = this.atkChainT > 0 ? (this.atkChain % 2) + 1 : 1;
     this.atkChainT = 0.85;
@@ -1465,8 +1489,27 @@ export class Game {
       }
     }
 
-    this.shockwaves.push({ x: this.px, y: this.py, r: 8, maxR: range, life: 0.32, maxLife: 0.32 });
-    this.burst(this.px + Math.cos(angle) * 22, this.py + Math.sin(angle) * 22, 12 + hits * 2, color, 150);
+    const sourceX = this.px + Math.cos(angle) * 16;
+    const sourceY = this.py + Math.sin(angle) * 16;
+    const sparkCount = 24 + hits * 4;
+    for (let i = 0; i < sparkCount; i++) {
+      const sparkAngle = angle + rnd(-0.74, 0.74);
+      const speed = rnd(90, 235);
+      this.parts.push({
+        x: sourceX + Math.cos(sparkAngle) * rnd(0, 10),
+        y: sourceY + Math.sin(sparkAngle) * rnd(0, 10),
+        vx: Math.cos(sparkAngle) * speed,
+        vy: Math.sin(sparkAngle) * speed,
+        life: rnd(0.2, 0.45),
+        max: 0.45,
+        size: 2,
+        color: i % 5 === 0 ? "#ffffff" : color,
+        drag: 3.5,
+        kind: i % 3 === 0 ? 3 : 2,
+        rot: sparkAngle,
+      });
+    }
+    this.burst(sourceX, sourceY, 10 + hits * 2, color, 130);
     this.shake = Math.max(this.shake, this.magicType === "water" ? 6 : 3);
     Sfx.swing("book");
   }

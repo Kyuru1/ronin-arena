@@ -101,7 +101,7 @@ export default function ShopScreen({
 
   return (
     <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-2 sm:p-5">
-      <PxFrame title={`${t.waveCleared} · ${t.wave} ${wave}`} icon="icoTrophy" className="anim-pop relative my-auto flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden p-3 pt-7 sm:p-5 sm:pt-8">
+      <PxFrame title={t.waveClearedTitle.replace("{wave}", String(wave))} icon="icoTrophy" className="anim-pop relative my-auto flex max-h-[96vh] w-full max-w-5xl flex-col overflow-hidden p-3 pt-7 sm:p-5 sm:pt-8">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex gap-1">
             <button className={`shop-tab ${tab === "weapons" ? "is-active" : ""}`} onClick={() => setTab("weapons")}>{t.tabWeapons} + {g.upgrades}</button>

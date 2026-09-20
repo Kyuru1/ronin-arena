@@ -610,3 +610,30 @@ input,
   .ranking-head, .ranking-row { grid-template-columns: 24px minmax(60px,1fr) 68px 34px; }
   .ranking-head span:last-child, .ranking-row span:last-child { display: none; }
 }
+
+/* Combat HUD: leave the arena visible and keep each control independent. */
+.combat-topbar { filter: drop-shadow(0 2px 0 rgba(7,3,5,.9)); }
+.combat-panel, .combat-wave { min-width: 0; border: 0; background: transparent; padding: 0; text-shadow: 2px 2px 0 #070305, -1px -1px 0 #070305; }
+.combat-wave { padding-top: 1px; }
+.combat-wave > div:nth-child(2) { border-color: rgba(7,3,5,.9); background: rgba(7,3,5,.34); box-shadow: 0 2px 0 rgba(7,3,5,.8); }
+.hud-label { margin-bottom: 3px; }
+.hud-icon { height: 24px; width: 24px; border: 0; background: transparent; color: #ffe2c4; text-shadow: 2px 2px 0 #070305; opacity: .9; }
+.hud-icon:hover, .hud-icon:focus-visible { color: #ffd44a; opacity: 1; outline: 2px solid #ffd44a; outline-offset: 2px; }
+.dash-gauge { filter: drop-shadow(0 2px 0 rgba(7,3,5,.9)); }
+.dash-gauge strong { border: 0; background: transparent; padding: 1px 3px; text-shadow: 2px 2px 0 #070305; }
+.weapon-rail { gap: 6px; border: 0; background: transparent; padding: 0; }
+.weapon-slot { height: 56px; width: 58px; border: 0; background: transparent; box-shadow: none; filter: drop-shadow(0 2px 0 rgba(7,3,5,.92)); transition: transform .12s ease, filter .12s ease; }
+.weapon-slot.is-active { height: 66px; width: 76px; border: 0; background: transparent; box-shadow: none; transform: translateY(-4px); filter: drop-shadow(0 0 2px #ffd44a) drop-shadow(0 3px 0 rgba(7,3,5,.95)); }
+.weapon-slot.is-empty { border: 1px dashed rgba(125,183,177,.38); background: rgba(7,3,5,.16); }
+.weapon-slot:hover, .weapon-slot:focus-visible { transform: translateY(-3px); outline: 2px solid #ffd44a; outline-offset: 2px; }
+.weapon-slot.is-active:hover { transform: translateY(-5px); }
+.slot-key, .slot-name, .slot-level { text-shadow: 2px 2px 0 #070305; }
+.slot-name { bottom: 8px; }
+
+@media (max-width: 640px) {
+  .combat-panel, .combat-wave { padding: 0; }
+  .weapon-slot { height: 46px; width: 42px; }
+  .weapon-slot.is-active { height: 56px; width: 58px; }
+  .weapon-rail { gap: 3px; }
+  .dash-gauge { height: 50px; width: 50px; }
+}

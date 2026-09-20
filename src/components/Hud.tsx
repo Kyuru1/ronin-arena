@@ -16,7 +16,7 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, muted,
   onMute: () => void;
   onSelectSlot: (slot: number) => void;
   muted: boolean;
-  hudScale: 1 | 1.25 | 1.5;
+  hudScale: 0.65 | 0.85 | 1 | 1.25 | 1.5;
   language: Language;
   t: Strings;
 }) {

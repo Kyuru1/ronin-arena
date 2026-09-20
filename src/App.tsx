@@ -55,7 +55,8 @@ const defaultOpts: UiOpts = {
   quality: "high",
   vsync: true,
   language: "pt",
-  hudScale: 1.25,
+  hudScale: 1,
+  keyboardOnly: false,
 };
 
 function loadOpts(): UiOpts {
@@ -318,6 +319,7 @@ export default function App() {
       quality: opts.quality,
       vsync: opts.vsync,
       language: opts.language,
+      keyboardOnly: opts.keyboardOnly,
     });
   }, [opts]);
 
