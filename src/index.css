@@ -653,8 +653,8 @@ input,
 .shop-frame .px-ribbon { max-width: calc(100vw - 42px); overflow: hidden; text-overflow: ellipsis; }
 .shop-layout > div { min-width: 0; }
 .shop-layout .px-inset { border-left-width: 3px; }
-.ui-text-small .menu-arena, .ui-text-small .px-backdrop { zoom: .88; }
-.ui-text-large .menu-arena, .ui-text-large .px-backdrop { zoom: 1.12; }
+.ui-text-small .menu-arena, .ui-text-small .px-backdrop { zoom: .92; }
+.ui-text-large .menu-arena, .ui-text-large .px-backdrop { zoom: 1.24; }
 
 @media (max-width: 640px) {
   .combat-topbar { gap: 5px; }
@@ -682,3 +682,9 @@ input,
   .px-coinbox { transform: scale(.9); transform-origin: right center; }
 }
 .ranking-row-four { grid-template-columns: 28px minmax(70px,1fr) 55px 90px 55px; }
+
+@media (max-width: 640px) {
+  canvas { width: 94% !important; height: 94% !important; margin: auto; }
+  .combat-topbar { font-size: 1.08em; }
+  .slot-name { font-size: 5px; }
+}

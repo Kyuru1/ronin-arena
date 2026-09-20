@@ -91,11 +91,11 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
     const perks: { id: Perk; title: string; desc: string }[] = [
       { id: "bladeMonk", title: "Monge da Lâmina Única", desc: "Carrega apenas 1 arma. Ela recebe muito mais dano, cadência e recarga." },
       { id: "bloodContract", title: "Contrato de Sangue", desc: "Abaixo de 30% da vida, você causa mais dano e ataca mais rápido. Ficar ferido fica muito perigoso." },
-      { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Permite carregar ate 6 armas ou equipamentos, mas reduz sua velocidade de movimento." },
+      { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Permite carregar até 6 armas ou equipamentos, mas reduz sua velocidade de movimento." },
       { id: "predatorInstinct", title: "Instinto Predador", desc: "Cada abate dá velocidade e cadência por pouco tempo. Abates seguidos renovam o efeito." },
       { id: "sharpGlass", title: "Vidro Afiado", desc: "Aumenta bastante o dano dos ataques, mas você começa com menos vida máxima." },
       { id: "kyuEcho", title: "Eco de Kyu", desc: "A cada alguns segundos, seu próximo ataque causa dano extra como um eco em linha reta." },
-      { id: "cursedArsenal", title: "Arsenal Amaldiçoado", desc: "Todas as armas ganham poder, mas você perde um pouco de velocidade para controlar a maldição." },
+      { id: "cursedArsenal", title: "Arsenal Amaldiçoado", desc: "Todas as armas causam mais dano, mas a maldição reduz sua velocidade de movimento." },
       { id: "lastBullet", title: "Última Bala", desc: "O disparo totalmente carregado causa dano enorme. Ideal para arco e pistola automática." },
     ];
     const available = difficulty === "hard" ? perks.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : perks;

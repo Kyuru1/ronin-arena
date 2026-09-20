@@ -116,7 +116,8 @@ export default function ShopScreen({
   const ownedIndex = stats.weapons.indexOf(selected);
   const owned = ownedIndex >= 0;
   const active = ownedIndex === stats.activeSlot;
-  const full = stats.weapons.length >= 4;
+  const maxWeapons = stats.perk === "bottomlessPocket" ? 6 : 4;
+  const full = stats.perk === "bladeMonk" || stats.weapons.length >= maxWeapons;
   const levels = stats.weaponLevels[selected];
   const isPowerUpMaxed = (power: PowerUp) => isPowerUpAtLimit(stats, power, stats.difficulty);
   const dismissShopIntro = () => {

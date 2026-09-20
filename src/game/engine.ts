@@ -85,6 +85,7 @@ export interface HudStats {
   weaponLevels: WeaponLevels;
   magicType: MagicType;
   difficulty: Difficulty;
+  perk: Perk | null;
 }
 
 export interface GameOpts {
@@ -676,6 +677,7 @@ export class Game {
   /* ---------------------- weapon slots & shop ---------------------- */
 
   switchSlot(slotIndex: number) {
+    if (this.perk === "bladeMonk") return;
     if (slotIndex >= 0 && slotIndex < this.weapons.length && slotIndex !== this.activeSlot) {
       this.activeSlot = slotIndex;
       this.atkT = 0;
@@ -941,6 +943,7 @@ export class Game {
       weaponLevels: this.weaponLevels,
       magicType: this.magicType,
       difficulty: this.difficulty,
+      perk: this.perk,
     };
   }
 
@@ -2995,15 +2998,15 @@ export class Game {
     ctx.fill();
   }
 
-  private blit(spr: Sprite, x: number, y: number, flip: number, white: number, scaleY = 1) {
+  private blit(spr: Sprite, x: number, y: number, flip: number, white: number, scaleY = 1, scaleX = 1) {
     const ctx = this.ctx;
     const img = white ? spr.white : spr.canvas;
     const w = spr.w;
     const h = spr.h;
-    if (flip < 0 || scaleY !== 1) {
+    if (flip < 0 || scaleY !== 1 || scaleX !== 1) {
       ctx.save();
       ctx.translate(Math.round(x), Math.round(y + h / 2));
-      ctx.scale(flip < 0 ? -1 : 1, scaleY);
+      ctx.scale((flip < 0 ? -1 : 1) * scaleX, scaleY);
       ctx.drawImage(img, Math.round(-w / 2), -h);
       ctx.restore();
     } else {
@@ -3153,7 +3156,7 @@ export class Game {
 
     if (!blink) {
       const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
-      this.blit(SPR.player, bx, by, this.face, 0, squash);
+      this.blit(SPR.player, bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.16 : 1);
       if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) this.drawPsychicHands(this.aimAngle());
     }
 

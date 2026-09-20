@@ -43,6 +43,7 @@ const emptyStats: HudStats = {
   },
   magicType: "fire",
   difficulty: "medium",
+  perk: null,
 };
 
 const OPT_KEY = "ronin.options.v2";
