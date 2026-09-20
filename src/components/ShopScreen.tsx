@@ -66,7 +66,7 @@ function weaponDescription(w: Weapon, t: Strings, g: GameplayStrings) {
 }
 
 function upgradeCost(weapon: Weapon, kind: WeaponUpgrade, level: number) {
-  if (kind === "form") return weapon === "hammer" ? 130 : 100;
+  if (kind === "form") return weapon === "hammer" ? 130 : weapon === "book" ? 120 : weapon === "katana" ? 115 : 100;
   const base = kind === "damage" ? 20 : kind === "speed" ? 24 : 22;
   return base + level * 18;
 }
@@ -164,7 +164,7 @@ export default function ShopScreen({
             <div className="flex flex-col gap-2">
               <div className="font-pixel text-[7px] text-[#ffd44a]">{g.upgrades}</div>
               {!owned ? <div className="px-inset p-4 text-center font-pixel text-[7px] leading-5 text-[#a35662]">{t.buy} {weaponName(selected, t, g, levels.form)}</div> : UPGRADE_TYPES.map((kind) => {
-                const allowed = kind !== "form" || selected === "bow" || selected === "hammer";
+                const allowed = kind !== "form" || selected === "katana" || selected === "bow" || selected === "hammer" || selected === "book";
                 const level = levels[kind];
                 const max = kind === "form" ? 1 : 3;
                 const cost = upgradeCost(selected, kind, level);

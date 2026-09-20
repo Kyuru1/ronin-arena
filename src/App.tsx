@@ -417,7 +417,7 @@ export default function App() {
         )}
 
         {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} onBegin={finishTutorial} />}
-        {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onQuit={toMenu} t={t} />}
+        {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (
           <GameOverScreen
             stats={finalStats}

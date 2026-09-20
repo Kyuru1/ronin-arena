@@ -45,14 +45,15 @@ export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: 
       drawMine(ctx);
       break;
     case "book":
-      drawBook(ctx);
+      drawBook(ctx, o.form ?? 0);
       break;
     default:
-      drawKatana(ctx, L, o.glint ?? 0, o.glintP ?? 0);
+      drawKatana(ctx, L, o.glint ?? 0, o.glintP ?? 0, o.form ?? 0);
   }
 }
 
-function drawKatana(ctx: CanvasRenderingContext2D, L: number, glint: number, glintP: number) {
+function drawKatana(ctx: CanvasRenderingContext2D, L: number, glint: number, glintP: number, form: number) {
+  const bladeLen = form > 0 ? L + 14 : L;
   ctx.fillStyle = "#070508";
   ctx.fillRect(-10, -2, 13, 5);
   ctx.fillStyle = "#891f2d";
@@ -67,7 +68,7 @@ function drawKatana(ctx: CanvasRenderingContext2D, L: number, glint: number, gli
   ctx.fillStyle = "#d34a4e";
   ctx.fillRect(1, -4, 2, 8);
 
-  const segments = Math.max(3, Math.floor((L - 4) / 3));
+  const segments = Math.max(3, Math.floor((bladeLen - 4) / 3));
   for (let i = 0; i < segments; i++) {
     const p = i / segments;
     const x = 4 + i * 3;
@@ -75,7 +76,7 @@ function drawKatana(ctx: CanvasRenderingContext2D, L: number, glint: number, gli
     const width = i > segments - 3 ? 2 : 3;
     ctx.fillStyle = "#08070a";
     ctx.fillRect(x, -2 - curve, 4, width + 2);
-    ctx.fillStyle = "#c9b9aa";
+    ctx.fillStyle = form > 0 ? "#a88df0" : "#c9b9aa";
     ctx.fillRect(x, -1 - curve, 3, width);
     ctx.fillStyle = "#fff0dc";
     ctx.fillRect(x, -1 - curve, 3, 1);
@@ -85,10 +86,10 @@ function drawKatana(ctx: CanvasRenderingContext2D, L: number, glint: number, gli
     }
   }
   ctx.fillStyle = "#fff0dc";
-  ctx.fillRect(L - 2, -7, 2, 2);
+  ctx.fillRect(bladeLen - 2, -7, 2, 2);
   if (glint > 0.02) {
-    const gx = 6 + Math.round((L - 12) * glintP);
-    const gy = -1 - Math.round(((gx - 4) / Math.max(1, L - 4)) ** 2 * 5);
+    const gx = 6 + Math.round((bladeLen - 12) * glintP);
+    const gy = -1 - Math.round(((gx - 4) / Math.max(1, bladeLen - 4)) ** 2 * 5);
     ctx.fillStyle = `rgba(255,255,255,${glint})`;
     ctx.fillRect(gx - 2, gy - 2, 5, 5);
   }
@@ -146,18 +147,18 @@ function drawBow(ctx: CanvasRenderingContext2D, draw01: number, form: number) {
 
 function drawPistol(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "#070508";
-  ctx.fillRect(-5, -5, 24, 10);
-  ctx.fillRect(0, 4, 8, 10);
+  ctx.fillRect(-4, -4, 17, 8);
+  ctx.fillRect(0, 3, 6, 7);
   ctx.fillStyle = "#626a72";
-  ctx.fillRect(-3, -3, 20, 6);
+  ctx.fillRect(-2, -2, 14, 4);
   ctx.fillStyle = "#c9d2d2";
-  ctx.fillRect(2, -2, 14, 2);
+  ctx.fillRect(2, -2, 9, 1);
   ctx.fillStyle = "#8e2430";
-  ctx.fillRect(1, 4, 6, 8);
+  ctx.fillRect(1, 3, 4, 6);
   ctx.fillStyle = "#e3574f";
-  ctx.fillRect(3, 5, 2, 5);
+  ctx.fillRect(2, 4, 1, 4);
   ctx.fillStyle = "#ffd44a";
-  ctx.fillRect(18, -2, 3, 4);
+  ctx.fillRect(12, -1, 2, 3);
 }
 
 function drawHammer(ctx: CanvasRenderingContext2D, L: number, form: number) {
@@ -193,19 +194,30 @@ function drawShield(ctx: CanvasRenderingContext2D) {
   ctx.fillRect(9, -2, 2, 4);
 }
 
-function drawBook(ctx: CanvasRenderingContext2D) {
+function drawBook(ctx: CanvasRenderingContext2D, form: number) {
+  if (form > 0) {
+    ctx.fillStyle = "#29143b";
+    ctx.fillRect(1, -7, 5, 5);
+    ctx.fillRect(8, 2, 5, 5);
+    ctx.fillStyle = "#d9b08f";
+    ctx.fillRect(2, -6, 3, 3);
+    ctx.fillRect(9, 3, 3, 3);
+    ctx.fillStyle = "#8cecff";
+    ctx.fillRect(6, -3, 2, 2);
+    return;
+  }
   ctx.fillStyle = "#070508";
-  ctx.fillRect(2, -10, 17, 20);
+  ctx.fillRect(2, -7, 13, 15);
   ctx.fillStyle = "#4f245f";
-  ctx.fillRect(3, -9, 15, 18);
+  ctx.fillRect(3, -6, 11, 13);
   ctx.fillStyle = "#9a55a5";
-  ctx.fillRect(5, -7, 11, 14);
+  ctx.fillRect(5, -5, 7, 10);
   ctx.fillStyle = "#f0d8a8";
-  ctx.fillRect(8, -4, 5, 8);
+  ctx.fillRect(7, -3, 4, 6);
   ctx.fillStyle = "#63d8ff";
-  ctx.fillRect(10, -2, 2, 4);
+  ctx.fillRect(8, -1, 2, 3);
   ctx.fillStyle = "#d9b45c";
-  ctx.fillRect(3, -9, 2, 18);
+  ctx.fillRect(3, -6, 1, 13);
 }
 
 function drawMine(ctx: CanvasRenderingContext2D) {

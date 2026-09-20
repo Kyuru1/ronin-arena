@@ -181,6 +181,15 @@ interface Shockwave {
   maxLife: number;
 }
 
+interface PsychicZone {
+  x: number;
+  y: number;
+  r: number;
+  life: number;
+  maxLife: number;
+  type: MagicType;
+}
+
 interface Pickup {
   x: number;
   y: number;
@@ -311,7 +320,9 @@ export class Game {
   trail: { a: number; r: number; life: number }[] = [];
   impacts: Impact[] = [];
   arrows: PlayerArrow[] = [];
+  dashHitSet = new Set<Enemy>();
   shockwaves: Shockwave[] = [];
+  psychicZones: PsychicZone[] = [];
   mines: LandMine[] = [];
 
   // World entities
@@ -677,7 +688,7 @@ export class Game {
     if (!this.weapons.includes(weapon) || this.coins < cost) return false;
     const max = upgrade === "form" ? 1 : 3;
     if (this.weaponLevels[weapon][upgrade] >= max) return false;
-    if (upgrade === "form" && weapon !== "bow" && weapon !== "hammer") return false;
+    if (upgrade === "form" && weapon !== "katana" && weapon !== "bow" && weapon !== "hammer" && weapon !== "book") return false;
     this.coins -= cost;
     this.weaponLevels[weapon][upgrade]++;
     Sfx.buy();
@@ -745,6 +756,8 @@ export class Game {
     this.shots.length = 0;
     this.arrows.length = 0;
     this.shockwaves.length = 0;
+    this.psychicZones.length = 0;
+    this.dashHitSet.clear();
     this.mines.length = 0;
     this.pickups.length = 0;
     this.marks.length = 0;
@@ -998,6 +1011,10 @@ export class Game {
       sw.r = sw.maxR * (1 - sw.life / sw.maxLife);
       if (sw.life <= 0) this.shockwaves.splice(i, 1);
     }
+    for (let i = this.psychicZones.length - 1; i >= 0; i--) {
+      this.psychicZones[i].life -= dt;
+      if (this.psychicZones[i].life <= 0) this.psychicZones.splice(i, 1);
+    }
     this.glint = Math.max(0, this.glint - dt * 2.2);
   }
 
@@ -1119,6 +1136,7 @@ export class Game {
       this.py = this.H - M;
       this.pvy = 0;
     }
+    if (this.dashT > 0 && this.currentWeapon === "katana" && this.weaponLevels.katana.form > 0) this.cutDuringDash();
 
     this.iframe = Math.max(0, this.iframe - dt);
     this.dashCd = Math.max(0, this.dashCd - dt);
@@ -1141,6 +1159,7 @@ export class Game {
         this.dashDx = dx / l;
         this.dashDy = dy / l;
         this.dashT = 0.17;
+        this.dashHitSet.clear();
         this.dashCd = this.dashMax;
         this.iframe = Math.max(this.iframe, 0.26);
         this.shake = Math.max(this.shake, 3);
@@ -1290,15 +1309,16 @@ export class Game {
     const levels = this.weaponLevels[weapon];
     const speed = 1 + levels.speed * 0.14;
     const evolvedHammer = weapon === "hammer" && levels.form > 0;
+    const evolvedKatana = weapon === "katana" && levels.form > 0;
     return {
       ...base,
       wind: base.wind / speed,
       strike: base.strike / speed,
       rec: base.rec / speed,
       cd: base.cd / speed,
-      range: base.range + levels.range * 5 + (evolvedHammer ? 28 : 0),
-      dmg: base.dmg + levels.damage * (weapon === "hammer" ? 2 : 1) + (evolvedHammer ? 5 : 0),
-      kb: base.kb + levels.range * 25 + (evolvedHammer ? 180 : 0),
+      range: base.range + levels.range * 5 + (evolvedHammer ? 28 : 0) + (evolvedKatana ? 24 : 0),
+      dmg: base.dmg + levels.damage * (weapon === "hammer" ? 2 : 1) + (evolvedHammer ? 5 : 0) + (evolvedKatana ? 2 : 0),
+      kb: base.kb + levels.range * 25 + (evolvedHammer ? 180 : 0) + (evolvedKatana ? 80 : 0),
     };
   }
 
@@ -1357,7 +1377,8 @@ export class Game {
       const p = clamp(this.phaseProgress(), 0, 1);
       return t.range * (1 - 0.45 * p);
     }
-    return 16 + Math.abs(Math.sin(this.idleT * 2.1)) * 1.5;
+    const evolvedKatana = this.currentWeapon === "katana" && this.weaponLevels.katana.form > 0;
+    return (evolvedKatana ? 28 : 16) + Math.abs(Math.sin(this.idleT * 2.1)) * 1.5;
   }
 
   /* ------------------- special attack actions ------------------- */
@@ -1453,11 +1474,15 @@ export class Game {
   }
 
   private castMagic() {
+    if (this.weaponLevels.book.form > 0) {
+      this.castPsychicMagic();
+      return;
+    }
     const levels = this.weaponLevels.book;
     const angle = this.aimAngle();
     const baseRange = 72 + levels.range * 7;
     const range = this.magicType === "fire" ? baseRange * 0.78 : this.magicType === "water" ? baseRange * 1.15 : baseRange;
-    const color = this.magicType === "fire" ? "#ff5a3d" : this.magicType === "ice" ? "#86e7ff" : this.magicType === "poison" ? "#8cdf55" : "#62a9ff";
+    const color = this.magicColor();
     let hits = 0;
 
     for (const enemy of this.enemies.slice()) {
@@ -1466,54 +1491,101 @@ export class Game {
       const distance = Math.hypot(dx, dy);
       const enemyAngle = Math.atan2(dy, dx);
       if (distance > range + enemy.r || Math.abs(angDiff(enemyAngle, angle)) > 0.72) continue;
-
-      const direct = this.magicType === "fire" ? 4 + levels.damage * 2 : this.magicType === "water" ? 2 + levels.damage : 1 + levels.damage;
-      const killed = this.damageEnemy(enemy, direct, enemyAngle);
       hits++;
-      if (killed) continue;
-
-      if (this.magicType === "fire") {
-        enemy.fireT = Math.max(enemy.fireT, 3);
-        enemy.fireTick = Math.min(enemy.fireTick || 0.5, 0.5);
-      } else if (this.magicType === "poison") {
-        enemy.poisonT = Math.max(enemy.poisonT, 5);
-        enemy.poisonTick = Math.min(enemy.poisonTick || 0.5, 0.5);
-      } else if (this.magicType === "ice" && enemy.freezeImmune <= 0) {
-        enemy.freezeT = 2;
-        enemy.freezeImmune = 12;
-        enemy.slowT = 7;
-      } else if (this.magicType === "water") {
-        const push = 420 + levels.range * 45;
-        enemy.vx += Math.cos(enemyAngle) * push;
-        enemy.vy += Math.sin(enemyAngle) * push;
-      }
+      this.applyMagicHit(enemy, enemyAngle, levels);
     }
 
     const sourceX = this.px + Math.cos(angle) * 16;
     const sourceY = this.py + Math.sin(angle) * 16;
-    const sparkCount = 24 + hits * 4;
-    for (let i = 0; i < sparkCount; i++) {
-      const sparkAngle = angle + rnd(-0.74, 0.74);
-      const speed = rnd(90, 235);
-      this.parts.push({
-        x: sourceX + Math.cos(sparkAngle) * rnd(0, 10),
-        y: sourceY + Math.sin(sparkAngle) * rnd(0, 10),
-        vx: Math.cos(sparkAngle) * speed,
-        vy: Math.sin(sparkAngle) * speed,
-        life: rnd(0.2, 0.45),
-        max: 0.45,
-        size: 2,
-        color: i % 5 === 0 ? "#ffffff" : color,
-        drag: 3.5,
-        kind: i % 3 === 0 ? 3 : 2,
-        rot: sparkAngle,
-      });
-    }
+    this.spawnMagicSparks(sourceX, sourceY, angle, color, 24 + hits * 4);
     this.burst(sourceX, sourceY, 10 + hits * 2, color, 130);
     this.shake = Math.max(this.shake, this.magicType === "water" ? 6 : 3);
     Sfx.swing("book");
   }
 
+  private castPsychicMagic() {
+    const levels = this.weaponLevels.book;
+    const angle = this.aimAngle();
+    const reach = 64 + levels.range * 9;
+    const radius = 30 + levels.range * 5;
+    const x = clamp(this.px + Math.cos(angle) * reach, 18, this.W - 18);
+    const y = clamp(this.py + Math.sin(angle) * reach, 18, this.H - 18);
+    let hits = 0;
+
+    for (const enemy of this.enemies.slice()) {
+      const dx = enemy.x - x;
+      const dy = enemy.y - y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > radius + enemy.r) continue;
+      hits++;
+      this.applyMagicHit(enemy, Math.atan2(enemy.y - y, enemy.x - x), levels);
+    }
+
+    this.psychicZones.push({ x, y, r: radius, life: 0.6, maxLife: 0.6, type: this.magicType });
+    if (this.psychicZones.length > 4) this.psychicZones.shift();
+    this.spawnPsychicGroundFx(x, y, radius, this.magicType, hits);
+    this.shake = Math.max(this.shake, this.magicType === "water" ? 6 : 3);
+    Sfx.swing("book");
+  }
+
+  private applyMagicHit(enemy: Enemy, enemyAngle: number, levels: WeaponLevels["book"]): void {
+    const direct = this.magicType === "fire" ? 4 + levels.damage * 2 : this.magicType === "water" ? 2 + levels.damage : 1 + levels.damage;
+    const killed = this.damageEnemy(enemy, direct, enemyAngle);
+    if (killed) return;
+    if (this.magicType === "fire") {
+      enemy.fireT = Math.max(enemy.fireT, 3);
+      enemy.fireTick = Math.min(enemy.fireTick || 0.5, 0.5);
+    } else if (this.magicType === "poison") {
+      enemy.poisonT = Math.max(enemy.poisonT, 5);
+      enemy.poisonTick = Math.min(enemy.poisonTick || 0.5, 0.5);
+    } else if (this.magicType === "ice" && enemy.freezeImmune <= 0) {
+      enemy.freezeT = 2;
+      enemy.freezeImmune = 12;
+      enemy.slowT = 7;
+    } else if (this.magicType === "water") {
+      const push = 420 + levels.range * 45;
+      enemy.vx += Math.cos(enemyAngle) * push;
+      enemy.vy += Math.sin(enemyAngle) * push;
+    }
+  }
+
+  private magicColor(): string {
+    return this.magicType === "fire" ? "#ff5a3d" : this.magicType === "ice" ? "#86e7ff" : this.magicType === "poison" ? "#8cdf55" : "#62a9ff";
+  }
+
+  private spawnMagicSparks(x: number, y: number, angle: number, color: string, count: number) {
+    for (let i = 0; i < count; i++) {
+      const sparkAngle = angle + rnd(-0.74, 0.74);
+      const speed = rnd(90, 235);
+      this.parts.push({ x: x + Math.cos(sparkAngle) * rnd(0, 10), y: y + Math.sin(sparkAngle) * rnd(0, 10), vx: Math.cos(sparkAngle) * speed, vy: Math.sin(sparkAngle) * speed, life: rnd(0.2, 0.45), max: 0.45, size: 2, color: i % 5 === 0 ? "#ffffff" : color, drag: 3.5, kind: i % 3 === 0 ? 3 : 2, rot: sparkAngle });
+    }
+  }
+
+  private spawnPsychicGroundFx(x: number, y: number, r: number, type: MagicType, hits: number) {
+    const color = this.magicColor();
+    const count = 30 + hits * 3;
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * TAU;
+      const d = Math.sqrt(Math.random()) * r;
+      const px = x + Math.cos(a) * d;
+      const py = y + Math.sin(a) * d * 0.56;
+      const upward = type === "fire" ? -rnd(50, 130) : type === "ice" ? -rnd(20, 70) : rnd(-45, 45);
+      this.parts.push({ x: px, y: py, vx: Math.cos(a) * rnd(15, 90), vy: upward, life: rnd(0.25, 0.6), max: 0.6, size: type === "water" ? 2 : 3, color: i % 6 === 0 ? "#ffffff" : color, drag: 2.8, kind: type === "water" ? 2 : 0, rot: a });
+    }
+  }
+
+  private cutDuringDash() {
+    const angle = Math.atan2(this.dashDy, this.dashDx);
+    const damage = 4 + this.weaponLevels.katana.damage * 2;
+    for (const enemy of this.enemies.slice()) {
+      if (this.dashHitSet.has(enemy)) continue;
+      if (Math.hypot(enemy.x - this.px, enemy.y - this.py) > enemy.r + 17) continue;
+      this.dashHitSet.add(enemy);
+      this.damageEnemy(enemy, damage, angle);
+      this.slashSpark(enemy.x, enemy.y, angle);
+      this.impacts.push({ x: enemy.x, y: enemy.y, a: angle, life: 0.18, max: 0.18, heavy: true });
+    }
+  }
   private doSwingHits() {
     const t = this.swingData();
     const p = clamp(this.phaseProgress(), 0, 1);
@@ -2516,6 +2588,30 @@ export class Game {
 
   /* ----------------------------- render ----------------------------- */
 
+  private drawPsychicZones(ctx: CanvasRenderingContext2D) {
+    for (const zone of this.psychicZones) {
+      const p = clamp(zone.life / zone.maxLife, 0, 1);
+      const color = zone.type === "fire" ? "#ff5a3d" : zone.type === "ice" ? "#86e7ff" : zone.type === "poison" ? "#8cdf55" : "#62a9ff";
+      ctx.save();
+      ctx.globalAlpha = 0.25 + p * 0.35;
+      for (let i = 0; i < 18; i++) {
+        const a = (i / 18) * TAU + zone.life * 5;
+        const d = zone.r * (0.25 + ((i * 7) % 10) / 14);
+        const x = Math.round(zone.x + Math.cos(a) * d);
+        const y = Math.round(zone.y + Math.sin(a) * d * 0.55);
+        ctx.fillStyle = i % 5 === 0 ? "#ffffff" : color;
+        if (zone.type === "fire") ctx.fillRect(x, y - 4 - (i % 3), 3, 6 + (i % 4));
+        else if (zone.type === "ice") {
+          ctx.fillRect(x, y, 2, 5);
+          ctx.fillRect(x - 2, y + 3, 6, 1);
+        } else if (zone.type === "water") {
+          ctx.fillRect(x - 3, y, 7, 2);
+          ctx.fillRect(x - 1, y - 2, 3, 1);
+        } else ctx.fillRect(x - 2, y - 2, 4, 4);
+      }
+      ctx.restore();
+    }
+  }
   private render() {
     const ctx = this.ctx;
     const { W, H } = this;
@@ -2531,6 +2627,7 @@ export class Game {
 
     ctx.drawImage(this.floor, 0, 0);
     ctx.drawImage(this.decal, 0, 0);
+    this.drawPsychicZones(ctx);
 
     // Shockwave rings from Hammer slams
     for (const sw of this.shockwaves) {
@@ -2879,6 +2976,7 @@ export class Game {
     if (!blink) {
       const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
       this.blit(SPR.player, bx, by, this.face, 0, squash);
+      if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) this.drawPsychicHands(this.aimAngle());
     }
 
     if (phase === 1 && this.trail.length > 4 && this.currentWeapon !== "bow" && this.currentWeapon !== "book") {
@@ -2927,7 +3025,26 @@ export class Game {
 
   }
 
+  private drawPsychicHands(angle: number) {
+    const ctx = this.ctx;
+    const pulse = 0.55 + Math.sin(this.idleT * 10) * 0.2;
+    for (const side of [-1, 1]) {
+      const spread = angle + side * 0.9;
+      const x = Math.round(this.px + Math.cos(spread) * 12);
+      const y = Math.round(this.py + Math.sin(spread) * 8 - 2);
+      ctx.fillStyle = "#27183b";
+      ctx.fillRect(x - 3, y - 3, 6, 6);
+      ctx.fillStyle = "#d9b08f";
+      ctx.fillRect(x - 2, y - 2, 4, 4);
+      ctx.fillStyle = "#8cecff";
+      ctx.globalAlpha = pulse;
+      ctx.fillRect(x - 4, y - 4, 2, 2);
+      ctx.fillRect(x + 3, y + 2, 2, 2);
+      ctx.globalAlpha = 1;
+    }
+  }
   private drawWeapon(angle: number, len: number, alpha: number) {
+    if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) return;
     const ctx = this.ctx;
     const L = Math.max(8, Math.round(len));
     ctx.save();
