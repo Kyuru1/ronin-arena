@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Difficulty } from "../game/engine";
+import type { Difficulty, Perk } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
 import type { ScoreEntry } from "../game/storage";
 import PixelSprite from "./PixelSprite";
@@ -25,8 +25,9 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }> ;
 }
 
-export default function MainMenu({ onStart, difficulty, onDifficulty, scores, best, opts, onOpts, onFullscreen }: {
+export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, best, opts, onOpts, onFullscreen }: {
   onStart: (difficulty?: Difficulty) => void;
+  onPerk: (perk: Perk | null) => void;
   difficulty: Difficulty;
   onDifficulty: (difficulty: Difficulty) => void;
   scores: ScoreEntry[];
@@ -37,6 +38,7 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
 }) {
   const [tab, setTab] = useState<MenuTab>("main");
   const [difficultyOpen, setDifficultyOpen] = useState(false);
+  const [perkOpen, setPerkOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [rankingDifficulty, setRankingDifficulty] = useState<Difficulty>("medium");
   useEffect(() => {
@@ -84,6 +86,28 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
     );
   }
 
+  if (perkOpen) {
+    const perks: { id: Perk; title: string; desc: string }[] = [
+      { id: "bladeMonk", title: "Monge da Lamina Unica", desc: "Uma arma, muito dano e cadencia." },
+      { id: "bloodContract", title: "Contrato de Sangue", desc: "Pouca vida aumenta dano e velocidade." },
+      { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Carrega mais armas, mas move menos." },
+      { id: "predatorInstinct", title: "Instinto Predador", desc: "Abates renovam velocidade e cadencia." },
+      { id: "sharpGlass", title: "Vidro Afiado", desc: "Dano critico maior, menos vida." },
+      { id: "kyuEcho", title: "Eco de Kyu", desc: "Ataques periodicamente recebem um eco." },
+      { id: "cursedArsenal", title: "Arsenal Amaldicoado", desc: "Poder extra com penalidade leve." },
+      { id: "lastBullet", title: "Ultima Bala", desc: "O ultimo disparo causa dano enorme." },
+    ];
+    const available = difficulty === "hard" ? perks.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : perks;
+    return (
+      <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
+        <PxFrame title="ESCOLHA SEU PERK" className="anim-pop w-full max-w-3xl p-4 sm:p-6">
+          <div className="mb-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">Escolha uma vantagem para esta partida.</div>
+          <div className="grid gap-2 sm:grid-cols-2">{available.map((perk) => <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPerkOpen(false); onStart(difficulty); }} className="min-h-24 flex-col items-start gap-2 p-3 text-left"><strong className="font-pixel text-[8px] text-[#ffd44a]">{perk.title}</strong><span className="font-pixel text-[6px] leading-4 text-[#a9c3be]">{perk.desc}</span></PxButton>)}</div>
+          <PxButton tone="dark" onClick={() => setPerkOpen(false)} className="mt-4 w-full py-3 text-[8px]">VOLTAR</PxButton>
+        </PxFrame>
+      </div>
+    );
+  }
   if (difficultyOpen) {
     return (
       <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
@@ -96,7 +120,7 @@ export default function MainMenu({ onStart, difficulty, onDifficulty, scores, be
               const titleKey = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard";
               const descKey = `${titleKey}Desc` as "difficultyEasyDesc" | "difficultyMediumDesc" | "difficultyHardDesc";
               return (
-                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => { onDifficulty(level); onStart(level); }} className="min-h-32 flex-col items-center justify-center gap-3 px-3 py-4 text-center">
+                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => { onDifficulty(level); setDifficultyOpen(false); setPerkOpen(true); }} className="min-h-32 flex-col items-center justify-center gap-3 px-3 py-4 text-center">
                   <strong className="font-pixel text-[9px]">{t[titleKey]}</strong>
                   <span className="font-pixel text-[5px] leading-4 text-[#a9c3be]">{t[descKey]}</span>
                 </PxButton>

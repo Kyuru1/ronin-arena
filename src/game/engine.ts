@@ -9,6 +9,7 @@ export type PowerUp = "speed" | "heart" | "dashCd" | "dashDist";
 export type WeaponUpgrade = "damage" | "speed" | "range" | "form";
 export type MagicType = "fire" | "ice" | "poison" | "water";
 export type Difficulty = "easy" | "medium" | "hard";
+export type Perk = "bladeMonk" | "bloodContract" | "bottomlessPocket" | "predatorInstinct" | "sharpGlass" | "kyuEcho" | "cursedArsenal" | "lastBullet";
 export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
 export const DIFFICULTY_RULES = {
@@ -312,6 +313,9 @@ export class Game {
   dashDy = 0;
   speedBonus = 0;
   difficulty: Difficulty = "medium";
+  perk: Perk | null = null;
+  perkBuffT = 0;
+  perkEchoT = 0;
 
   // Weapons in slots (up to 4)
   weapons: Weapon[] = ["katana"];
@@ -424,6 +428,11 @@ export class Game {
   }
 
   /* ----------------------------- setup ----------------------------- */
+
+  setPerk(perk: Perk | null) {
+    this.perk = perk;
+    this.pushStats(true);
+  }
 
   setDifficulty(difficulty: Difficulty) {
     this.difficulty = difficulty;
@@ -696,7 +705,8 @@ export class Game {
   buyWeapon(weapon: Weapon, cost: number): boolean {
     if (this.coins < cost) return false;
     if (this.weapons.includes(weapon)) return false;
-    if (this.weapons.length >= 4) return false;
+    const maxWeapons = this.perk === "bladeMonk" ? 1 : this.perk === "bottomlessPocket" ? 6 : 4;
+    if (this.weapons.length >= maxWeapons) return false;
     this.coins -= cost;
     this.weapons.push(weapon);
     this.activeSlot = this.weapons.length - 1;
@@ -723,7 +733,7 @@ export class Game {
     if (!this.weapons.includes(weapon) || this.coins < cost) return false;
     const max = upgrade === "form" ? 1 : 3;
     if (this.weaponLevels[weapon][upgrade] >= max) return false;
-    if (upgrade === "form" && weapon !== "katana" && weapon !== "bow" && weapon !== "hammer" && weapon !== "book") return false;
+    if (upgrade === "form" && weapon !== "katana" && weapon !== "bow" && weapon !== "hammer" && weapon !== "book" && weapon !== "staff") return false;
     this.coins -= cost;
     this.weaponLevels[weapon][upgrade]++;
     Sfx.buy();
@@ -804,7 +814,7 @@ export class Game {
     this.px = this.W / 2;
     this.py = this.H / 2;
     this.pvx = this.pvy = 0;
-    this.hp = this.maxHp = 5;
+    this.hp = this.maxHp = this.perk === "sharpGlass" ? 3 : 5;
     this.coins = 0;
     this.iframe = 0;
     this.dashT = this.dashCd = 0;
@@ -814,6 +824,7 @@ export class Game {
     this.weapons = ["katana"];
     this.activeSlot = 0;
     this.weaponLevels = createWeaponLevels();
+    this.perkBuffT = 0; this.perkEchoT = 0;
     this.magicType = "fire";
     this.magicCd = 0;
     this.keyboardAimAngle = 0;
@@ -1118,7 +1129,7 @@ export class Game {
     }
     if (this.opts.keyboardOnly && ml > 0.01) this.keyboardAimAngle = Math.atan2(my, mx);
 
-    const SPEED = 108 + this.speedBonus;
+    const SPEED = 108 + this.speedBonus - (this.perk === "bottomlessPocket" ? 12 : 0) - (this.perk === "cursedArsenal" ? 8 : 0) + (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0);
     const accel = 1100;
     const friction = 1000;
 
@@ -1275,7 +1286,7 @@ export class Game {
       }
     } else if (this.atkT > 0) {
       this.atkT -= dt;
-      if (this.currentWeapon !== "bow" && this.currentWeapon !== "mine" && this.currentWeapon !== "book") {
+      if (this.currentWeapon !== "bow" && this.currentWeapon !== "mine" && this.currentWeapon !== "book" && this.currentWeapon !== "staff") {
         this.doSwingHits();
       }
       if (this.atkT <= 0) {
@@ -1317,7 +1328,17 @@ export class Game {
     void dt;
     if (!wantAttack || this.atkCd > 0 || this.dashT > 0 || this.summons.length >= 6) return;
     const a = this.aimAngle();
+    const evolved = this.weaponLevels.staff.form > 0;
+    const area = evolved ? 92 + this.weaponLevels.staff.range * 10 : 62 + this.weaponLevels.staff.range * 7;
+    const color = evolved ? "#9f63ff" : "#4db9ff";
     this.spawnSummon(this.px + Math.cos(a) * 18, this.py + Math.sin(a) * 18, "summoned");
+    this.burst(this.px + Math.cos(a) * 28, this.py + Math.sin(a) * 28, evolved ? 28 : 20, color, evolved ? 150 : 110);
+    for (const enemy of this.enemies.slice()) {
+      if (Math.hypot(enemy.x - this.px, enemy.y - this.py) <= area) {
+        enemy.hp -= (evolved ? 4 : 2) + this.weaponLevels.staff.damage; enemy.flash = 0.14;
+        if (enemy.hp <= 0) this.killEnemy(enemy, a);
+      }
+    }
     this.atkCd = 0.62 / (1 + this.weaponLevels.staff.speed * 0.12);
     this.atkAngle = a;
     this.glint = 1;
@@ -1397,8 +1418,8 @@ export class Game {
       strike: base.strike / speed,
       rec: base.rec / speed,
       cd: base.cd / speed,
-      range: base.range + levels.range * 5 + (evolvedHammer ? 28 : 0) + (evolvedKatana ? 24 : 0),
-      dmg: base.dmg + levels.damage * (weapon === "hammer" ? 2 : 1) + (evolvedHammer ? 5 : 0) + (evolvedKatana ? 2 : 0),
+      range: base.range + levels.range * 5 + (weapon === "staff" && levels.form > 0 ? 28 : 0) + (evolvedHammer ? 28 : 0) + (evolvedKatana ? 24 : 0),
+      dmg: (base.dmg + levels.damage * (weapon === "hammer" ? 2 : 1) + (evolvedHammer ? 5 : 0) + (evolvedKatana ? 2 : 0)) * (this.perk === "bladeMonk" ? 1.85 : 1) * (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) * (this.perk === "sharpGlass" ? 1.35 : 1) * (this.perk === "cursedArsenal" ? 1.2 : 1) * (this.perk === "kyuEcho" && this.perkEchoT >= 6 ? 1.65 : 1),
       kb: base.kb + levels.range * 25 + (evolvedHammer ? 180 : 0) + (evolvedKatana ? 80 : 0),
     };
   }
@@ -1526,7 +1547,7 @@ export class Game {
     this.bowCharge = 0;
     const ang = this.aimAngle();
     const sp = automatic ? 680 : 300 + charge * 300;
-    const dmg = automatic ? 2 + levels.damage : 2 + Math.round(charge * 4) + levels.damage;
+    const dmg = (automatic ? 2 + levels.damage : 2 + Math.round(charge * 4) + levels.damage) * (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) * (this.perk === "sharpGlass" ? 1.35 : 1) * (this.perk === "cursedArsenal" ? 1.2 : 1);
     const pierce = automatic ? 1 : 1 + Math.round(charge * 3);
     this.bowReleasing = automatic ? 0.03 : 0.14;
     this.arrows.push({
@@ -1688,7 +1709,7 @@ export class Game {
   }
   private cutDuringDash() {
     const angle = Math.atan2(this.dashDy, this.dashDx);
-    const damage = 4 + this.weaponLevels.katana.damage * 2;
+    const damage = (4 + this.weaponLevels.katana.damage * 2) * (this.perk === "sharpGlass" ? 1.35 : 1) * (this.perk === "cursedArsenal" ? 1.2 : 1);
     for (const enemy of this.enemies.slice()) {
       if (this.dashHitSet.has(enemy)) continue;
       if (Math.hypot(enemy.x - this.px, enemy.y - this.py) > enemy.r + 17) continue;
@@ -1912,6 +1933,7 @@ export class Game {
 
     this.combo++;
     this.comboT = 3.2;
+    if (this.perk === "predatorInstinct") this.perkBuffT = 2.5;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     this.kills++;
     const mult = this.comboMult();
@@ -3142,7 +3164,7 @@ export class Game {
     }
 
     // the bow always tracks the aim; melee weapons use the swing timeline
-    const weaponAngle = this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book"
+    const weaponAngle = this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff"
       ? this.aimAngle()
       : this.swingAngleNow();
     this.drawWeapon(weaponAngle, this.bladeLen(), 1);
@@ -3227,7 +3249,7 @@ export class Game {
   }
 
   private pushTrail() {
-    if (this.atkT <= 0 || this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book") return;
+    if (this.atkT <= 0 || this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff") return;
     const a = this.swingAngleNow();
     const r = this.bladeLen();
     const last = this.trail[this.trail.length - 1];

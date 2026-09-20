@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Game, type Difficulty, type HudStats, type MagicType, type PowerUp, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
+import { Game, type Difficulty, type Perk, type HudStats, type MagicType, type PowerUp, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
 import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
 import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
@@ -150,12 +150,16 @@ export default function App() {
   const launchRun = useCallback(() => {
     const game = gameRef.current;
     if (!game) return;
+    game.setPerk(selectedPerk.current);
     game.startGame();
     setRank(-1);
     setPendingScore(false);
     setPhase("playing");
     setMenuClosing(false);
   }, []);
+
+  const selectedPerk = useRef<Perk | null>(null);
+  const choosePerk = useCallback((perk: Perk | null) => { selectedPerk.current = perk; gameRef.current?.setPerk(perk); }, []);
 
   const start = useCallback((selectedDifficulty: Difficulty = difficulty) => {
     if (!gameRef.current) return;
@@ -181,6 +185,7 @@ export default function App() {
     const game = gameRef.current;
     if (!game) return;
     game.setDifficulty(difficulty);
+    game.setPerk(selectedPerk.current);
     game.startGame();
     setRank(-1);
     setPendingScore(false);
@@ -404,6 +409,7 @@ export default function App() {
           <div className={menuClosing ? "anim-menu-out" : ""}>
             <MainMenu
               onStart={start}
+              onPerk={choosePerk}
               difficulty={difficulty}
               onDifficulty={setDifficulty}
               scores={scores}
