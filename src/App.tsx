@@ -242,6 +242,7 @@ export default function App() {
         wave: finalStats.wave,
         kills: finalStats.kills,
         time: finalStats.time,
+        difficulty: finalStats.difficulty,
         date: Date.now(),
       };
       void saveRemoteScore(entry).then(({ list, rank: r }) => {

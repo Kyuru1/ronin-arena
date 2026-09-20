@@ -681,3 +681,4 @@ input,
   .shop-tab { min-height: 38px; padding: 8px 10px; font-size: 7px; }
   .px-coinbox { transform: scale(.9); transform-origin: right center; }
 }
+.ranking-row-four { grid-template-columns: 28px minmax(70px,1fr) 55px 90px 55px; }
