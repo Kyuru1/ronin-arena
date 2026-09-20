@@ -88,7 +88,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
   if (perkOpen) {
     const perks: { id: Perk; title: string; desc: string }[] = [
-      { id: "bladeMonk", title: "Monge da Lâmina Única", desc: "Carrega apenas 1 arma. Ela recebe muito mais dano, cadência e recarga." },
+      { id: "bladeMonk", title: "Monge da Lâmina Única", desc: "Usa somente a katana e não pode comprar ou equipar outras armas. A katana recebe muito mais dano, cadência e recarga." },
       { id: "bloodContract", title: "Contrato de Sangue", desc: "Abaixo de 30% da vida, você causa mais dano e ataca mais rápido. Ficar ferido fica muito perigoso." },
       { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Permite carregar até 6 armas ou equipamentos, mas reduz sua velocidade de movimento." },
       { id: "predatorInstinct", title: "Instinto Predador", desc: "Cada abate dá velocidade e cadência por pouco tempo. Abates seguidos renovam o efeito." },

@@ -44,19 +44,6 @@ export function isPowerUpAtLimit(
   return stats.dashSpeedMult >= limits.dashSpeedMult;
 }
 
-function clampPowerUpStats(
-  stats: Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult">,
-  difficulty: Difficulty,
-): Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult"> {
-  const limits = DIFFICULTY_RULES[difficulty].limits;
-  return {
-    maxHp: Math.min(stats.maxHp, limits.maxHp),
-    speedBonus: Math.min(stats.speedBonus, limits.speed - 108),
-    dashMax: Math.max(stats.dashMax, limits.dashMax),
-    dashSpeedMult: Math.min(stats.dashSpeedMult, limits.dashSpeedMult),
-  };
-}
-
 export interface UpgradeOffer {
   wave: number;
 }
@@ -315,7 +302,7 @@ export class Game {
   dashT = 0;
   dashCd = 0;
   dashMax = 6;
-  dashSpeedMult = 1;
+  dashSpeedMult = 1.25;
   dashDx = 0;
   dashDy = 0;
   speedBonus = 0;
@@ -784,7 +771,10 @@ export class Game {
 
   buyPowerUp(power: PowerUp, cost: number): boolean {
     if (this.coins < cost) return false;
-    if (isPowerUpAtLimit(this, power, this.difficulty)) return false;
+    const atLimit = power === "dashDist" && this.perk === "bladeMonk"
+      ? this.dashSpeedMult >= this.limits().dashSpeedMult
+      : isPowerUpAtLimit(this, power, this.difficulty);
+    if (atLimit) return false;
     this.coins -= cost;
     if (power === "speed") {
       this.speedBonus = Math.min(this.limits().speed - 108, this.speedBonus + 18);
@@ -802,11 +792,11 @@ export class Game {
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashDistanceBoost, "#f8d7a5");
     }
 
-    const clamped = clampPowerUpStats(this, this.difficulty);
-    this.maxHp = clamped.maxHp;
-    this.speedBonus = clamped.speedBonus;
-    this.dashMax = clamped.dashMax;
-    this.dashSpeedMult = clamped.dashSpeedMult;
+    const limits = this.limits();
+    this.maxHp = Math.min(this.maxHp, limits.maxHp);
+    this.speedBonus = Math.min(this.speedBonus, limits.speed - 108);
+    this.dashMax = Math.max(this.dashMax, limits.dashMax);
+    this.dashSpeedMult = Math.min(this.dashSpeedMult, limits.dashSpeedMult);
 
     Sfx.buy();
     this.pushStats(true);
@@ -854,7 +844,7 @@ export class Game {
     this.iframe = 0;
     this.dashT = this.dashCd = 0;
     this.dashMax = 6;
-    this.dashSpeedMult = 1;
+    this.dashSpeedMult = 1.25;
     this.speedBonus = 0;
     this.weapons = ["katana"];
     this.activeSlot = 0;
@@ -939,15 +929,18 @@ export class Game {
   }
 
   private limits() {
-    return DIFFICULTY_RULES[this.difficulty].limits;
+    const base = DIFFICULTY_RULES[this.difficulty].limits;
+    return this.perk === "bladeMonk"
+      ? { ...base, dashSpeedMult: base.dashSpeedMult * 1.5 }
+      : base;
   }
 
   private enforceStatLimits() {
-    const clamped = clampPowerUpStats(this, this.difficulty);
-    this.maxHp = clamped.maxHp;
-    this.speedBonus = clamped.speedBonus;
-    this.dashMax = clamped.dashMax;
-    this.dashSpeedMult = clamped.dashSpeedMult;
+    const limits = this.limits();
+    this.maxHp = Math.min(this.maxHp, limits.maxHp);
+    this.speedBonus = Math.min(this.speedBonus, limits.speed - 108);
+    this.dashMax = Math.max(this.dashMax, limits.dashMax);
+    this.dashSpeedMult = Math.min(this.dashSpeedMult, limits.dashSpeedMult);
     this.hp = clamp(this.hp, 0, this.maxHp);
   }
   stats(): HudStats {
