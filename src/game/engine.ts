@@ -113,6 +113,10 @@ type EnemyType =
   | "monk"
   | "demon"
   | "skeleton"
+  | "crawler"
+  | "bomber"
+  | "warlock"
+  | "golem"
   | "boss";
 
 interface Summon {
@@ -184,6 +188,7 @@ interface Projectile {
   life: number;
   r: number;
   dmg: number;
+  color?: string;
 }
 
 interface PlayerArrow {
@@ -476,13 +481,13 @@ export class Game {
     f.width = W;
     f.height = H;
     const c = f.getContext("2d")!;
-    c.fillStyle = "#16090d";
+    c.fillStyle = "#1b0a11";
     c.fillRect(0, 0, W, H);
     const T = 24;
     for (let y = 0; y < H; y += T) {
       for (let x = 0; x < W; x += T) {
         const odd = ((x / T + y / T) | 0) % 2 === 0;
-        c.fillStyle = odd ? "#240d13" : "#1d0a0f";
+        c.fillStyle = odd ? "#35121e" : "#270d17";
         c.fillRect(x, y, T, T);
         c.fillStyle = "rgba(0,0,0,0.22)";
         c.fillRect(x, y + T - 1, T, 1);
@@ -492,6 +497,16 @@ export class Game {
         for (let i = 0; i < 5; i++) {
           c.fillStyle = Math.random() > 0.5 ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.15)";
           c.fillRect(x + ((Math.random() * T) | 0), y + ((Math.random() * T) | 0), 1, 1);
+        }
+        // Small cracks and petals keep the arena from reading as a flat grid.
+        if (Math.random() < 0.13) {
+          const cx = x + 5 + ((Math.random() * (T - 10)) | 0);
+          const cy = y + 5 + ((Math.random() * (T - 10)) | 0);
+          c.fillStyle = "rgba(8,3,7,0.46)";
+          c.fillRect(cx, cy, 5, 1);
+          c.fillRect(cx + 3, cy + 1, 1, 3);
+          c.fillStyle = "rgba(255,116,112,0.24)";
+          c.fillRect(cx - 1, cy - 2, 2, 1);
         }
       }
     }
@@ -513,6 +528,23 @@ export class Game {
       c.moveTo(cx + Math.cos(a) * Math.min(W, H) * 0.22, cy + Math.sin(a) * Math.min(W, H) * 0.22);
       c.lineTo(cx + Math.cos(a) * Math.min(W, H) * 0.3, cy + Math.sin(a) * Math.min(W, H) * 0.3);
       c.stroke();
+    }
+    // Four low-profile shrine lanterns add life near the edges without covering play space.
+    const lanterns = [
+      { x: 28, y: 28 }, { x: W - 28, y: 28 },
+      { x: 28, y: H - 28 }, { x: W - 28, y: H - 28 },
+    ];
+    for (const lantern of lanterns) {
+      c.fillStyle = "rgba(8,3,7,0.7)";
+      c.fillRect(lantern.x - 7, lantern.y + 7, 14, 2);
+      c.fillStyle = "#4d2330";
+      c.fillRect(lantern.x - 4, lantern.y - 6, 8, 12);
+      c.fillStyle = "#9d3a45";
+      c.fillRect(lantern.x - 3, lantern.y - 5, 6, 8);
+      c.fillStyle = "#ffd26a";
+      c.fillRect(lantern.x - 1, lantern.y - 3, 3, 4);
+      c.fillStyle = "rgba(255,190,93,0.18)";
+      c.fillRect(lantern.x - 8, lantern.y - 10, 16, 16);
     }
     // Arena borders
     const B = 10;
@@ -2068,6 +2100,14 @@ export class Game {
         return { hp: 12 + hpB * 2, r: 9, speed: 60 + spB * 0.7, score: 70, dmg: 2 + dmgB };
       case "skeleton":
         return { hp: 6 + hpB, r: 7, speed: 58 + spB * 0.6, score: 38, dmg: 2 + dmgB };
+      case "crawler":
+        return { hp: 5 + hpB, r: 6, speed: 112 + spB * 1.1, score: 48, dmg: 2 + dmgB };
+      case "bomber":
+        return { hp: 8 + hpB, r: 8, speed: 48 + spB * 0.45, score: 64, dmg: 2 + dmgB };
+      case "warlock":
+        return { hp: 10 + Math.floor(hpB * 1.3), r: 8, speed: 48 + spB * 0.45, score: 82, dmg: 3 + dmgB };
+      case "golem":
+        return { hp: 24 + hpB * 3, r: 13, speed: 28 + spB * 0.35, score: 120, dmg: 4 + dmgB };
       case "boss":
         return { hp: 68 + w * 8, r: 18, speed: 34 + w * 0.7, score: 1500, dmg: this.difficulty === "hard" ? Number.POSITIVE_INFINITY : w >= 30 ? 12 : w >= 21 ? 9 : 6 };
     }
@@ -2134,9 +2174,13 @@ export class Game {
     if (w >= 5) add("wisp", 7);
     if (w >= 3) add("archer", 7);
     if (w >= 11) add("skeleton", 12);
+    if (w >= 8) add("crawler", 11);
+    if (w >= 10) add("bomber", 8);
     if (w >= 13) add("shield", 9);
+    if (w >= 14) add("warlock", 9);
     if (w >= 15) add("monk", 10);
     if (w >= 17) add("oni", 8);
+    if (w >= 18) add("golem", 7);
     if (w >= 20) add("demon", 8);
     return pick(table) ?? "grunt";
   }
@@ -2219,7 +2263,7 @@ export class Game {
     // can't stall with an archer kiting in a corner.
     if (this.waveSpawned >= this.waveTotal && this.marks.length === 0 && this.enemies.length <= 3) {
       for (const e of this.enemies) {
-        if (e.type === "spitter" || e.type === "archer" || e.type === "wisp" || e.type === "monk") {
+        if (e.type === "spitter" || e.type === "archer" || e.type === "wisp" || e.type === "monk" || e.type === "warlock") {
           const dx = this.px - e.x;
           const dy = this.py - e.y;
           const d = Math.hypot(dx, dy) || 1;
@@ -2285,25 +2329,26 @@ export class Game {
           case "bat":
           case "ninja":
           case "hound":
+          case "crawler":
           case "demon": {
             e.cd -= dt;
             if (e.state === 0) {
               e.vx += nx * e.speed * 3 * dt;
               e.vy += ny * e.speed * 3 * dt;
-              if (e.cd <= 0 && dist < (e.type === "demon" ? 180 : 150)) {
+              if (e.cd <= 0 && dist < (e.type === "demon" ? 180 : e.type === "crawler" ? 170 : 150)) {
                 e.state = 1;
-                e.cd = e.type === "demon" ? 0.55 : 0.35;
+                e.cd = e.type === "demon" ? 0.55 : e.type === "crawler" ? 0.24 : 0.35;
               }
             } else if (e.state === 1) {
               e.vx *= 1 - Math.min(1, dt * 8);
               e.vy *= 1 - Math.min(1, dt * 8);
               if (e.cd <= 0) {
                 e.state = 2;
-                e.cd = e.type === "demon" ? 0.75 : 0.42;
-                const dashSpeed = e.type === "demon" ? 340 : e.type === "ninja" ? 320 : 270;
+                e.cd = e.type === "demon" ? 0.75 : e.type === "crawler" ? 0.32 : 0.42;
+                const dashSpeed = e.type === "demon" ? 340 : e.type === "ninja" ? 320 : e.type === "crawler" ? 360 : 270;
                 e.vx = nx * dashSpeed;
                 e.vy = ny * dashSpeed;
-                this.burst(e.x, e.y, 5, "#ff5361", 70);
+                this.burst(e.x, e.y, 5, e.type === "crawler" ? "#ffb05d" : "#ff5361", 70);
               }
             } else if (e.cd <= 0) {
               e.state = 0;
@@ -2314,9 +2359,10 @@ export class Game {
           case "spitter":
           case "archer":
           case "wisp":
-          case "monk": {
+          case "monk":
+          case "warlock": {
             e.cd -= dt;
-            const wanted = e.type === "wisp" ? 125 : e.type === "archer" ? 145 : 100;
+            const wanted = e.type === "wisp" ? 125 : e.type === "archer" ? 145 : e.type === "warlock" ? 135 : 100;
             const err = dist - wanted;
             e.vx += nx * Math.sign(err) * e.speed * 4 * dt;
             e.vy += ny * Math.sign(err) * e.speed * 4 * dt;
@@ -2324,24 +2370,41 @@ export class Game {
             e.vx += -ny * e.speed * circle * dt;
             e.vy += nx * e.speed * circle * dt;
             if (e.cd <= 0 && dist < 210) {
-              e.cd = e.type === "archer" ? rnd(1.2, 1.8) : rnd(1.7, 2.5);
+              e.cd = e.type === "archer" ? rnd(1.2, 1.8) : e.type === "warlock" ? rnd(2.1, 2.8) : rnd(1.7, 2.5);
               e.flash = 0.1;
-              const sp = e.type === "archer" ? 160 : e.type === "wisp" ? 125 : 108;
-              const volley = e.type === "monk" ? 3 : 1;
+              const sp = e.type === "archer" ? 160 : e.type === "wisp" ? 125 : e.type === "warlock" ? 118 : 108;
+              const volley = e.type === "monk" ? 3 : e.type === "warlock" ? 5 : 1;
               for (let v = 0; v < volley; v++) {
-                const a = Math.atan2(ny, nx) + (v - (volley - 1) / 2) * 0.24;
-                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 4, r: 3, dmg: e.dmg });
+                const a = Math.atan2(ny, nx) + (v - (volley - 1) / 2) * (e.type === "warlock" ? 0.18 : 0.24);
+                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 4, r: 3, dmg: e.dmg, color: e.type === "warlock" ? "#ad73ff" : undefined });
               }
-              this.burst(e.x + nx * 6, e.y + ny * 6, 4, "#ff764f", 60);
+              this.burst(e.x + nx * 6, e.y + ny * 6, 4, e.type === "warlock" ? "#a677ff" : "#ff764f", 60);
               Sfx.shoot();
             }
             break;
           }
           case "brute":
           case "oni":
-          case "shield": {
+          case "shield":
+          case "golem": {
             e.vx += nx * e.speed * 3 * dt;
             e.vy += ny * e.speed * 3 * dt;
+            break;
+          }
+          case "bomber": {
+            e.cd -= dt;
+            const wanted = 75;
+            e.vx += nx * Math.sign(dist - wanted) * e.speed * 3.5 * dt;
+            e.vy += ny * Math.sign(dist - wanted) * e.speed * 3.5 * dt;
+            if (e.cd <= 0 && dist < 145) {
+              e.cd = 2.8;
+              for (let v = 0; v < 6; v++) {
+                const a = (v / 6) * TAU + e.t * 0.4;
+                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 100, vy: Math.sin(a) * 100, life: 2.2, r: 3, dmg: e.dmg, color: "#ffb25b" });
+              }
+              this.burst(e.x, e.y, 12, "#ffb25b", 95);
+              Sfx.shoot();
+            }
             break;
           }
           case "boss": {
@@ -2382,10 +2445,10 @@ export class Game {
         }
       }
 
-      const damp = e.type === "bat" && e.state === 2 ? 1.2 : 6.5;
+      const damp = (e.type === "bat" || e.type === "crawler") && e.state === 2 ? 1.2 : 6.5;
       e.vx -= e.vx * Math.min(1, damp * dt);
       e.vy -= e.vy * Math.min(1, damp * dt);
-      const maxV = e.type === "bat" ? 300 : e.speed * 1.6 + 220;
+      const maxV = e.type === "bat" || e.type === "crawler" ? 300 : e.speed * 1.6 + 220;
       const sp = Math.hypot(e.vx, e.vy);
       if (sp > maxV) {
         e.vx = (e.vx / sp) * maxV;
@@ -2865,9 +2928,9 @@ export class Game {
 
     // Enemy Projectiles
     for (const s of this.shots) {
-      ctx.fillStyle = "#ffe1b5";
+      ctx.fillStyle = s.color ?? "#ffe1b5";
       ctx.fillRect(Math.round(s.x - 2), Math.round(s.y - 2), 4, 4);
-      ctx.fillStyle = "#ff7665";
+      ctx.fillStyle = s.color ?? "#ff7665";
       ctx.fillRect(Math.round(s.x - 3), Math.round(s.y - 1), 6, 2);
       ctx.fillRect(Math.round(s.x - 1), Math.round(s.y - 3), 2, 6);
     }
@@ -3017,7 +3080,7 @@ export class Game {
   private drawSummon(s: Summon) {
     const ctx = this.ctx; const color = s.kind === "revived" ? "#a56cff" : "#55c9ff";
     ctx.save(); ctx.filter = s.kind === "revived" ? "hue-rotate(245deg) saturate(2) brightness(.72)" : "hue-rotate(165deg) saturate(2)";
-    this.blit(SPR[s.type], s.x, s.y + Math.sin(this.elapsed * 8 + s.x) * 1.2, 1, 0, 1); ctx.restore();
+    this.blit(SPR[s.type], s.x, s.y + Math.sin(this.elapsed * 8 + s.x) * 1.2, 1, 0, 1, 1.07); ctx.restore();
     ctx.globalAlpha = 0.6; ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(s.x, s.y + 2, 10 + Math.sin(this.elapsed * 7) * 1.5, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
   }
 
@@ -3035,7 +3098,7 @@ export class Game {
       ctx.globalAlpha = 1;
       return;
     }
-    if ((e.type === "bat" || e.type === "ninja" || e.type === "hound" || e.type === "demon") && e.state === 1) {
+    if ((e.type === "bat" || e.type === "ninja" || e.type === "hound" || e.type === "crawler" || e.type === "demon") && e.state === 1) {
       ctx.globalAlpha = 0.6;
       ctx.strokeStyle = "#ff5961";
       ctx.beginPath();
@@ -3044,8 +3107,8 @@ export class Game {
       ctx.globalAlpha = 1;
     }
     ctx.save();
-    ctx.filter = "saturate(1.65) contrast(1.12)";
-    this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY);
+    ctx.filter = "saturate(2) contrast(1.22) brightness(1.1)";
+    this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY, 1.08);
     ctx.restore();
     if (e.maxHp > 2 && (e.hp < e.maxHp || e.type === "boss")) {
       const w = e.type === "boss" ? 46 : 14;
@@ -3156,7 +3219,7 @@ export class Game {
 
     if (!blink) {
       const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
-      this.blit(SPR.player, bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.16 : 1);
+      this.blit(SPR.player, bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08);
       if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) this.drawPsychicHands(this.aimAngle());
     }
 
@@ -3355,6 +3418,14 @@ function bloodColor(t: EnemyType) {
       return "#b02d48";
     case "skeleton":
       return "#d8b7a4";
+    case "crawler":
+      return "#e7943d";
+    case "bomber":
+      return "#ffad59";
+    case "warlock":
+      return "#a778ff";
+    case "golem":
+      return "#b78055";
     case "brute":
       return "#c73443";
   }
@@ -3382,6 +3453,14 @@ function gibColor(t: EnemyType) {
       return ["#80675e", "#d9c0ad", "#f4dfce"];
     case "brute":
       return ["#591523", "#9b2635", "#e5424f"];
+    case "crawler":
+      return ["#713322", "#c56333", "#ffc066"];
+    case "bomber":
+      return ["#723027", "#dd6340", "#ffc267"];
+    case "warlock":
+      return ["#321d58", "#7348b5", "#bf95ff"];
+    case "golem":
+      return ["#4c3030", "#88594a", "#d89a67"];
   }
 }
 

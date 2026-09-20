@@ -338,6 +338,63 @@ export function buildSprites() {
     { b: "#dac0aa", e: "#ff4b5b", r: "#631b2b", d: "#190e13" },
   );
 
+  // Later-wave enemies use brighter, distinct palettes for quick combat reads.
+  SPR.crawler = makeSprite(
+    [
+      "...cccc...",
+      ".ccccc.cc.",
+      "cc.eee..cc",
+      "cccccccccc",
+      ".cc.rr.cc.",
+      "cc..cc..cc",
+      "d...cc...d",
+    ],
+    { c: "#c65b32", e: "#fff0ae", r: "#7b2830", d: "#291116" },
+  );
+
+  SPR.bomber = makeSprite(
+    [
+      "....bbbb....",
+      "...bbbbbb...",
+      "..bb.eebb...",
+      ".bbbbbbbbbb.",
+      ".bb.oooo.bb.",
+      ".bbbbbbbbbb.",
+      "...bb..bb...",
+      "..dd....dd..",
+    ],
+    { b: "#d75c3e", e: "#fff0b8", o: "#ffbd58", d: "#321018" },
+  );
+
+  SPR.warlock = makeSprite(
+    [
+      "....pppp....",
+      "...pppppp...",
+      "..pp.eeeepp.",
+      "..pppppppp..",
+      "...vvvvvv...",
+      "..vvvvvvvv..",
+      ".vv..vv..vv.",
+      "dd...vv...dd",
+    ],
+    { p: "#7547ba", e: "#f4dcff", v: "#3b1c60", d: "#150b25" },
+  );
+
+  SPR.golem = makeSprite(
+    [
+      "...gggggg...",
+      ".gggggggggg.",
+      "gg.gggggg.gg",
+      "gg.eegg.ee.g",
+      "gggggggggggg",
+      "gg.rrrrrr.gg",
+      ".gggggggggg.",
+      ".ggg.ggg.ggg.",
+      "dd...gg...dd",
+    ],
+    { g: "#95654f", e: "#fff0bb", r: "#5b3b3c", d: "#25151b" },
+  );
+
   SPR.boss = makeSprite(
     [
       ".......rrrrrrrr.......",
