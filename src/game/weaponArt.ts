@@ -48,6 +48,9 @@ export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: 
     case "book":
       drawBook(ctx, o.form ?? 0);
       break;
+    case "staff":
+      drawStaff(ctx, L, o.form ?? 0);
+      break;
     default:
       drawKatana(ctx, L, o.glint ?? 0, o.glintP ?? 0, o.form ?? 0);
   }
