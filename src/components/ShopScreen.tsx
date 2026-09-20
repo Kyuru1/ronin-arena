@@ -97,7 +97,7 @@ export default function ShopScreen({
   const active = ownedIndex === stats.activeSlot;
   const full = stats.weapons.length >= 4;
   const levels = stats.weaponLevels[selected];
-  const isPowerUpMaxed = (power: PowerUp) => isPowerUpAtLimit(stats, power);
+  const isPowerUpMaxed = (power: PowerUp) => isPowerUpAtLimit(stats, power, stats.difficulty);
 
   return (
     <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-2 sm:p-5">

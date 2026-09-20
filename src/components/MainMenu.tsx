@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GAMEPLAY_TEXT } from "../game/gameplayText";
+import type { Difficulty } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
 import { formatTime, type ScoreEntry } from "../game/storage";
 import PixelSprite from "./PixelSprite";
@@ -19,8 +20,10 @@ export interface UiOpts {
 
 type MenuTab = "main" | "settings" | "language" | "ranking";
 
-export default function MainMenu({ onStart, scores, best, isTouch, opts, onOpts, onClearScores, onFullscreen }: {
+export default function MainMenu({ onStart, difficulty, onDifficulty, scores, best, isTouch, opts, onOpts, onClearScores, onFullscreen }: {
   onStart: () => void;
+  difficulty: Difficulty;
+  onDifficulty: (difficulty: Difficulty) => void;
   scores: ScoreEntry[];
   best: number;
   isTouch: boolean;
@@ -82,6 +85,17 @@ export default function MainMenu({ onStart, scores, best, isTouch, opts, onOpts,
         </header>
 
         <main className="py-5">
+          <section className="mb-4">
+            <div className="mb-2 font-pixel text-[7px] text-[#ffd44a]">{t.difficulty}</div>
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {(["easy", "medium", "hard"] as const).map((level) => (
+                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => onDifficulty(level)} className="min-h-14 flex-col items-start gap-1 px-3 py-3 text-left">
+                  <strong className="font-pixel text-[8px]">{t[`difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"]}</strong>
+                  <span className="font-pixel text-[5px] leading-4 text-[#a9c3be]">{t[`difficulty${level[0].toUpperCase()}${level.slice(1)}Desc` as "difficultyEasyDesc" | "difficultyMediumDesc" | "difficultyHardDesc"]}</span>
+                </PxButton>
+              ))}
+            </div>
+          </section>
           <button onClick={onStart} className="menu-play group w-full">
             <span className="font-pixel text-[16px] sm:text-[24px]">▶ {t.play}</span>
             <span className="font-pixel text-[7px] text-[#3c171b]">{isTouch ? t.touchStart : t.start}</span>

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Game, type HudStats, type MagicType, type PowerUp, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
+import { Game, type Difficulty, type HudStats, type MagicType, type PowerUp, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
 import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
 import { clearScores, loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
@@ -41,6 +41,7 @@ const emptyStats: HudStats = {
     book: { damage: 0, speed: 0, range: 0, form: 0 },
   },
   magicType: "fire",
+  difficulty: "medium",
 };
 
 const OPT_KEY = "ronin.options.v2";
@@ -85,6 +86,7 @@ export default function App() {
   const [muted, setMutedState] = useState(false);
   const [opts, setOpts] = useState<UiOpts>(defaultOpts);
   const [isTouch, setIsTouch] = useState(false);
+  const [difficulty, setDifficulty] = useState<Difficulty>("medium");
 
   /* boot */
   useEffect(() => {
@@ -155,6 +157,7 @@ export default function App() {
 
   const start = useCallback(() => {
     if (!gameRef.current) return;
+    gameRef.current.setDifficulty(difficulty);
     unlockAudio();
     setMenuClosing(true);
     window.setTimeout(() => {
@@ -170,7 +173,7 @@ export default function App() {
         setMenuClosing(false);
       }
     }, 220);
-  }, [launchRun]);
+  }, [difficulty, launchRun]);
 
   const finishTutorial = useCallback((neverAgain: boolean) => {
     if (neverAgain) {
@@ -402,6 +405,8 @@ export default function App() {
           <div className={menuClosing ? "anim-menu-out" : ""}>
             <MainMenu
               onStart={start}
+              difficulty={difficulty}
+              onDifficulty={setDifficulty}
               scores={scores}
               best={best}
               isTouch={isTouch}

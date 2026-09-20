@@ -10,6 +10,13 @@ export interface Strings {
   touchStart: string;
   best: string;
   coins: string;
+  difficulty: string;
+  difficultyEasy: string;
+  difficultyMedium: string;
+  difficultyHard: string;
+  difficultyEasyDesc: string;
+  difficultyMediumDesc: string;
+  difficultyHardDesc: string;
   // settings
   graphics: string;
   quality: string;
@@ -139,6 +146,11 @@ export const I18N = {
     touchStart: "TOQUE PARA JOGAR",
     best: "RECORDE",
     coins: "MOEDAS",
+    difficulty: "DIFICULDADE",
+    difficultyEasy: "FÁCIL", difficultyMedium: "MÉDIO", difficultyHard: "DIFÍCIL",
+    difficultyEasyDesc: "2x moedas, metade do dano e limites em dobro.",
+    difficultyMediumDesc: "Regras padrão. Chefes ficam brutais nas ondas altas.",
+    difficultyHardDesc: "2x dano sofrido. Chefes eliminam em um golpe.",
     graphics: "GRÁFICOS",
     quality: "QUALIDADE",
     qualityHigh: "ALTA",
@@ -252,6 +264,11 @@ export const I18N = {
     touchStart: "TAP TO PLAY",
     best: "BEST",
     coins: "COINS",
+    difficulty: "DIFFICULTY",
+    difficultyEasy: "EASY", difficultyMedium: "MEDIUM", difficultyHard: "HARD",
+    difficultyEasyDesc: "2x coins, half damage taken, double stat limits.",
+    difficultyMediumDesc: "Standard rules. Bosses get brutal in later waves.",
+    difficultyHardDesc: "2x damage taken. Bosses kill in one hit.",
     graphics: "GRAPHICS",
     quality: "QUALITY",
     qualityHigh: "HIGH",
@@ -365,6 +382,11 @@ export const I18N = {
     touchStart: "TOUCHEZ POUR JOUER",
     best: "RECORD",
     coins: "PIÈCES",
+    difficulty: "DIFFICULTÉ",
+    difficultyEasy: "FACILE", difficultyMedium: "MOYEN", difficultyHard: "DIFFICILE",
+    difficultyEasyDesc: "2x pièces, moitié des dégâts, limites doublées.",
+    difficultyMediumDesc: "Règles standard. Les boss deviennent redoutables.",
+    difficultyHardDesc: "2x dégâts subis. Les boss tuent en un coup.",
     graphics: "GRAPHISMES",
     quality: "QUALITÉ",
     qualityHigh: "ÉLEVÉE",
@@ -472,7 +494,7 @@ export const I18N = {
 
 I18N.de = {
   ...I18N.en,
-  langName: "Deutsch", play: "SPIELEN", settings: "EINSTELLUNGEN", language: "SPRACHE", ranking: "RANGLISTE",
+  langName: "Deutsch", difficulty: "SCHWIERIGKEIT", difficultyEasy: "LEICHT", difficultyMedium: "MITTEL", difficultyHard: "SCHWER", difficultyEasyDesc: "2x Münzen, halber Schaden, doppelte Attributgrenzen.", difficultyMediumDesc: "Standardregeln. Bosse werden später brutal.", difficultyHardDesc: "2x erlittener Schaden. Bosse töten mit einem Treffer.", play: "SPIELEN", settings: "EINSTELLUNGEN", language: "SPRACHE", ranking: "RANGLISTE",
   start: "ENTER DRÜCKEN ZUM SPIELEN", touchStart: "ZUM SPIELEN TIPPEN", best: "REKORD", coins: "MÜNZEN",
   graphics: "GRAFIK", quality: "QUALITÄT", qualityHigh: "HOCH", qualityLow: "NIEDRIG", fullscreen: "VOLLBILD",
   enter: "ÖFFNEN", exit: "BEENDEN", sound: "TON", volume: "LAUTSTÄRKE", screenShake: "BILDSCHIRMWACKELN",
@@ -505,7 +527,7 @@ I18N.de = {
 
 I18N.zh = {
   ...I18N.en,
-  langName: "中文", play: "开始游戏", settings: "设置", language: "语言", ranking: "排行榜", start: "按回车键开始",
+  langName: "中文", difficulty: "难度", difficultyEasy: "简单", difficultyMedium: "普通", difficultyHard: "困难", difficultyEasyDesc: "双倍金币、受到一半伤害、属性上限翻倍。", difficultyMediumDesc: "标准规则。后期首领非常凶猛。", difficultyHardDesc: "受到双倍伤害。首领一击必杀。", play: "开始游戏", settings: "设置", language: "语言", ranking: "排行榜", start: "按回车键开始",
   touchStart: "点击开始", best: "最高纪录", coins: "金币", graphics: "画面", quality: "画质", qualityHigh: "高",
   qualityLow: "低", fullscreen: "全屏", enter: "进入", exit: "退出", sound: "声音", volume: "音量",
   screenShake: "屏幕震动", screenFlash: "屏幕闪光", on: "开", off: "关", noScores: "暂无纪录", wave: "波次",

@@ -25,6 +25,7 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, muted,
   const dashProgress = stats.dashReady ? 1 : 1 - stats.dashCd / stats.dashMax;
   const waveProgress = stats.waveTotal ? 1 - stats.waveLeft / stats.waveTotal : 0;
   const healthSegments = Math.min(20, Math.max(1, stats.maxHp));
+  const filledHeartSegments = Math.ceil((stats.hp / stats.maxHp) * healthSegments);
 
   return (
     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col justify-between p-2 sm:p-3">
@@ -34,7 +35,7 @@ export default function Hud({ stats, best, onPause, onMute, onSelectSlot, muted,
             <span className="hud-label">HP</span>
             <span className="font-pixel text-[6px] text-[#ffd2b5]">{stats.hp}/{stats.maxHp}</span>
           </div>
-          <div className="grid grid-cols-10 gap-[2px]">{Array.from({ length: healthSegments }).map((_, index) => <Heart key={index} filled={index < stats.hp} />)}</div>
+          <div className="grid grid-cols-10 gap-[2px]">{Array.from({ length: healthSegments }).map((_, index) => <Heart key={index} filled={index < filledHeartSegments} />)}</div>
           <div className="mt-1 flex items-center gap-2"><PixelSprite name="coin" scale={2} /><span className="font-pixel text-[10px] text-[#ffd44a]">{stats.coins}</span><span className="font-pixel text-[5px] text-[#7db7b1]">{g.shopSoon}</span></div>
         </section>
 

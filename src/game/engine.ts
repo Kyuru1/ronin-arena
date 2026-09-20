@@ -8,33 +8,51 @@ export type Phase = "menu" | "playing" | "paused" | "upgrade" | "dying" | "dead"
 export type PowerUp = "speed" | "heart" | "dashCd" | "dashDist";
 export type WeaponUpgrade = "damage" | "speed" | "range" | "form";
 export type MagicType = "fire" | "ice" | "poison" | "water";
+export type Difficulty = "easy" | "medium" | "hard";
 export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
-export const STAT_LIMITS = {
-  maxHp: 20,
-  speed: 200,
-  dashMax: 2,
-  dashSpeedMult: 3,
+export const DIFFICULTY_RULES = {
+  easy: {
+    limits: { maxHp: 60, speed: 400, dashMax: 1, dashSpeedMult: 6 },
+    damageTaken: 0.5,
+    coinMultiplier: 2,
+  },
+  medium: {
+    limits: { maxHp: 30, speed: 200, dashMax: 2, dashSpeedMult: 3 },
+    damageTaken: 1,
+    coinMultiplier: 1,
+  },
+  hard: {
+    limits: { maxHp: 15, speed: 154, dashMax: 4, dashSpeedMult: 1.5 },
+    damageTaken: 2,
+    coinMultiplier: 1,
+  },
 } as const;
+
+export const STAT_LIMITS = DIFFICULTY_RULES.medium.limits;
 
 export function isPowerUpAtLimit(
   stats: Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult">,
   power: PowerUp,
+  difficulty: Difficulty = "medium",
 ): boolean {
-  if (power === "speed") return 108 + stats.speedBonus >= STAT_LIMITS.speed;
-  if (power === "heart") return stats.maxHp >= STAT_LIMITS.maxHp;
-  if (power === "dashCd") return stats.dashMax <= STAT_LIMITS.dashMax;
-  return stats.dashSpeedMult >= STAT_LIMITS.dashSpeedMult;
+  const limits = DIFFICULTY_RULES[difficulty].limits;
+  if (power === "speed") return 108 + stats.speedBonus >= limits.speed;
+  if (power === "heart") return stats.maxHp >= limits.maxHp;
+  if (power === "dashCd") return stats.dashMax <= limits.dashMax;
+  return stats.dashSpeedMult >= limits.dashSpeedMult;
 }
 
 function clampPowerUpStats(
   stats: Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult">,
+  difficulty: Difficulty,
 ): Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult"> {
+  const limits = DIFFICULTY_RULES[difficulty].limits;
   return {
-    maxHp: Math.min(stats.maxHp, STAT_LIMITS.maxHp),
-    speedBonus: Math.min(stats.speedBonus, STAT_LIMITS.speed - 108),
-    dashMax: Math.max(stats.dashMax, STAT_LIMITS.dashMax),
-    dashSpeedMult: Math.min(stats.dashSpeedMult, STAT_LIMITS.dashSpeedMult),
+    maxHp: Math.min(stats.maxHp, limits.maxHp),
+    speedBonus: Math.min(stats.speedBonus, limits.speed - 108),
+    dashMax: Math.max(stats.dashMax, limits.dashMax),
+    dashSpeedMult: Math.min(stats.dashSpeedMult, limits.dashSpeedMult),
   };
 }
 
@@ -65,6 +83,7 @@ export interface HudStats {
   mineTutorial: boolean;
   weaponLevels: WeaponLevels;
   magicType: MagicType;
+  difficulty: Difficulty;
 }
 
 export interface GameOpts {
@@ -285,6 +304,7 @@ export class Game {
   dashDx = 0;
   dashDy = 0;
   speedBonus = 0;
+  difficulty: Difficulty = "medium";
 
   // Weapons in slots (up to 4)
   weapons: Weapon[] = ["katana"];
@@ -395,6 +415,12 @@ export class Game {
   }
 
   /* ----------------------------- setup ----------------------------- */
+
+  setDifficulty(difficulty: Difficulty) {
+    this.difficulty = difficulty;
+    this.enforceStatLimits();
+    this.pushStats(true);
+  }
 
   setOpts(o: Partial<GameOpts>) {
     Object.assign(this.opts, o);
@@ -704,25 +730,25 @@ export class Game {
 
   buyPowerUp(power: PowerUp, cost: number): boolean {
     if (this.coins < cost) return false;
-    if (isPowerUpAtLimit(this, power)) return false;
+    if (isPowerUpAtLimit(this, power, this.difficulty)) return false;
     this.coins -= cost;
     if (power === "speed") {
-      this.speedBonus = Math.min(STAT_LIMITS.speed - 108, this.speedBonus + 18);
+      this.speedBonus = Math.min(this.limits().speed - 108, this.speedBonus + 18);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].speedBoost, "#ffae57");
     } else if (power === "heart") {
-      this.maxHp = Math.min(STAT_LIMITS.maxHp, this.maxHp + 1);
+      this.maxHp = Math.min(this.limits().maxHp, this.maxHp + 1);
       this.hp = Math.min(this.maxHp, this.hp + 2);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].healthBoost, "#ff4f58");
     } else if (power === "dashCd") {
-      this.dashMax = Math.max(STAT_LIMITS.dashMax, this.dashMax - 0.8);
+      this.dashMax = Math.max(this.limits().dashMax, this.dashMax - 0.8);
       this.dashCd = 0;
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashCooldownBoost, "#f8d7a5");
     } else if (power === "dashDist") {
-      this.dashSpeedMult = Math.min(STAT_LIMITS.dashSpeedMult, this.dashSpeedMult + 0.25);
+      this.dashSpeedMult = Math.min(this.limits().dashSpeedMult, this.dashSpeedMult + 0.25);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashDistanceBoost, "#f8d7a5");
     }
 
-    const clamped = clampPowerUpStats(this);
+    const clamped = clampPowerUpStats(this, this.difficulty);
     this.maxHp = clamped.maxHp;
     this.speedBonus = clamped.speedBonus;
     this.dashMax = clamped.dashMax;
@@ -855,8 +881,12 @@ export class Game {
     else if (this.phase === "paused") this.resume();
   }
 
+  private limits() {
+    return DIFFICULTY_RULES[this.difficulty].limits;
+  }
+
   private enforceStatLimits() {
-    const clamped = clampPowerUpStats(this);
+    const clamped = clampPowerUpStats(this, this.difficulty);
     this.maxHp = clamped.maxHp;
     this.speedBonus = clamped.speedBonus;
     this.dashMax = clamped.dashMax;
@@ -888,13 +918,14 @@ export class Game {
       mineTutorial: this.mineTutorialT > 0,
       weaponLevels: this.weaponLevels,
       magicType: this.magicType,
+      difficulty: this.difficulty,
     };
   }
 
   private pushStats(force = false) {
     this.waveLeft = Math.max(0, this.waveTotal - this.waveSpawned) + this.marks.length + this.enemies.length;
     const s = this.stats();
-    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.weaponLevels)}|${s.magicType}`;
+    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}`;
     if (force || key !== this.lastStats) {
       this.lastStats = key;
       this.onStats(s);
@@ -1962,7 +1993,7 @@ export class Game {
       case "skeleton":
         return { hp: 6 + hpB, r: 7, speed: 58 + spB * 0.6, score: 38, dmg: 2 + dmgB };
       case "boss":
-        return { hp: 68 + w * 8, r: 18, speed: 34 + w * 0.7, score: 1500, dmg: 4 + dmgB };
+        return { hp: 68 + w * 8, r: 18, speed: 34 + w * 0.7, score: 1500, dmg: this.difficulty === "hard" ? Number.POSITIVE_INFINITY : w >= 30 ? 12 : w >= 21 ? 9 : 6 };
     }
   }
 
@@ -2428,8 +2459,9 @@ export class Game {
           this.flashColor = "255,90,120";
           Sfx.heal();
         } else if (p.kind === "coin") {
-          this.coins += 1;
-          this.addScore(5, p.x, p.y - 6, "+1", "#ffd747");
+          const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
+          this.coins += coinValue;
+          this.addScore(5 * coinValue, p.x, p.y - 6, `+${coinValue}`, "#ffd747");
           this.burst(p.x, p.y, 6, "#ffd747", 75);
           Sfx.coin();
         } else {
@@ -2445,7 +2477,7 @@ export class Game {
 
   private hurtPlayer(dmg: number, nx: number, ny: number) {
     if (this.iframe > 0 || this.dashT > 0 || this.phase !== "playing") return;
-    this.hp -= dmg;
+    this.hp -= dmg * DIFFICULTY_RULES[this.difficulty].damageTaken;
     this.iframe = 1.05;
     this.combo = 0;
     this.pvx = nx * 190;
