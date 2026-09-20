@@ -157,7 +157,7 @@ export function startMusic() {
   musicTimer = window.setInterval(tick, 125);
 }
 
-export type Weapon = "katana" | "bow" | "hammer" | "shield" | "mine" | "book";
+export type Weapon = "katana" | "bow" | "hammer" | "shield" | "mine" | "book" | "staff";
 
 export const Sfx = {
   // A crisp metallic "shing" for the katana; heavier thumps/twangs for other weapons.

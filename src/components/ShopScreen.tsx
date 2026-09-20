@@ -13,6 +13,7 @@ export const WEAPON_ICON: Record<Weapon, string> = {
   shield: "icoShield",
   mine: "icoMine",
   book: "icoBook",
+  staff: "icoStaff",
 };
 
 interface WeaponShopInfo {
@@ -31,6 +32,7 @@ const ALL_WEAPONS: WeaponShopInfo[] = [
   { id: "shield", cost: 35, sellRefund: 20, dmg: 0, spd: 4, range: 2 },
   { id: "mine", cost: 28, sellRefund: 16, dmg: 5, spd: 2, range: 4 },
   { id: "book", cost: 65, sellRefund: 36, dmg: 4, spd: 3, range: 4 },
+  { id: "staff", cost: 75, sellRefund: 42, dmg: 2, spd: 2, range: 4 },
 ];
 
 const ALL_POWERUPS: Array<{ id: PowerUp; nameKey: keyof Strings; descKey: keyof Strings; cost: number; icon: string }> = [
@@ -53,8 +55,19 @@ function Pips({ value, max = 5, color }: { value: number; max?: number; color: s
   ))}</span>;
 }
 
+function upgradeLabel(weapon: Weapon, kind: WeaponUpgrade, language: Language, fallback: string) {
+  const labels: Record<Language, Partial<Record<Weapon, Partial<Record<WeaponUpgrade, string>>>>> = {
+    pt: { shield: { damage: "REFLEXÃO", speed: "RECARGA", range: "COBERTURA" }, mine: { damage: "EXPLOSÃO", speed: "ARMAMENTO", range: "RAIO" }, book: { damage: "POTÊNCIA", speed: "CONJURAÇÃO", range: "ÁREA" }, staff: { damage: "VÍNCULO", speed: "RITUAL", range: "ALCANCE" }, bow: { damage: "IMPACTO", speed: "CADÊNCIA", range: "PRECISÃO" }, katana: { damage: "CORTE", speed: "FLUIDEZ", range: "LÂMINA" }, hammer: { damage: "IMPACTO", speed: "BALANÇO", range: "ONDA" } },
+    en: { shield: { damage: "REFLECTION", speed: "RECOVERY", range: "COVERAGE" }, mine: { damage: "BLAST", speed: "ARMING", range: "RADIUS" }, book: { damage: "POWER", speed: "CASTING", range: "AREA" }, staff: { damage: "BOND", speed: "RITUAL", range: "REACH" } },
+    fr: { shield: { damage: "REFLET", speed: "RECHARGE", range: "COUVERTURE" }, mine: { damage: "EXPLOSION", speed: "ARMEMENT", range: "RAYON" }, book: { damage: "PUISSANCE", speed: "INCANTATION", range: "ZONE" }, staff: { damage: "LIEN", speed: "RITUEL", range: "PORTÉE" } },
+    de: { shield: { damage: "REFLEX", speed: "AUFLADUNG", range: "DECKUNG" }, mine: { damage: "SPRENGUNG", speed: "ARMierung", range: "RADIUS" }, book: { damage: "MACHT", speed: "ZAUBER", range: "ZONE" }, staff: { damage: "BINDUNG", speed: "RITUAL", range: "REICHWEITE" } },
+    zh: { shield: { damage: "反射", speed: "冷却", range: "防护" }, mine: { damage: "爆炸", speed: "装填", range: "半径" }, book: { damage: "威力", speed: "施法", range: "范围" }, staff: { damage: "契约", speed: "仪式", range: "距离" } },
+  };
+  return labels[language][weapon]?.[kind] ?? fallback;
+}
 function weaponName(w: Weapon, t: Strings, g: GameplayStrings, form = 0) {
   if (w === "book") return g.book;
+  if (w === "staff") return g.staff;
   if (w === "bow" && form > 0) return g.automaticPistol;
   if (w === "hammer" && form > 0) return g.titanHammer;
   return t[w] as string;
@@ -62,6 +75,7 @@ function weaponName(w: Weapon, t: Strings, g: GameplayStrings, form = 0) {
 
 function weaponDescription(w: Weapon, t: Strings, g: GameplayStrings) {
   if (w === "book") return g.bookDesc;
+  if (w === "staff") return g.staffDesc;
   return t[`${w}Desc` as keyof Strings] as string;
 }
 
@@ -179,7 +193,7 @@ export default function ShopScreen({
             <div className="flex flex-col gap-2">
               <div className="font-pixel text-[7px] text-[#ffd44a]">{g.upgrades}</div>
               {!owned ? <div className="px-inset p-4 text-center font-pixel text-[7px] leading-5 text-[#a35662]">{t.buy} {weaponName(selected, t, g, levels.form)}</div> : UPGRADE_TYPES.map((kind) => {
-                const allowed = kind !== "form" || selected === "katana" || selected === "bow" || selected === "hammer" || selected === "book";
+                const allowed = kind !== "form" || selected === "katana" || selected === "bow" || selected === "hammer" || selected === "book" || selected === "staff";
                 const level = levels[kind];
                 const max = kind === "form" ? 1 : 3;
                 const cost = upgradeCost(selected, kind, level);
@@ -187,7 +201,7 @@ export default function ShopScreen({
                 return (
                   <div key={kind} className="px-inset flex items-center gap-2 p-2">
                     <div className="min-w-0 grow">
-                      <div className="font-pixel text-[7px] text-[#ffe2c4]">{g[kind]}</div>
+                      <div className="font-pixel text-[7px] text-[#ffe2c4]">{upgradeLabel(selected, kind, language, g[kind])}</div>
                       <div className="mt-1 flex gap-1">{Array.from({ length: max }).map((_, i) => <i key={i} className={`h-2 w-5 border-2 border-[#070305] ${i < level ? "bg-[#e0444d]" : "bg-[#2a0e13]"}`} />)}</div>
                     </div>
                     <PxButton tone="red" disabled={level >= max || stats.coins < cost} onClick={() => onUpgradeWeapon(selected, kind, cost)} className="px-2 py-2 text-[6px]">{level >= max ? g.max : <><Price cost={cost} /></>}</PxButton>

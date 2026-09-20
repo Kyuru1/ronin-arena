@@ -265,6 +265,7 @@ const WEAPON_CONFIG: Record<
   shield: { wind: 0.06, strike: 0.12, rec: 0.14, cd: 0.16, arc: 1.85, range: 28, dmg: 0, kb: 0 },
   mine: { wind: 0, strike: 0, rec: 0, cd: 0.45, arc: 0, range: 12, dmg: 6, kb: 0 },
   book: { wind: 0, strike: 0, rec: 0, cd: 0.5, arc: 1.7, range: 78, dmg: 2, kb: 180 },
+  staff: { wind: 0.12, strike: 0.12, rec: 0.18, cd: 0.55, arc: 1.2, range: 42, dmg: 2, kb: 110 },
 };
 
 const createWeaponLevels = (): WeaponLevels => ({
@@ -274,6 +275,7 @@ const createWeaponLevels = (): WeaponLevels => ({
   shield: { damage: 0, speed: 0, range: 0, form: 0 },
   mine: { damage: 0, speed: 0, range: 0, form: 0 },
   book: { damage: 0, speed: 0, range: 0, form: 0 },
+  staff: { damage: 0, speed: 0, range: 0, form: 0 },
 });
 
 export class Game {

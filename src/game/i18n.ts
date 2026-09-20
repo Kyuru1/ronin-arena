@@ -90,6 +90,8 @@ export interface Strings {
   shield: string;
   shieldDesc: string;
   mine: string;
+  staff: string;
+  staffDesc: string;
   mineDesc: string;
   mineTutorial: string;
   // upgrades
@@ -215,7 +217,7 @@ export const I18N = {
     hammerDesc: "Impacto esmagador que cria onda de choque e atordoa inimigos.",
     shield: "ESCUDO DE AÇO",
     shieldDesc: "Defesa direcional. Mire e pressione M1 para refletir projéteis.",
-    mine: "MINA TERRESTRE",
+    mine: "MINA TERRESTRE", staff: "CAJADO DE INVOCAÇÃO", staffDesc: "Invoca aliados e pode reviver inimigos.",
     mineDesc: "Coloque no chão. Explode quando um inimigo se aproxima (máx. 6).",
     mineTutorial: "MINA: MIRE E CLIQUE PARA COLOCAR NO CHÃO",
     speedUp: "+ VELOCIDADE",
@@ -333,7 +335,7 @@ export const I18N = {
     hammerDesc: "Crushing slam creating a shockwave that stuns surrounding foes.",
     shield: "STEEL SHIELD",
     shieldDesc: "Directional defense. Aim and press M1 to reflect projectiles.",
-    mine: "LAND MINE",
+    mine: "LAND MINE", staff: "SUMMONING STAFF", staffDesc: "Summons allies and can revive enemies.",
     mineDesc: "Place it on the ground. Explodes near enemies (max 6).",
     mineTutorial: "MINE: AIM AND CLICK TO PLACE ON THE GROUND",
     speedUp: "+ SPEED",
@@ -451,7 +453,7 @@ export const I18N = {
     hammerDesc: "Frappe écrasante créant une onde de choc étourdissante.",
     shield: "BOUCLIER D'ACIER",
     shieldDesc: "Défense directionnelle. Visez et appuyez sur M1 pour renvoyer les projectiles.",
-    mine: "MINE TERRESTRE",
+    mine: "MINE TERRESTRE", staff: "BATON D INVOCATION", staffDesc: "Invoque des alliés et ressuscite des ennemis.",
     mineDesc: "Posez-la au sol. Explose près des ennemis (max. 6).",
     mineTutorial: "MINE : VISEZ ET CLIQUEZ POUR LA POSER AU SOL",
     speedUp: "+ VITESSE",
@@ -515,7 +517,7 @@ I18N.de = {
   notEnoughCoins: "NICHT GENUG MÜNZEN", nextWave: "ZUR NÄCHSTEN WELLE", katanaDesc: "Schnelle, flüssige Hiebe mit ausgewogener Reichweite.",
   bow: "BOGEN", bowDesc: "Feuert schnelle Pfeile aus sicherer Entfernung.",
   hammer: "ONI-HAMMER",
-  hammerDesc: "Wuchtiger Schlag mit Schockwelle, der Gegner betäubt.", shield: "STAHLSCHILD",
+  hammerDesc: "Wuchtiger Schlag mit Schockwelle, der Gegner betäubt.", shield: "STAHLSCHILD", staff: "BESCHWÖRUNGSSTAB", staffDesc: "Beschwört Verbündete und belebt Feinde wieder.",
   shieldDesc: "Richtet sich zur Maus aus und reflektiert Projektile mit M1.", mine: "LANDMINE",
   mineDesc: "Auf den Boden legen. Explodiert bei Gegnernähe (max. 6).", mineTutorial: "MINE: ZIELEN UND KLICKEN, UM SIE ABZULEGEN",
   speedUp: "+ TEMPO", speedDesc: "+18 Bewegungstempo.", heartUp: "+ HERZ / HEILUNG", heartDesc: "+1 maximales Herz und 2 Heilung.",
@@ -545,7 +547,7 @@ I18N.zh = {
   equipped: "已装备", maxSlots: "武器栏已满", notEnoughCoins: "金币不足", nextWave: "进入下一波",
   katana: "武士刀", katanaDesc: "快速流畅的斩击，范围与速度均衡。", bow: "弓箭", bowDesc: "从远处射出高速箭矢。",
   hammer: "鬼锤", hammerDesc: "重击产生冲击波并击晕敌人。",
-  shield: "钢盾", shieldDesc: "跟随鼠标方向，按鼠标左键反射投射物。", mine: "地雷",
+  shield: "钢盾", staff: "召唤法杖", staffDesc: "召唤盟友并复活敌人。", shieldDesc: "跟随鼠标方向，按鼠标左键反射投射物。", mine: "地雷",
   mineDesc: "放置在地面，敌人靠近时爆炸（最多6枚）。", mineTutorial: "地雷：瞄准并点击鼠标左键放置",
   speedUp: "+ 移动速度", speedDesc: "+18移动速度。", heartUp: "+ 生命 / 治疗", heartDesc: "+1最大生命并恢复2点生命。",
   dashCdUp: "- 冲刺冷却", dashCdDesc: "冲刺冷却减少0.8秒。", dashDistUp: "+ 冲刺距离", dashDistDesc: "冲刺速度和距离增加25%。",

@@ -26,6 +26,7 @@ export const WEAPON_REST_LEN: Record<Weapon, number> = {
   shield: 28,
   mine: 9,
   book: 18,
+  staff: 25,
 };
 
 export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: WeaponDrawOpts) {
@@ -52,6 +53,20 @@ export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: 
   }
 }
 
+
+function drawStaff(ctx: CanvasRenderingContext2D, L: number, form: number) {
+  const glow = form > 0 ? "#9f6cff" : "#4da9ff";
+  ctx.fillStyle = "#070508";
+  ctx.fillRect(-2, -2, 4, L + 4);
+  ctx.fillStyle = form > 0 ? "#241634" : "#19304a";
+  ctx.fillRect(-1, -1, 2, L + 2);
+  ctx.fillStyle = "#d9b45c";
+  ctx.fillRect(-3, -4, 6, 3);
+  ctx.fillStyle = glow;
+  ctx.fillRect(-2, -8, 4, 4);
+  ctx.fillRect(-4, -6, 2, 2);
+  ctx.fillRect(3, -6, 2, 2);
+}
 function drawKatana(ctx: CanvasRenderingContext2D, L: number, glint: number, glintP: number, form: number) {
   const bladeLen = form > 0 ? L + 14 : L;
   ctx.fillStyle = "#070508";

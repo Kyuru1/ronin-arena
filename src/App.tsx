@@ -39,6 +39,7 @@ const emptyStats: HudStats = {
     shield: { damage: 0, speed: 0, range: 0, form: 0 },
     mine: { damage: 0, speed: 0, range: 0, form: 0 },
     book: { damage: 0, speed: 0, range: 0, form: 0 },
+    staff: { damage: 0, speed: 0, range: 0, form: 0 },
   },
   magicType: "fire",
   difficulty: "medium",
