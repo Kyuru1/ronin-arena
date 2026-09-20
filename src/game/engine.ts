@@ -17,6 +17,16 @@ export const STAT_LIMITS = {
   dashSpeedMult: 3,
 } as const;
 
+export function isPowerUpAtLimit(
+  stats: Pick<HudStats, "maxHp" | "speedBonus" | "dashMax" | "dashSpeedMult">,
+  power: PowerUp,
+): boolean {
+  if (power === "speed") return 108 + stats.speedBonus >= STAT_LIMITS.speed;
+  if (power === "heart") return stats.maxHp >= STAT_LIMITS.maxHp;
+  if (power === "dashCd") return stats.dashMax <= STAT_LIMITS.dashMax;
+  return stats.dashSpeedMult >= STAT_LIMITS.dashSpeedMult;
+}
+
 export interface UpgradeOffer {
   wave: number;
 }
@@ -660,12 +670,7 @@ export class Game {
 
   buyPowerUp(power: PowerUp, cost: number): boolean {
     if (this.coins < cost) return false;
-    if (
-      (power === "speed" && 108 + this.speedBonus >= STAT_LIMITS.speed) ||
-      (power === "heart" && this.maxHp >= STAT_LIMITS.maxHp) ||
-      (power === "dashCd" && this.dashMax <= STAT_LIMITS.dashMax) ||
-      (power === "dashDist" && this.dashSpeedMult >= STAT_LIMITS.dashSpeedMult)
-    ) return false;
+    if (isPowerUpAtLimit(this, power)) return false;
     this.coins -= cost;
     if (power === "speed") {
       this.speedBonus = Math.min(STAT_LIMITS.speed - 108, this.speedBonus + 18);

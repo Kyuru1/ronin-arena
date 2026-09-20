@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { STAT_LIMITS, type HudStats, type MagicType, type PowerUp, type Weapon, type WeaponUpgrade } from "../game/engine";
+import { isPowerUpAtLimit, type HudStats, type MagicType, type PowerUp, type Weapon, type WeaponUpgrade } from "../game/engine";
 import { GAMEPLAY_TEXT, type GameplayStrings } from "../game/gameplayText";
 import type { Language, Strings } from "../game/i18n";
 import PixelSprite from "./PixelSprite";
@@ -94,12 +94,7 @@ export default function ShopScreen({
   const active = ownedIndex === stats.activeSlot;
   const full = stats.weapons.length >= 4;
   const levels = stats.weaponLevels[selected];
-  const isPowerUpMaxed = (power: PowerUp) => {
-    if (power === "speed") return 108 + stats.speedBonus >= STAT_LIMITS.speed;
-    if (power === "heart") return stats.maxHp >= STAT_LIMITS.maxHp;
-    if (power === "dashCd") return stats.dashMax <= STAT_LIMITS.dashMax;
-    return stats.dashSpeedMult >= STAT_LIMITS.dashSpeedMult;
-  };
+  const isPowerUpMaxed = (power: PowerUp) => isPowerUpAtLimit(stats, power);
 
   return (
     <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-2 sm:p-5">

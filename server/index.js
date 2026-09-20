@@ -1,4 +1,5 @@
 import "dotenv/config";
+import fs from "node:fs";
 import cors from "cors";
 import express from "express";
 import pg from "pg";
@@ -7,6 +8,12 @@ const { Pool } = pg;
 const port = Number(process.env.PORT || 3001);
 const app = express();
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+
+async function initializeDatabase() {
+  const schemaPath = new URL("./schema.sql", import.meta.url);
+  const schemaSql = fs.readFileSync(schemaPath, "utf8");
+  await pool.query(schemaSql);
+}
 
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") || true }));
 app.use(express.json({ limit: "10kb" }));
@@ -22,6 +29,8 @@ const rankingQuery = `
   FROM ranking
   ORDER BY score DESC, wave DESC, kills DESC, survival_time_seconds DESC, created_at ASC
   LIMIT 50`;
+
+await initializeDatabase();
 
 app.get("/api/ranking", async (_request, response) => {
   try {
