@@ -35,6 +35,8 @@ const emptyStats: HudStats = {
   dashSpeedMult: 1,
   mineTutorial: false,
   potionTutorial: false,
+  activePotion: null,
+  potionTime: 0,
   weaponLevels: {
     katana: { damage: 0, speed: 0, range: 0, form: 0 },
     bow: { damage: 0, speed: 0, range: 0, form: 0 },
@@ -97,6 +99,18 @@ export default function App() {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [savedRun, setSavedRun] = useState<SavedRun | null>(null);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
+  const [hasGamepad, setHasGamepad] = useState(false);
+
+  useEffect(() => {
+    const detectGamepad = () => setHasGamepad(Boolean(navigator.getGamepads?.().some((gamepad) => gamepad !== null)));
+    detectGamepad();
+    window.addEventListener("gamepadconnected", detectGamepad);
+    window.addEventListener("gamepaddisconnected", detectGamepad);
+    return () => {
+      window.removeEventListener("gamepadconnected", detectGamepad);
+      window.removeEventListener("gamepaddisconnected", detectGamepad);
+    };
+  }, []);
 
   useEffect(() => {
     profileRef.current = profile;
@@ -336,6 +350,10 @@ export default function App() {
     gameRef.current?.switchSlot(slot);
   }, []);
 
+  const reorderWeapons = useCallback((from: number, to: number) => {
+    gameRef.current?.reorderWeapons(from, to);
+  }, []);
+
   const buyWeapon = useCallback((w: Weapon, cost: number) => {
     gameRef.current?.buyWeapon(w, cost);
   }, []);
@@ -486,7 +504,7 @@ export default function App() {
           </div>
         )}
 
-        {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} onBegin={finishTutorial} />}
+        {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} isGamepad={hasGamepad} onBegin={finishTutorial} />}
         {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (
           <GameOverScreen
@@ -508,6 +526,7 @@ export default function App() {
             onBuyWeapon={buyWeapon}
             onSellWeapon={sellWeapon}
             onSelectSlot={selectSlot}
+            onReorderWeapons={reorderWeapons}
             onBuyPowerUp={buyPowerUp}
             onUpgradeWeapon={upgradeWeapon}
             onMagicType={selectMagic}

@@ -4,15 +4,15 @@ import type { Language } from "../game/i18n";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxFrame } from "./PixelUi";
 
-export default function TutorialScreen({ language, isTouch, onBegin }: { language: Language; isTouch: boolean; onBegin: (neverAgain: boolean) => void }) {
+export default function TutorialScreen({ language, isTouch, isGamepad, onBegin }: { language: Language; isTouch: boolean; isGamepad: boolean; onBegin: (neverAgain: boolean) => void }) {
   const [neverAgain, setNeverAgain] = useState(false);
   const g = GAMEPLAY_TEXT[language];
   const controls = [
-    { icon: "player", title: g.move, detail: isTouch ? g.touchMove : g.moveHelp },
-    { icon: "icoCrosshair", title: g.aim, detail: isTouch ? g.touchAim : g.aimHelp },
-    { icon: "icoKatana", title: g.attack, detail: isTouch ? g.touchAttack : g.attackHelp },
-    { icon: "icoDash", title: g.dash, detail: isTouch ? g.touchDash : g.dashHelp },
-    { icon: "icoBook", title: g.swap, detail: isTouch ? g.touchSwap : g.swapHelp },
+    { icon: "player", title: g.move, detail: isGamepad ? "ANALÓGICO ESQUERDO" : isTouch ? g.touchMove : g.moveHelp },
+    { icon: "icoCrosshair", title: g.aim, detail: isGamepad ? "ANALÓGICO DIREITO" : isTouch ? g.touchAim : g.aimHelp },
+    { icon: "icoKatana", title: g.attack, detail: isGamepad ? "A OU RT" : isTouch ? g.touchAttack : g.attackHelp },
+    { icon: "icoDash", title: g.dash, detail: isGamepad ? "B OU RB" : isTouch ? g.touchDash : g.dashHelp },
+    { icon: "icoBook", title: g.swap, detail: isGamepad ? "LB/RB OU DIRECIONAL" : isTouch ? g.touchSwap : g.swapHelp },
     { icon: "coin", title: g.shop, detail: g.shopHelp },
   ];
 

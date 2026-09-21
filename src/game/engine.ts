@@ -77,6 +77,8 @@ export interface HudStats {
   dashSpeedMult: number;
   mineTutorial: boolean;
   potionTutorial: boolean;
+  activePotion: PotionType | null;
+  potionTime: number;
   weaponLevels: WeaponLevels;
   magicType: MagicType;
   difficulty: Difficulty;
@@ -216,7 +218,7 @@ interface PsychicZone {
   type: MagicType;
 }
 
-type PotionType = "health" | "strength" | "speed" | "agility";
+export type PotionType = "health" | "strength" | "speed" | "agility";
 
 interface ArenaProp {
   x: number; y: number; kind: "tree" | "crate"; life: number; t: number;
@@ -416,6 +418,7 @@ export class Game {
   dashQueued = false;
   moveStick: { id: number; ox: number; oy: number; x: number; y: number } | null = null;
   aimStick: { id: number; ox: number; oy: number; x: number; y: number } | null = null;
+  gamepadButtons: boolean[] = [];
 
   onStats: (s: HudStats) => void = () => {};
   onGameOver: (s: HudStats) => void = () => {};
@@ -791,6 +794,18 @@ export class Game {
     }
   }
 
+  reorderWeapons(fromIndex: number, toIndex: number): boolean {
+    if (this.perk === "bladeMonk" || fromIndex === toIndex) return false;
+    if (fromIndex < 0 || toIndex < 0 || fromIndex >= this.weapons.length || toIndex >= this.weapons.length) return false;
+    const [weapon] = this.weapons.splice(fromIndex, 1);
+    this.weapons.splice(toIndex, 0, weapon);
+    if (this.activeSlot === fromIndex) this.activeSlot = toIndex;
+    else if (fromIndex < this.activeSlot && toIndex >= this.activeSlot) this.activeSlot--;
+    else if (fromIndex > this.activeSlot && toIndex <= this.activeSlot) this.activeSlot++;
+    this.pushStats(true);
+    return true;
+  }
+
   nextWeapon() {
     if (this.weapons.length <= 1) return;
     this.switchSlot((this.activeSlot + 1) % this.weapons.length);
@@ -1044,6 +1059,8 @@ export class Game {
       dashSpeedMult: this.dashSpeedMult,
       mineTutorial: this.mineTutorialT > 0,
       potionTutorial: this.potionTutorialT > 0,
+      activePotion: this.strengthT > 0 ? "strength" : this.speedT > 0 ? "speed" : this.agilityT > 0 ? "agility" : null,
+      potionTime: Math.max(this.strengthT, this.speedT, this.agilityT),
       weaponLevels: this.weaponLevels,
       magicType: this.magicType,
       difficulty: this.difficulty,
@@ -1054,7 +1071,7 @@ export class Game {
   private pushStats(force = false) {
     this.waveLeft = Math.max(0, this.waveTotal - this.waveSpawned) + this.marks.length + this.enemies.length;
     const s = this.stats();
-    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}`;
+    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${s.activePotion}|${Math.ceil(s.potionTime)}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}`;
     if (force || key !== this.lastStats) {
       this.lastStats = key;
       this.onStats(s);
@@ -1131,6 +1148,7 @@ export class Game {
     this.speedT = Math.max(0, this.speedT - dt);
     this.agilityT = Math.max(0, this.agilityT - dt);
     this.updateProps(dt);
+    this.updateGamepad();
     this.decayFx(realDt);
 
     if (this.combo > 0) {
@@ -1232,6 +1250,19 @@ export class Game {
         const n = Math.min(1, len / 26);
         mx += (dx / len) * n;
         my += (dy / len) * n;
+      }
+    }
+    const pad = navigator.getGamepads?.()[0];
+    if (pad) {
+      mx += Math.abs(pad.axes[0] ?? 0) > 0.18 ? pad.axes[0] : 0;
+      my += Math.abs(pad.axes[1] ?? 0) > 0.18 ? pad.axes[1] : 0;
+      const aimX = Math.abs(pad.axes[2] ?? 0) > 0.18 ? pad.axes[2] : 0;
+      const aimY = Math.abs(pad.axes[3] ?? 0) > 0.18 ? pad.axes[3] : 0;
+      if (Math.hypot(aimX, aimY) > 0.18) {
+        this.keyboardAimAngle = Math.atan2(aimY, aimX);
+        this.mouseX = this.px + aimX * 100;
+        this.mouseY = this.py + aimY * 100;
+        this.mouseActive = true;
       }
     }
     const ml = Math.hypot(mx, my);
@@ -1434,6 +1465,19 @@ export class Game {
     if (this.currentWeapon === "bow" && (this.bowHolding || this.bowCharge > 0.02)) {
       this.face = Math.cos(this.aimAngle()) >= 0 ? 1 : -1;
     }
+  }
+
+  private updateGamepad() {
+    const pad = navigator.getGamepads?.()[0];
+    if (!pad || this.phase !== "playing") return;
+    const pressed = (index: number) => Boolean(pad.buttons[index]?.pressed);
+    const justPressed = (index: number) => pressed(index) && !this.gamepadButtons[index];
+    this.attackHeld = pressed(0) || pressed(7);
+    if (justPressed(1) || justPressed(2)) this.dashQueued = true;
+    if (justPressed(4) || justPressed(14)) this.prevWeapon();
+    if (justPressed(5) || justPressed(15)) this.nextWeapon();
+    if (justPressed(9)) this.onPause();
+    this.gamepadButtons = pad.buttons.map((button) => button.pressed);
   }
 
   private updateStaff(wantAttack: boolean, dt: number) {
@@ -2714,6 +2758,13 @@ export class Game {
           this.burst(p.x, p.y, 6, "#ffd747", 75);
           Sfx.coin();
         } else {
+          if (p.potion === "strength") this.strengthT = 8;
+          if (p.potion === "speed") this.speedT = 8;
+          if (p.potion === "agility") this.agilityT = 8;
+          if (p.potion && !this.potionTutorialSeen) {
+            this.potionTutorialSeen = true;
+            this.potionTutorialT = 5;
+          }
           const v = Math.round(25 * this.comboMult());
           this.addScore(v, p.x, p.y - 8, `+${v}`, "#ffbd86");
           this.burst(p.x, p.y, 8, "#ffbd86", 90);
