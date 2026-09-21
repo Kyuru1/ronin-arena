@@ -28,6 +28,12 @@ function normalizeDifficulty(value: unknown): Difficulty {
   return "medium";
 }
 
+function normalizeAvatar(value: unknown): ScoreEntry["avatarId"] {
+  return value === "ninja" || value === "oni" || value === "boss" || value === "bat" || value === "samurai"
+    ? value
+    : "samurai";
+}
+
 export function difficultyToDb(value: Difficulty): "facil" | "medio" | "dificil" {
   return value === "easy" ? "facil" : value === "hard" ? "dificil" : "medio";
 }
@@ -38,11 +44,11 @@ export function normalizeScores(entries: unknown): ScoreEntry[] {
     .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
     .filter((entry) => Number.isFinite(Number(entry.score)))
     .map((entry) => {
-      const profileName = typeof entry.profile_username === "string" ? entry.profile_username.trim() : "";
-      const storedName = typeof entry.name === "string" ? entry.name.trim() : typeof entry.player_name === "string" ? entry.player_name.trim() : "";
+      const storedName = typeof entry.player_name === "string" ? entry.player_name.trim() : typeof entry.name === "string" ? entry.name.trim() : "";
+      const legacyProfileName = typeof entry.profile_username === "string" ? entry.profile_username.trim() : "";
       return {
-      name: profileName || storedName || "RONIN",
-      avatarId: (entry.avatar_id === "ninja" || entry.avatar_id === "oni" || entry.avatar_id === "boss" || entry.avatar_id === "bat" || entry.avatar_id === "samurai") ? entry.avatar_id : "samurai",
+      name: storedName || legacyProfileName || "RONIN",
+      avatarId: normalizeAvatar(entry.avatar_id ?? entry.avatarId),
       score: Number(entry.score),
       wave: Number.isFinite(Number(entry.wave)) ? Number(entry.wave) : 1,
       kills: Number.isFinite(Number(entry.kills)) ? Number(entry.kills) : 0,
@@ -172,7 +178,7 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
       kills: payload.p_kills,
       survival_time_seconds: payload.p_survival_time_seconds,
     });
-    if (insertError) throw rpcError;
+    if (insertError) throw insertError;
   }
 
   const list = await loadRemoteScores();
