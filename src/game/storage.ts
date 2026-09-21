@@ -102,37 +102,28 @@ function saveLocal(list: ScoreEntry[]) {
 export async function loadRemoteScores(): Promise<ScoreEntry[]> {
   if (supabase) {
     const rankingQuery = supabase
-      .from("ranking")
-      .select("user_id, player_name, avatar_id, difficulty, score, wave, kills, survival_time_seconds, created_at")
+      .from("top_50_ranking")
+      .select("user_id, player_name, avatar_id, difficulty, score, wave, kills, survival_time_seconds, created_at, placement")
       .order("score", { ascending: false })
       .order("wave", { ascending: false })
       .order("kills", { ascending: false })
       .limit(150);
     const { data, error } = await rankingQuery;
     if (!error && data) {
-      const userIds = [...new Set(data.map((entry) => entry.user_id).filter((id): id is string => typeof id === "string"))];
-      let profiles = new Map<string, { username: string; avatar_id: string }>();
-      if (userIds.length) {
-        const { data: profileRows } = await supabase.from("profiles").select("id, username, avatar_id").in("id", userIds);
-        profiles = new Map((profileRows ?? []).map((profile) => [profile.id, profile]));
-      }
-      const scores = normalizeScores(data.map((entry) => {
-        const profile = typeof entry.user_id === "string" ? profiles.get(entry.user_id) : undefined;
-        return { ...entry, profile_username: profile?.username, avatar_id: entry.avatar_id ?? profile?.avatar_id ?? "samurai" };
-      }));
+      const scores = normalizeScores(data);
       saveLocal(scores);
       return scores;
     }
     if (error) {
       const legacy = await supabase
         .from("ranking")
-        .select("player_name, difficulty, score, wave, kills, survival_time_seconds, created_at")
+        .select("user_id, player_name, avatar_id, difficulty, score, wave, kills, survival_time_seconds, created_at")
         .order("score", { ascending: false })
         .order("wave", { ascending: false })
         .order("kills", { ascending: false })
         .limit(150);
       if (!legacy.error && legacy.data) {
-        const scores = normalizeScores(legacy.data);
+        const scores = normalizeScores(legacy.data.map((entry) => ({ ...entry, avatar_id: entry.avatar_id ?? "samurai" })));
         saveLocal(scores);
         return scores;
       }
