@@ -98,6 +98,7 @@ export function GameOverScreen({
   t: Strings;
 }) {
   useMenuNavigation();
+  const difficultyScores = scores.filter((score) => score.difficulty === stats.difficulty).slice(0, 6);
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#12040a]/88 p-3">
@@ -138,9 +139,9 @@ export function GameOverScreen({
                 </div>
               )}
               <div className="px-inset scrollbar-thin max-h-[22vh] w-full overflow-y-auto">
-                {scores.slice(0, 6).map((s, i) => (
+                {difficultyScores.length === 0 ? <div className="px-3 py-4 text-center font-pixel text-[7px] text-[#a35662]">SEM RECORDES NESTA DIFICULDADE</div> : difficultyScores.map((s, i) => (
                   <div
-                    key={i}
+                    key={`${s.userId ?? s.name}-${s.date}-${i}`}
                     className={`font-pixel flex items-center gap-2 px-3 py-1.5 text-[7px] sm:text-[8px] ${
                       i % 2 ? "bg-[#140609]" : "bg-[#0c0407]"
                     } ${i === rank ? "text-[#ffd44a]" : "text-[#ffe2c4]"}`}

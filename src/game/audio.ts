@@ -281,6 +281,16 @@ export const Sfx = {
     tone("square", 900, 1360, 0.06, 0.18);
     tone("square", 1360, 1820, 0.08, 0.14, 0.05);
   },
+  treeBreak() {
+    noise(0.2, 0.34, 720, 180, 1.1);
+    tone("sawtooth", 180, 70, 0.2, 0.2);
+    tone("triangle", 420, 130, 0.12, 0.13, 0.04);
+  },
+  crateBreak() {
+    noise(0.12, 0.3, 1500, 420, 1.4);
+    tone("square", 260, 90, 0.16, 0.22);
+    tone("triangle", 880, 420, 0.1, 0.14, 0.03);
+  },
   heal() {
     tone("triangle", 540, 1080, 0.16, 0.22);
     tone("triangle", 810, 1620, 0.2, 0.16, 0.08);

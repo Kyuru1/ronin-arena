@@ -1528,7 +1528,7 @@ export class Game {
     this.burst(this.px + Math.cos(a) * 28, this.py + Math.sin(a) * 28, evolved ? 28 : 20, color, evolved ? 150 : 110);
     for (const enemy of this.enemies.slice()) {
       if (Math.hypot(enemy.x - this.px, enemy.y - this.py) <= area) {
-        enemy.hp -= (evolved ? 4 : 2) + this.weaponLevels.staff.damage; enemy.flash = 0.14;
+        this.damageEnemy(enemy, (evolved ? 4 : 2) + this.weaponLevels.staff.damage, a);
         if (enemy.hp <= 0) this.killEnemy(enemy, a);
       }
     }
@@ -1550,7 +1550,7 @@ export class Game {
       if (s.life <= 0) { this.summons.splice(i, 1); continue; }
       let target: Enemy | null = null; let best = Infinity;
       for (const e of this.enemies) { const d = Math.hypot(e.x - s.x, e.y - s.y); if (d < best) { best = d; target = e; } }
-      if (target) { const a = Math.atan2(target.y - s.y, target.x - s.x); if (best > 20) { s.vx += Math.cos(a) * 260 * dt; s.vy += Math.sin(a) * 260 * dt; } const sp = Math.hypot(s.vx, s.vy); if (sp > 74) { s.vx = s.vx / sp * 74; s.vy = s.vy / sp * 74; } if (best < target.r + 10 && s.attackCd <= 0) { target.hp -= 1 + Math.floor(this.weaponLevels.staff.damage / 2); target.flash = 0.12; s.attackCd = s.kind === "revived" ? 0.55 : 0.72; this.burst(target.x, target.y, 4, s.kind === "revived" ? "#b276ff" : "#69d7ff", 60); if (target.hp <= 0) this.killEnemy(target, a, false); } }
+      if (target) { const a = Math.atan2(target.y - s.y, target.x - s.x); if (best > 20) { s.vx += Math.cos(a) * 260 * dt; s.vy += Math.sin(a) * 260 * dt; } const sp = Math.hypot(s.vx, s.vy); if (sp > 74) { s.vx = s.vx / sp * 74; s.vy = s.vy / sp * 74; } if (best < target.r + 10 && s.attackCd <= 0) { target.hp -= this.playerDamage(1 + Math.floor(this.weaponLevels.staff.damage / 2)); target.flash = 0.12; s.attackCd = s.kind === "revived" ? 0.55 : 0.72; this.burst(target.x, target.y, 4, s.kind === "revived" ? "#b276ff" : "#69d7ff", 60); if (target.hp <= 0) this.killEnemy(target, a, false); } }
       s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.92; s.vy *= 0.92;
     }
   }
@@ -2061,7 +2061,7 @@ export class Game {
       e.fireTick -= dt;
       if (e.fireTick <= 0) {
         e.fireTick = 0.5;
-        if (!this.statusDamage(e, 2 + Math.floor(this.weaponLevels.book.damage / 2), "#ff5a3d")) return false;
+        if (!this.statusDamage(e, this.playerDamage(2 + Math.floor(this.weaponLevels.book.damage / 2)), "#ff5a3d")) return false;
       }
     }
     if (e.poisonT > 0) {
@@ -2069,7 +2069,7 @@ export class Game {
       e.poisonTick -= dt;
       if (e.poisonTick <= 0) {
         e.poisonTick = 0.5;
-        if (!this.statusDamage(e, 3 + this.weaponLevels.book.damage, "#8cdf55")) return false;
+        if (!this.statusDamage(e, this.playerDamage(3 + this.weaponLevels.book.damage), "#8cdf55")) return false;
       }
     }
     return true;
@@ -2087,6 +2087,10 @@ export class Game {
     return true;
   }
 
+  private playerDamage(dmg: number): number {
+    return this.strengthT > 0 ? dmg * 1.5 : dmg;
+  }
+
   private shieldFacing(x: number, y: number): boolean {
     if (this.currentWeapon !== "shield") return false;
     const sourceAngle = Math.atan2(y - this.py, x - this.px);
@@ -2094,7 +2098,7 @@ export class Game {
   }
 
   private damageEnemy(e: Enemy, dmg: number, ang: number): boolean {
-    if (this.strengthT > 0) dmg *= 1.5;
+    dmg = this.playerDamage(dmg);
     const heavy = this.currentWeapon !== "katana";
     e.hp -= dmg;
     e.flash = 0.14;
@@ -2758,6 +2762,8 @@ export class Game {
       prop.t += dt;
       if (Math.hypot(this.px - prop.x, this.py - prop.y) > 18) continue;
       this.props.splice(i, 1);
+      if (prop.kind === "tree") Sfx.treeBreak();
+      else Sfx.crateBreak();
       const potion: PotionType = pick(["health", "strength", "speed", "agility"]);
       this.pickups.push({ x: prop.x, y: prop.y, vx: rnd(-20, 20), vy: rnd(-35, -10), t: 0, kind: potion, potion, magnet: false });
       this.burst(prop.x, prop.y, 12, potion === "health" ? "#ff4d6d" : potion === "strength" ? "#ff8a45" : potion === "speed" ? "#ffd44a" : "#8c8cff", 100);
@@ -2804,7 +2810,7 @@ export class Game {
           if (p.potion === "speed") this.speedT = 8;
           if (p.potion === "agility") this.agilityT = 8;
           this.lastPotion = p.potion ?? null;
-          this.potionDisplayT = p.potion === "health" ? 2.5 : 8;
+          this.potionDisplayT = p.potion === "health" ? 0 : 8;
           if (p.potion && this.potionTutorialEnabled && !this.potionTutorialSeen) {
             this.potionTutorialSeen = true;
             this.potionTutorialT = 1;

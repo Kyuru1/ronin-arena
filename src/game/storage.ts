@@ -142,14 +142,26 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
   const user = authData.user;
   if (!user) return { list: await loadRemoteScores(), rank: -1 };
 
-  const { error } = await supabase.rpc("submit_ranking", {
+  const payload = {
     p_difficulty: difficultyToDb(entry.difficulty),
     p_score: Math.max(0, Math.floor(entry.score)),
     p_wave: Math.max(1, Math.floor(entry.wave)),
     p_kills: Math.max(0, Math.floor(entry.kills)),
     p_survival_time_seconds: Math.max(0, Math.floor(entry.time)),
-  });
-  if (error) throw error;
+  };
+  const { error } = await supabase.rpc("submit_ranking", payload);
+  if (error) {
+    const { error: insertError } = await supabase.from("ranking").insert({
+      user_id: user.id,
+      player_name: entry.name,
+      difficulty: payload.p_difficulty,
+      score: payload.p_score,
+      wave: payload.p_wave,
+      kills: payload.p_kills,
+      survival_time_seconds: payload.p_survival_time_seconds,
+    });
+    if (insertError) throw error;
+  }
 
   const list = await loadRemoteScores();
   const sameDifficulty = list.filter((item) => item.difficulty === entry.difficulty);
