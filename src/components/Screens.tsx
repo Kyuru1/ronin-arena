@@ -16,6 +16,36 @@ function StatCell({ label, value, gold }: { label: string; value: string | numbe
   );
 }
 
+export function SavedRunPrompt({
+  wave,
+  atShop,
+  onContinue,
+  onDiscard,
+}: {
+  wave: number;
+  atShop: boolean;
+  onContinue: () => void;
+  onDiscard: () => void;
+}) {
+  return (
+    <div className="px-backdrop absolute inset-0 z-40 flex items-center justify-center p-3 sm:p-6">
+      <PxFrame title="CONTINUAR RUN?" icon="player" className="anim-pop w-full max-w-sm p-4 pt-7 sm:p-5 sm:pt-8">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <PixelSprite name="player" scale={4} />
+          <p className="font-pixel text-[7px] leading-5 text-[#ffe2c4] sm:text-[8px]">
+            SUA RUN DA WAVE {wave} ESTA SALVA{atShop ? " NO SHOP" : ""}.
+          </p>
+          <p className="font-pixel text-[6px] leading-4 text-[#91b9b5]">QUER VOLTAR PARA A ULTIMA RUN?</p>
+          <div className="flex w-full flex-col gap-2">
+            <PxButton tone="gold" onClick={onContinue} className="w-full py-3 text-[9px] sm:text-[10px]">CONTINUAR</PxButton>
+            <PxButton tone="dark" onClick={onDiscard} className="w-full py-2.5 text-[8px]">NOVA PARTIDA</PxButton>
+          </div>
+        </div>
+      </PxFrame>
+    </div>
+  );
+}
+
 export function PauseScreen({
   onResume,
   onSave,

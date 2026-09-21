@@ -2247,46 +2247,46 @@ export class Game {
     const w = this.wave;
     const hpB = Math.floor(w / 3) + Math.floor(Math.max(0, w - 8) * 0.45);
     const spB = w * 0.9 + Math.max(0, w - 10) * 0.65;
-    const dmgB = Math.floor(Math.max(0, w - 1) / 2);
+    const enemyDamage = 1 + Math.floor(Math.max(0, w - 1) / 5);
     switch (type) {
       case "grunt":
-        return { hp: 2 + hpB, r: 6, speed: 52 + spB, score: 10, dmg: 1 + dmgB };
+        return { hp: 2 + hpB, r: 6, speed: 52 + spB, score: 10, dmg: enemyDamage };
       case "bat":
-        return { hp: 1 + Math.floor(hpB / 2), r: 6, speed: 70 + spB, score: 15, dmg: 1 + dmgB };
+        return { hp: 1 + Math.floor(hpB / 2), r: 6, speed: 70 + spB, score: 15, dmg: enemyDamage };
       case "spitter":
-        return { hp: 3 + hpB, r: 6, speed: 40 + spB * 0.4, score: 20, dmg: 1 + dmgB };
+        return { hp: 3 + hpB, r: 6, speed: 40 + spB * 0.4, score: 20, dmg: enemyDamage };
       case "brute":
-        return { hp: 9 + hpB * 2, r: 10, speed: 36 + spB * 0.5, score: 45, dmg: 2 + dmgB };
+        return { hp: 9 + hpB * 2, r: 10, speed: 36 + spB * 0.5, score: 45, dmg: enemyDamage };
       case "ninja":
-        return { hp: 3 + hpB, r: 6, speed: 96 + spB, score: 28, dmg: 2 + dmgB };
+        return { hp: 3 + hpB, r: 6, speed: 96 + spB, score: 28, dmg: enemyDamage };
       case "hound":
-        return { hp: 3 + hpB, r: 7, speed: 88 + spB, score: 25, dmg: 1 + dmgB };
+        return { hp: 3 + hpB, r: 7, speed: 88 + spB, score: 25, dmg: enemyDamage };
       case "wisp":
-        return { hp: 3 + Math.floor(hpB * 0.7), r: 6, speed: 60 + spB * 0.5, score: 30, dmg: 1 + dmgB };
+        return { hp: 3 + Math.floor(hpB * 0.7), r: 6, speed: 60 + spB * 0.5, score: 30, dmg: enemyDamage };
       case "archer":
-        return { hp: 4 + hpB, r: 7, speed: 40 + spB * 0.4, score: 34, dmg: 2 + dmgB };
+        return { hp: 4 + hpB, r: 7, speed: 40 + spB * 0.4, score: 34, dmg: enemyDamage };
       case "oni":
-        return { hp: 11 + hpB * 2, r: 9, speed: 44 + spB * 0.5, score: 55, dmg: 2 + dmgB };
+        return { hp: 11 + hpB * 2, r: 9, speed: 44 + spB * 0.5, score: 55, dmg: enemyDamage };
       case "shield":
-        return { hp: 13 + hpB * 2, r: 9, speed: 38 + spB * 0.4, score: 60, dmg: 2 + dmgB };
+        return { hp: 13 + hpB * 2, r: 9, speed: 38 + spB * 0.4, score: 60, dmg: enemyDamage };
       case "slime":
-        return { hp: 5 + hpB, r: 8, speed: 42 + spB * 0.5, score: 32, dmg: 1 + dmgB };
+        return { hp: 5 + hpB, r: 8, speed: 42 + spB * 0.5, score: 32, dmg: enemyDamage };
       case "monk":
-        return { hp: 6 + hpB, r: 7, speed: 52 + spB * 0.6, score: 42, dmg: 2 + dmgB };
+        return { hp: 6 + hpB, r: 7, speed: 52 + spB * 0.6, score: 42, dmg: enemyDamage };
       case "demon":
-        return { hp: 12 + hpB * 2, r: 9, speed: 60 + spB * 0.7, score: 70, dmg: 2 + dmgB };
+        return { hp: 12 + hpB * 2, r: 9, speed: 60 + spB * 0.7, score: 70, dmg: enemyDamage };
       case "skeleton":
-        return { hp: 6 + hpB, r: 7, speed: 58 + spB * 0.6, score: 38, dmg: 2 + dmgB };
+        return { hp: 6 + hpB, r: 7, speed: 58 + spB * 0.6, score: 38, dmg: enemyDamage };
       case "crawler":
-        return { hp: 5 + hpB, r: 6, speed: 112 + spB * 1.1, score: 48, dmg: 2 + dmgB };
+        return { hp: 5 + hpB, r: 6, speed: 112 + spB * 1.1, score: 48, dmg: enemyDamage };
       case "bomber":
-        return { hp: 8 + hpB, r: 8, speed: 48 + spB * 0.45, score: 64, dmg: 2 + dmgB };
+        return { hp: 8 + hpB, r: 8, speed: 48 + spB * 0.45, score: 64, dmg: enemyDamage };
       case "warlock":
-        return { hp: 10 + Math.floor(hpB * 1.3), r: 8, speed: 48 + spB * 0.45, score: 82, dmg: 3 + dmgB };
+        return { hp: 10 + Math.floor(hpB * 1.3), r: 8, speed: 48 + spB * 0.45, score: 82, dmg: enemyDamage };
       case "golem":
-        return { hp: 24 + hpB * 3, r: 13, speed: 28 + spB * 0.35, score: 120, dmg: 4 + dmgB };
+        return { hp: 24 + hpB * 3, r: 13, speed: 28 + spB * 0.35, score: 120, dmg: enemyDamage };
       case "boss":
-        return { hp: 68 + w * 8, r: 18, speed: 34 + w * 0.7, score: 1500, dmg: this.difficulty === "hard" ? Number.POSITIVE_INFINITY : w >= 30 ? 12 : w >= 21 ? 9 : 6 };
+        return { hp: 68 + w * 8, r: 18, speed: 34 + w * 0.7, score: 1500, dmg: this.difficulty === "hard" ? Number.POSITIVE_INFINITY : 3 + Math.floor(Math.max(0, w - 1) / 10) * 5 };
     }
   }
 

@@ -4,7 +4,7 @@ import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
 import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
 import Hud from "./components/Hud";
-import { GameOverScreen, PauseScreen } from "./components/Screens";
+import { GameOverScreen, PauseScreen, SavedRunPrompt } from "./components/Screens";
 import MainMenu, { type UiOpts } from "./components/MainMenu";
 import ShopScreen from "./components/ShopScreen";
 import TutorialScreen from "./components/TutorialScreen";
@@ -161,6 +161,8 @@ export default function App() {
     try { game.setPotionTutorialHidden(localStorage.getItem(POTION_TUTORIAL_KEY) === "1"); } catch { /* ignore */ }
     game.onStats = (s) => setStats(s);
     game.onGameOver = (s) => {
+      try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
+      setSavedRun(null);
       setFinalStats(s);
       setPendingScore(s.score > 0);
       setRank(-1);
@@ -280,26 +282,25 @@ export default function App() {
     }
   }, []);
 
-  useEffect(() => {
-    if (!savedRun || !gameRef.current || phase !== "menu") return;
-    const continueRun = window.confirm("Quer continuar desde a sua última vida?\n\nOK: continuar run\nCancelar: começar uma nova partida");
-    if (!continueRun) {
-      try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
-      setSavedRun(null);
-      return;
-    }
-    const game = gameRef.current;
-    if (!game.restoreRun(savedRun)) {
-      try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
-      setSavedRun(null);
-      return;
-    }
-    selectedPerk.current = savedRun.stats.perk;
-    setDifficulty(savedRun.stats.difficulty);
-    if (savedRun.atShop) setUpgrade({ wave: savedRun.stats.wave });
-    setPhase(savedRun.atShop ? "upgrade" : "playing");
+  const discardSavedRun = useCallback(() => {
+    try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
     setSavedRun(null);
-  }, [savedRun, phase]);
+  }, []);
+
+  const continueSavedRun = useCallback(() => {
+    const saved = savedRun;
+    const game = gameRef.current;
+    if (!saved || !game) return;
+    if (!game.restoreRun(saved)) {
+      discardSavedRun();
+      return;
+    }
+    selectedPerk.current = saved.stats.perk;
+    setDifficulty(saved.stats.difficulty);
+    if (saved.atShop) setUpgrade({ wave: saved.stats.wave });
+    setPhase(saved.atShop ? "upgrade" : "playing");
+    setSavedRun(null);
+  }, [discardSavedRun, savedRun]);
   const togglePause = useCallback(() => {
     const g = gameRef.current;
     if (!g) return;
@@ -537,6 +538,14 @@ export default function App() {
               openAccount={pendingScore}
             />
           </div>
+        )}
+        {phase === "menu" && savedRun && (
+          <SavedRunPrompt
+            wave={savedRun.stats.wave}
+            atShop={savedRun.atShop}
+            onContinue={continueSavedRun}
+            onDiscard={discardSavedRun}
+          />
         )}
 
         {phase === "input-select" && <InputModeScreen onSelect={chooseInputMode} />}
