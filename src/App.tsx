@@ -549,7 +549,7 @@ export default function App() {
             rank={rank}
             pendingScore={pendingScore}
             defaultName={profile?.username ?? lastName}
-            onSubmitName={submitName}
+            onSubmitName={() => void submitName()}
             onRestart={restartRun}
             onMenu={toMenu}
             t={t}

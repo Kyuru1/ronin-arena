@@ -92,7 +92,7 @@ export function GameOverScreen({
   rank: number;
   pendingScore: boolean;
   defaultName: string;
-  onSubmitName: (name: string) => void;
+  onSubmitName: () => void;
   onRestart: () => void;
   onMenu: () => void;
   t: Strings;
@@ -126,7 +126,7 @@ export function GameOverScreen({
             <div className="w-full">
               <PxHeading>{t.ranking}</PxHeading>
               <div className="px-inset mb-3 p-3 text-center font-pixel text-[8px] text-[#ffe2c4]">RECORDE DE: {defaultName}</div>
-              <PxButton tone="gold" onClick={() => onSubmitName(defaultName)} className="w-full py-3 text-[9px] sm:text-[10px]">
+              <PxButton tone="gold" onClick={onSubmitName} className="w-full py-3 text-[9px] sm:text-[10px]">
                 {t.save}
               </PxButton>
               <PxButton tone="dark" onClick={onRestart} className="mt-2 w-full py-2.5 text-[8px]">▶ {t.playAgain}</PxButton>
