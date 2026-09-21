@@ -311,6 +311,28 @@ export const Sfx = {
   shoot() {
     tone("sawtooth", 760, 200, 0.13, 0.14);
   },
+  enemyShoot(kind: "arrow" | "burst" | "magic" = "arrow") {
+    const base = kind === "magic" ? 420 : kind === "burst" ? 180 : 980;
+    tone(kind === "magic" ? "sine" : "square", base, base * 0.45, 0.12, 0.13);
+    noise(0.07, kind === "burst" ? 0.18 : 0.12, kind === "magic" ? 900 : 2600, 500, 1.4);
+  },
+  enemyDash() {
+    noise(0.18, 0.3, 180, 2400, 1.1);
+    tone("sawtooth", 110, 360, 0.2, 0.16);
+  },
+  enemyCharge() {
+    tone("sawtooth", 90, 230, 0.38, 0.2);
+    noise(0.3, 0.12, 240, 900, 1.2);
+  },
+  bombExplode() {
+    tone("sawtooth", 190, 34, 0.38, 0.42);
+    noise(0.42, 0.52, 1100, 48, 0.65);
+    tone("square", 680, 90, 0.16, 0.16, 0.03);
+  },
+  ramImpact() {
+    noise(0.2, 0.42, 900, 100, 0.8);
+    tone("square", 160, 42, 0.25, 0.3);
+  },
   equip() {
     tone("square", 480, 720, 0.05, 0.18);
     noise(0.08, 0.2, 2200, 800, 1.8);

@@ -120,6 +120,8 @@ type EnemyType =
   | "skeleton"
   | "crawler"
   | "bomber"
+  | "bombMinion"
+  | "ram"
   | "warlock"
   | "golem"
   | "boss";
@@ -149,6 +151,7 @@ interface Enemy {
   spawnT: number;
   score: number;
   dmg: number;
+  noDrop?: boolean;
   scaleY: number;
   baseSpeed: number;
   fireT: number;
@@ -309,6 +312,10 @@ export class Game {
   ctx: CanvasRenderingContext2D;
   W = 480;
   H = 270;
+  worldW = 720;
+  worldH = 405;
+  cameraX = 120;
+  cameraY = 67;
   phase: Phase = "menu";
 
   private floor!: HTMLCanvasElement;
@@ -373,6 +380,7 @@ export class Game {
   arrows: PlayerArrow[] = [];
   dashHitSet = new Set<Enemy>();
   dashSlashes: { x: number; y: number; a: number; life: number; max: number }[] = [];
+  enemyDashFx: { x: number; y: number; a: number; life: number; max: number; color: string }[] = [];
   shockwaves: Shockwave[] = [];
   psychicZones: PsychicZone[] = [];
   mines: LandMine[] = [];
@@ -511,6 +519,7 @@ export class Game {
     this.texts.length = 0;
     this.shots.length = 0;
     this.arrows.length = 0;
+    this.enemyDashFx.length = 0;
     this.marks.length = 0;
     this.pickups.length = 0;
     this.mines.length = 0;
@@ -520,6 +529,8 @@ export class Game {
     this.waveClearT = -1;
     this.dashT = 0;
     this.dashCd = 0;
+    this.cameraX = clamp(this.px - this.W / 2, 0, Math.max(0, this.worldW - this.W));
+    this.cameraY = clamp(this.py - this.H / 2, 0, Math.max(0, this.worldH - this.H));
   }
 
   setDifficulty(difficulty: Difficulty) {
@@ -554,20 +565,23 @@ export class Game {
     let w = Math.round(h * aspect);
     w = Math.max(220, Math.min(760, w - (w % 2)));
     h = Math.max(220, Math.min(620, h - (h % 2)));
-    const dx = (w - this.W) / 2;
-    const dy = (h - this.H) / 2;
     this.W = w;
     this.H = h;
+    this.worldW = Math.round(w * 1.5);
+    this.worldH = Math.round(h * 1.5);
     this.canvas.width = w;
     this.canvas.height = h;
     this.ctx.imageSmoothingEnabled = false;
-    this.px = clamp(this.px + dx, 16, w - 16);
-    this.py = clamp(this.py + dy, 16, h - 16);
+    this.px = clamp(this.px, 16, this.worldW - 16);
+    this.py = clamp(this.py, 16, this.worldH - 16);
+    this.cameraX = clamp(this.px - w / 2, 0, Math.max(0, this.worldW - w));
+    this.cameraY = clamp(this.py - h / 2, 0, Math.max(0, this.worldH - h));
     this.buildFloor();
   }
 
   private buildFloor() {
-    const { W, H } = this;
+    const W = this.worldW;
+    const H = this.worldH;
     const f = document.createElement("canvas");
     f.width = W;
     f.height = H;
@@ -757,8 +771,8 @@ export class Game {
   private toCanvas(e: PointerEvent) {
     const r = this.canvas.getBoundingClientRect();
     return {
-      x: ((e.clientX - r.left) / r.width) * this.W,
-      y: ((e.clientY - r.top) / r.height) * this.H,
+      x: ((e.clientX - r.left) / r.width) * this.W + this.cameraX,
+      y: ((e.clientY - r.top) / r.height) * this.H + this.cameraY,
     };
   }
 
@@ -779,7 +793,7 @@ export class Game {
       }
       return;
     }
-    if (p.x < this.W * 0.45) {
+    if (p.x - this.cameraX < this.W * 0.45) {
       if (!this.moveStick) this.moveStick = { id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y };
     } else {
       if (!this.aimStick) this.aimStick = { id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y };
@@ -951,7 +965,7 @@ export class Game {
   }
 
   private clearDecals() {
-    this.dctx?.clearRect(0, 0, this.W, this.H);
+    this.dctx?.clearRect(0, 0, this.worldW, this.worldH);
   }
 
   /* ----------------------------- lifecycle ----------------------------- */
@@ -963,6 +977,7 @@ export class Game {
     this.texts.length = 0;
     this.shots.length = 0;
     this.arrows.length = 0;
+    this.enemyDashFx.length = 0;
     this.shockwaves.length = 0;
     this.psychicZones.length = 0;
     this.dashHitSet.clear();
@@ -975,8 +990,10 @@ export class Game {
     this.afterimages.length = 0;
     this.impacts.length = 0;
     this.trail.length = 0;
-    this.px = this.W / 2;
-    this.py = this.H / 2;
+    this.px = this.worldW / 2;
+    this.py = this.worldH / 2;
+    this.cameraX = (this.worldW - this.W) / 2;
+    this.cameraY = (this.worldH - this.H) / 2;
     this.pvx = this.pvy = 0;
     this.hp = this.maxHp = this.perk === "sharpGlass" ? 3 : 5;
     this.coins = 0;
@@ -1180,8 +1197,8 @@ export class Game {
 
   private menuUpdate(dt: number) {
     this.idleT += dt;
-    this.px = this.W / 2 + Math.cos(this.idleT * 0.5) * 3;
-    this.py = this.H / 2 + Math.sin(this.idleT * 0.7) * 2;
+    this.px = this.worldW / 2 + Math.cos(this.idleT * 0.5) * 3;
+    this.py = this.worldH / 2 + Math.sin(this.idleT * 0.7) * 2;
     this.face = Math.cos(this.idleT * 0.5) >= 0 ? 1 : -1;
     this.updateParticles(dt);
     this.updateTexts(dt);
@@ -1224,6 +1241,7 @@ export class Game {
     }
 
     this.updatePlayer(dt);
+    this.updateCamera(dt);
     this.updateEnemies(dt);
     this.updateSummons(dt);
     this.updateShots(dt);
@@ -1244,6 +1262,10 @@ export class Game {
     for (let i = this.dashSlashes.length - 1; i >= 0; i--) {
       this.dashSlashes[i].life -= dt;
       if (this.dashSlashes[i].life <= 0) this.dashSlashes.splice(i, 1);
+    }
+    for (let i = this.enemyDashFx.length - 1; i >= 0; i--) {
+      this.enemyDashFx[i].life -= dt;
+      if (this.enemyDashFx[i].life <= 0) this.enemyDashFx.splice(i, 1);
     }
     for (let i = this.afterimages.length - 1; i >= 0; i--) {
       this.afterimages[i].life -= dt * 3.2;
@@ -1300,6 +1322,26 @@ export class Game {
   }
 
   /* ----------------------------- player ----------------------------- */
+
+  private updateCamera(dt: number) {
+    const marginX = this.W * 0.18;
+    const marginY = this.H * 0.18;
+    const left = this.cameraX + marginX;
+    const right = this.cameraX + this.W - marginX;
+    const top = this.cameraY + marginY;
+    const bottom = this.cameraY + this.H - marginY;
+    let targetX = this.cameraX;
+    let targetY = this.cameraY;
+    if (this.px < left) targetX = this.px - marginX;
+    else if (this.px > right) targetX = this.px - this.W + marginX;
+    if (this.py < top) targetY = this.py - marginY;
+    else if (this.py > bottom) targetY = this.py - this.H + marginY;
+    targetX = clamp(targetX, 0, Math.max(0, this.worldW - this.W));
+    targetY = clamp(targetY, 0, Math.max(0, this.worldH - this.H));
+    const follow = Math.min(1, dt * 5.5);
+    this.cameraX += (targetX - this.cameraX) * follow;
+    this.cameraY += (targetY - this.cameraY) * follow;
+  }
 
   private updatePlayer(dt: number) {
     const k = this.keys;
@@ -1382,16 +1424,16 @@ export class Game {
       this.px = M;
       this.pvx = 0;
     }
-    if (this.px > this.W - M) {
-      this.px = this.W - M;
+    if (this.px > this.worldW - M) {
+      this.px = this.worldW - M;
       this.pvx = 0;
     }
     if (this.py < M + 4) {
       this.py = M + 4;
       this.pvy = 0;
     }
-    if (this.py > this.H - M) {
-      this.py = this.H - M;
+    if (this.py > this.worldH - M) {
+      this.py = this.worldH - M;
       this.pvy = 0;
     }
     if (this.dashT > 0 && this.currentWeapon === "katana" && this.weaponLevels.katana.form > 0) {
@@ -1831,8 +1873,8 @@ export class Game {
     const dy = aimY - this.py;
     const distance = Math.hypot(dx, dy);
     const scale = distance > reach ? reach / distance : 1;
-    const x = clamp(this.px + dx * scale, 18, this.W - 18);
-    const y = clamp(this.py + dy * scale, 18, this.H - 18);
+    const x = clamp(this.px + dx * scale, 18, this.worldW - 18);
+    const y = clamp(this.py + dy * scale, 18, this.worldH - 18);
     let hits = 0;
 
     for (const enemy of this.enemies.slice()) {
@@ -2018,8 +2060,8 @@ export class Game {
     const a = this.aimAngle();
     if (this.mines.length >= 6) this.mines.shift();
     this.mines.push({
-      x: clamp(this.px + Math.cos(a) * 15, 12, this.W - 12),
-      y: clamp(this.py + Math.sin(a) * 15, 12, this.H - 12),
+      x: clamp(this.px + Math.cos(a) * 15, 12, this.worldW - 12),
+      y: clamp(this.py + Math.sin(a) * 15, 12, this.worldH - 12),
       armT: 0.45,
       life: 24,
     });
@@ -2197,16 +2239,18 @@ export class Game {
     Sfx.kill(this.combo);
 
     // Three coins per kill make the first shop visit immediately useful.
-    for (let c = 0; c < 3; c++) {
-      this.pickups.push({
-        x: e.x + rnd(-4, 4),
-        y: e.y + rnd(-4, 4),
-        vx: rnd(-50, 50),
-        vy: rnd(-60, -15),
-        t: 0,
-        kind: "coin",
-        magnet: false,
-      });
+    if (!e.noDrop) {
+      for (let c = 0; c < 3; c++) {
+        this.pickups.push({
+          x: e.x + rnd(-4, 4),
+          y: e.y + rnd(-4, 4),
+          vx: rnd(-50, 50),
+          vy: rnd(-60, -15),
+          t: 0,
+          kind: "coin",
+          magnet: false,
+        });
+      }
     }
 
     // Occasional health heart drop
@@ -2304,6 +2348,10 @@ export class Game {
         return { hp: 5 + hpB, r: 6, speed: 112 + spB * 1.1, score: 48, dmg: enemyDamage };
       case "bomber":
         return { hp: 8 + hpB, r: 8, speed: 48 + spB * 0.45, score: 64, dmg: enemyDamage };
+      case "bombMinion":
+        return { hp: 4 + hpB, r: 7, speed: 62 + spB * 0.55, score: 52, dmg: this.wave <= 10 ? 2 : 5 };
+      case "ram":
+        return { hp: 12 + hpB * 2, r: 10, speed: 34 + spB * 0.35, score: 78, dmg: this.wave <= 10 ? 5 : 10 };
       case "warlock":
         return { hp: 10 + Math.floor(hpB * 1.3), r: 8, speed: 48 + spB * 0.45, score: 82, dmg: enemyDamage };
       case "golem":
@@ -2335,6 +2383,7 @@ export class Game {
       spawnT: 0.28,
       score: s.score,
       dmg: s.dmg,
+      noDrop: type === "ram",
       scaleY: 1,
       baseSpeed: s.speed,
       fireT: 0,
@@ -2352,10 +2401,10 @@ export class Game {
   private randomEdge() {
     const m = 20;
     const side = (Math.random() * 4) | 0;
-    if (side === 0) return { x: rnd(m, this.W - m), y: m };
-    if (side === 1) return { x: rnd(m, this.W - m), y: this.H - m };
-    if (side === 2) return { x: m, y: rnd(m, this.H - m) };
-    return { x: this.W - m, y: rnd(m, this.H - m) };
+    if (side === 0) return { x: rnd(m, this.worldW - m), y: m };
+    if (side === 1) return { x: rnd(m, this.worldW - m), y: this.worldH - m };
+    if (side === 2) return { x: m, y: rnd(m, this.worldH - m) };
+    return { x: this.worldW - m, y: rnd(m, this.worldH - m) };
   }
 
   private chooseType(): EnemyType {
@@ -2365,23 +2414,25 @@ export class Game {
     };
     const w = this.wave;
     add("grunt", 38);
-    if (w >= 2) add("bat", 16);
-    if (w >= 3) add("spitter", 12);
-    if (w >= 4) add("brute", 10);
-    if (w >= 5) add("hound", 12);
+    if (w >= 6) add("bat", 16);
+    if (w >= 6) add("spitter", 12);
+    if (w >= 6) add("brute", 10);
+    if (w >= 6) add("hound", 12);
     if (w >= 6) add("ninja", 12);
     if (w >= 7) add("slime", 10);
-    if (w >= 5) add("wisp", 7);
-    if (w >= 3) add("archer", 7);
-    if (w >= 11) add("skeleton", 12);
-    if (w >= 8) add("crawler", 11);
-    if (w >= 10) add("bomber", 8);
-    if (w >= 13) add("shield", 9);
-    if (w >= 14) add("warlock", 9);
-    if (w >= 15) add("monk", 10);
-    if (w >= 17) add("oni", 8);
-    if (w >= 18) add("golem", 7);
-    if (w >= 20) add("demon", 8);
+    if (w >= 6) add("wisp", 7);
+    if (w >= 6) add("archer", 7);
+    if (w >= 6) add("skeleton", 12);
+    if (w >= 6) add("crawler", 11);
+    if (w >= 6) add("bomber", 8);
+    if (w >= 6) add("bombMinion", 7);
+    if (w >= 6) add("ram", 6);
+    if (w >= 6) add("shield", 9);
+    if (w >= 6) add("warlock", 9);
+    if (w >= 6) add("monk", 10);
+    if (w >= 6) add("oni", 8);
+    if (w >= 6) add("golem", 7);
+    if (w >= 6) add("demon", 8);
     return pick(table) ?? "grunt";
   }
 
@@ -2405,18 +2456,18 @@ export class Game {
     const ring = Math.min(6 + this.wave, 16, this.waveTotal);
     for (let i = 0; i < ring; i++) {
       const a = (i / ring) * TAU + Math.random() * 0.3;
-      const rx = clamp(this.W / 2 + Math.cos(a) * (this.W / 2 - 26), 20, this.W - 20);
-      const ry = clamp(this.H / 2 + Math.sin(a) * (this.H / 2 - 26), 20, this.H - 20);
+      const rx = clamp(this.worldW / 2 + Math.cos(a) * (this.worldW / 2 - 26), 20, this.worldW - 20);
+      const ry = clamp(this.worldH / 2 + Math.sin(a) * (this.worldH / 2 - 26), 20, this.worldH - 20);
       this.queueMark(rx, ry, 0.55 + i * 0.045, this.chooseType());
     }
-    if (this.wave % 3 === 0) {
+    if (this.wave >= 6 && this.wave % 3 === 0) {
       const extra = this.wave >= 12 ? 2 : 1;
       for (let k = 0; k < extra; k++) {
         const p = this.randomEdge();
         this.queueMark(p.x, p.y, 1.0, "brute");
       }
     }
-    if (this.wave % 5 === 0) {
+    if (this.wave >= 6 && this.wave % 5 === 0) {
       const bosses = this.wave >= 15 ? 2 : 1;
       for (let i = 0; i < bosses; i++) {
         const p = this.randomEdge();
@@ -2504,6 +2555,34 @@ export class Game {
     }
   }
 
+  private explodeBombMinion(e: Enemy) {
+    const radius = 42;
+    const damage = this.wave <= 10 ? 2 : 5;
+    const dx = this.px - e.x;
+    const dy = this.py - e.y;
+    const distance = Math.hypot(dx, dy);
+    const index = this.enemies.indexOf(e);
+    if (index >= 0) this.enemies.splice(index, 1);
+    this.shockwaves.push({ x: e.x, y: e.y, r: 5, maxR: radius, life: 0.38, maxLife: 0.38, color: "#ff7b38" });
+    this.burst(e.x, e.y, 34, "#ff8b3d", 240);
+    this.gibs(e.x, e.y, e.type);
+    this.bloodDecal(e.x, e.y + 3, 8, "#e85b32");
+    this.shake = Math.max(this.shake, 9);
+    Sfx.bombExplode();
+    if (distance <= radius) this.hurtPlayer(damage, dx / (distance || 1), dy / (distance || 1));
+  }
+
+  private ramCrash(e: Enemy) {
+    const index = this.enemies.indexOf(e);
+    if (index >= 0) this.enemies.splice(index, 1);
+    this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(e.vy, e.vx), life: 0.26, max: 0.26, color: "#ffd27a" });
+    this.shockwaves.push({ x: e.x, y: e.y, r: 4, maxR: 24, life: 0.28, maxLife: 0.28, color: "#ffd27a" });
+    this.burst(e.x, e.y, 20, "#b7794d", 180);
+    this.gibs(e.x, e.y, e.type);
+    Sfx.ramImpact();
+    this.shake = Math.max(this.shake, 7);
+  }
+
   private updateEnemies(dt: number) {
     const arr = this.enemies;
     for (let i = arr.length - 1; i >= 0; i--) {
@@ -2545,6 +2624,8 @@ export class Game {
               if (e.cd <= 0 && dist < (e.type === "demon" ? 180 : e.type === "crawler" ? 170 : 150)) {
                 e.state = 1;
                 e.cd = e.type === "demon" ? 0.55 : e.type === "crawler" ? 0.24 : 0.35;
+                this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(ny, nx), life: 0.3, max: 0.3, color: e.type === "crawler" ? "#ffb05d" : "#ff5361" });
+                Sfx.enemyDash();
               }
             } else if (e.state === 1) {
               e.vx *= 1 - Math.min(1, dt * 8);
@@ -2555,7 +2636,7 @@ export class Game {
                 const dashSpeed = e.type === "demon" ? 340 : e.type === "ninja" ? 320 : e.type === "crawler" ? 360 : 270;
                 e.vx = nx * dashSpeed;
                 e.vy = ny * dashSpeed;
-                this.burst(e.x, e.y, 5, e.type === "crawler" ? "#ffb05d" : "#ff5361", 70);
+                this.burst(e.x, e.y, 8, e.type === "crawler" ? "#ffb05d" : "#ff5361", 100);
               }
             } else if (e.cd <= 0) {
               e.state = 0;
@@ -2586,7 +2667,7 @@ export class Game {
                 this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 4, r: 3, dmg: e.dmg, color: e.type === "warlock" ? "#ad73ff" : undefined });
               }
               this.burst(e.x + nx * 6, e.y + ny * 6, 4, e.type === "warlock" ? "#a677ff" : "#ff764f", 60);
-              Sfx.shoot();
+              Sfx.enemyShoot(e.type === "warlock" ? "magic" : "arrow");
             }
             break;
           }
@@ -2610,7 +2691,43 @@ export class Game {
                 this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 100, vy: Math.sin(a) * 100, life: 2.2, r: 3, dmg: e.dmg, color: "#ffb25b" });
               }
               this.burst(e.x, e.y, 12, "#ffb25b", 95);
-              Sfx.shoot();
+              Sfx.enemyShoot("burst");
+            }
+            break;
+          }
+          case "bombMinion": {
+            e.vx += nx * e.speed * 4.2 * dt;
+            e.vy += ny * e.speed * 4.2 * dt;
+            if (dist < e.r + 10) {
+              this.explodeBombMinion(e);
+              continue;
+            }
+            break;
+          }
+          case "ram": {
+            if (e.state === 0) {
+              e.vx += nx * e.speed * 2.8 * dt;
+              e.vy += ny * e.speed * 2.8 * dt;
+              if (dist < 112) {
+                e.state = 1;
+                e.cd = 0.58;
+                e.vx *= 0.2;
+                e.vy *= 0.2;
+                this.burst(e.x, e.y, 8, "#ffd27a", 48);
+                Sfx.enemyCharge();
+              }
+            } else if (e.state === 1) {
+              e.cd -= dt;
+              e.vx *= 1 - Math.min(1, dt * 10);
+              e.vy *= 1 - Math.min(1, dt * 10);
+              if (e.cd <= 0) {
+                e.state = 2;
+                e.vx = nx * 330;
+                e.vy = ny * 330;
+                this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(ny, nx), life: 0.42, max: 0.42, color: "#ffd27a" });
+                this.burst(e.x, e.y, 12, "#ffd27a", 105);
+                Sfx.enemyDash();
+              }
             }
             break;
           }
@@ -2626,7 +2743,7 @@ export class Game {
               }
               this.shake = Math.max(this.shake, 4);
               this.burst(e.x, e.y, 18, "#ff3c4a", 120);
-              Sfx.shoot();
+              Sfx.enemyShoot("burst");
             }
             break;
           }
@@ -2652,10 +2769,10 @@ export class Game {
         }
       }
 
-      const damp = (e.type === "bat" || e.type === "crawler") && e.state === 2 ? 1.2 : 6.5;
+      const damp = ((e.type === "bat" || e.type === "crawler") && e.state === 2) || (e.type === "ram" && e.state === 2) ? 1.2 : 6.5;
       e.vx -= e.vx * Math.min(1, damp * dt);
       e.vy -= e.vy * Math.min(1, damp * dt);
-      const maxV = e.type === "bat" || e.type === "crawler" ? 300 : e.speed * 1.6 + 220;
+      const maxV = e.type === "bat" || e.type === "crawler" || e.type === "ram" ? 340 : e.speed * 1.6 + 220;
       const sp = Math.hypot(e.vx, e.vy);
       if (sp > maxV) {
         e.vx = (e.vx / sp) * maxV;
@@ -2669,20 +2786,30 @@ export class Game {
         e.x = M;
         e.vx = Math.abs(e.vx) * 0.4;
       }
-      if (e.x > this.W - M) {
-        e.x = this.W - M;
+      if (e.x > this.worldW - M) {
+        e.x = this.worldW - M;
         e.vx = -Math.abs(e.vx) * 0.4;
       }
       if (e.y < M) {
         e.y = M;
         e.vy = Math.abs(e.vy) * 0.4;
       }
-      if (e.y > this.H - M) {
-        e.y = this.H - M;
+      if (e.y > this.worldH - M) {
+        e.y = this.worldH - M;
         e.vy = -Math.abs(e.vy) * 0.4;
       }
 
-      if (dist < e.r + 8 && e.touchCd <= 0 && e.spawnT <= 0) {
+      if (e.type === "ram" && e.state === 2 && (e.x === M || e.x === this.worldW - M || e.y === M || e.y === this.worldH - M)) {
+        this.ramCrash(e);
+        continue;
+      }
+
+      if (e.type === "ram" && e.state === 2 && dist < e.r + 10 && e.spawnT <= 0) {
+        this.hurtPlayer(e.dmg, nx, ny);
+        this.ramCrash(e);
+        continue;
+      }
+      if (e.type !== "ram" && e.type !== "bombMinion" && dist < e.r + 8 && e.touchCd <= 0 && e.spawnT <= 0) {
         if (this.shieldFacing(e.x, e.y)) {
           const away = Math.atan2(e.y - this.py, e.x - this.px);
           e.touchCd = 0.55;
@@ -2730,7 +2857,7 @@ export class Game {
         this.hurtPlayer(s.dmg, (this.px - s.x) / (d || 1), (this.py - s.y) / (d || 1));
         continue;
       }
-      if (s.life <= 0 || s.x < 8 || s.y < 8 || s.x > this.W - 8 || s.y > this.H - 8) {
+      if (s.life <= 0 || s.x < 8 || s.y < 8 || s.x > this.worldW - 8 || s.y > this.worldH - 8) {
         this.burst(s.x, s.y, 4, "#ff8a68", 60);
         this.shots.splice(i, 1);
       }
@@ -2772,7 +2899,7 @@ export class Game {
         }
       }
 
-      if (a.pierce <= 0 || a.life <= 0 || a.x < 8 || a.y < 8 || a.x > this.W - 8 || a.y > this.H - 8) {
+      if (a.pierce <= 0 || a.life <= 0 || a.x < 8 || a.y < 8 || a.x > this.worldW - 8 || a.y > this.worldH - 8) {
         this.burst(a.x, a.y, 5, "#ffd0a2", 70);
         this.arrows.splice(i, 1);
       }
@@ -2783,7 +2910,7 @@ export class Game {
     this.propTimer -= dt;
     if (this.propTimer <= 0 && this.props.length < 5) {
       const kind = Math.random() < 0.58 ? "crate" : "tree";
-      this.props.push({ x: rnd(28, this.W - 28), y: rnd(34, this.H - 34), kind, life: kind === "crate" ? 2 : 3, t: 0 });
+      this.props.push({ x: rnd(28, this.worldW - 28), y: rnd(34, this.worldH - 34), kind, life: kind === "crate" ? 2 : 3, t: 0 });
       this.propTimer = rnd(7, 13);
     }
     for (let i = this.props.length - 1; i >= 0; i--) {
@@ -3078,7 +3205,7 @@ export class Game {
     const sh = this.shake * this.opts.shake;
     const ox = sh > 0 ? Math.round(rnd(-sh, sh)) : 0;
     const oy = sh > 0 ? Math.round(rnd(-sh, sh)) : 0;
-    ctx.translate(ox, oy);
+    ctx.translate(ox - Math.round(this.cameraX), oy - Math.round(this.cameraY));
 
     ctx.drawImage(this.floor, 0, 0);
     ctx.drawImage(this.decal, 0, 0);
@@ -3182,11 +3309,24 @@ export class Game {
 
     // Enemy Projectiles
     for (const s of this.shots) {
-      ctx.fillStyle = s.color ?? "#ffe1b5";
+      const color = s.color ?? "#ffe1b5";
+      const length = Math.min(13, Math.max(5, Math.hypot(s.vx, s.vy) * 0.045));
+      const angle = Math.atan2(s.vy, s.vx);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.32;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(s.x - Math.cos(angle) * length, s.y - Math.sin(angle) * length);
+      ctx.lineTo(s.x, s.y);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = color;
       ctx.fillRect(Math.round(s.x - 2), Math.round(s.y - 2), 4, 4);
-      ctx.fillStyle = s.color ?? "#ff7665";
-      ctx.fillRect(Math.round(s.x - 3), Math.round(s.y - 1), 6, 2);
-      ctx.fillRect(Math.round(s.x - 1), Math.round(s.y - 3), 2, 6);
+      ctx.fillStyle = "#fff4d0";
+      ctx.fillRect(Math.round(s.x - 1), Math.round(s.y - 1), 2, 2);
+      ctx.restore();
     }
 
     // Player Bow Arrows
@@ -3219,6 +3359,24 @@ export class Game {
       ctx.globalAlpha = fade;
       ctx.strokeStyle = "#fff3dc";
       ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (const dash of this.enemyDashFx) {
+      const fade = clamp(dash.life / dash.max, 0, 1);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = fade * 0.7;
+      ctx.strokeStyle = dash.color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(dash.x - Math.cos(dash.a) * 17, dash.y - Math.sin(dash.a) * 17);
+      ctx.lineTo(dash.x + Math.cos(dash.a) * 9, dash.y + Math.sin(dash.a) * 9);
+      ctx.stroke();
+      ctx.globalAlpha = fade;
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "#fff4d0";
       ctx.stroke();
       ctx.restore();
     }
@@ -3359,6 +3517,37 @@ export class Game {
       ctx.arc(e.x, e.y, 10 + Math.sin(e.t * 30) * 2, 0, TAU);
       ctx.stroke();
       ctx.globalAlpha = 1;
+    }
+    if (e.type === "ram" && e.state === 1) {
+      const pulse = 12 + Math.sin(e.t * 18) * 2;
+      ctx.save();
+      ctx.globalAlpha = 0.35 + Math.sin(e.t * 18) * 0.12;
+      ctx.strokeStyle = "#ffd27a";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, pulse, 0, TAU);
+      ctx.stroke();
+      ctx.fillStyle = "#fff0b8";
+      ctx.fillRect(Math.round(e.x - 2), Math.round(e.y - 2), 4, 4);
+      ctx.restore();
+    }
+    if (e.type === "ram" && e.state === 2) {
+      ctx.save();
+      ctx.globalAlpha = 0.5 + Math.sin(e.t * 24) * 0.2;
+      ctx.strokeStyle = "#ff765d";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r + 4, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+    if (e.type === "bombMinion") {
+      const pulse = 0.45 + Math.sin(e.t * 16) * 0.25;
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.fillStyle = "#ff6a38";
+      ctx.fillRect(Math.round(e.x - 2), Math.round(e.y - e.r - 5), 4, 3);
+      ctx.restore();
     }
     ctx.save();
     ctx.filter = "saturate(2) contrast(1.22) brightness(1.1)";
@@ -3676,6 +3865,10 @@ function bloodColor(t: EnemyType) {
       return "#e7943d";
     case "bomber":
       return "#ffad59";
+    case "bombMinion":
+      return "#ff7b38";
+    case "ram":
+      return "#b7794d";
     case "warlock":
       return "#a778ff";
     case "golem":
@@ -3711,6 +3904,10 @@ function gibColor(t: EnemyType) {
       return ["#713322", "#c56333", "#ffc066"];
     case "bomber":
       return ["#723027", "#dd6340", "#ffc267"];
+    case "bombMinion":
+      return ["#5e2026", "#d83b3f", "#ff9d3f"];
+    case "ram":
+      return ["#523022", "#98613e", "#d99a62"];
     case "warlock":
       return ["#321d58", "#7348b5", "#bf95ff"];
     case "golem":

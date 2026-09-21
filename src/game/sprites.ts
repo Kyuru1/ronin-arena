@@ -366,6 +366,34 @@ export function buildSprites() {
     { b: "#d75c3e", e: "#fff0b8", o: "#ffbd58", d: "#321018" },
   );
 
+  SPR.bombMinion = makeSprite(
+    [
+      "....rrrr....",
+      "...rrrrrr...",
+      "..rr.eerrr..",
+      ".rrrrrrrrrr.",
+      ".rrr.oooo.rr",
+      ".rrrrrrrrrr.",
+      "..rr.rr.rr..",
+      "..dd....dd..",
+    ],
+    { r: "#b9343e", e: "#fff0b8", o: "#ff9d3f", d: "#2b1015" },
+  );
+
+  SPR.ram = makeSprite(
+    [
+      "....hhhh....",
+      "...hhhhhh...",
+      "..hh.eehh...",
+      ".hhhhhhhhhh.",
+      "hhhhhhhhhhhh",
+      "..bbbbbbbb..",
+      ".bbbbbbbbbb.",
+      "dd..dddd..dd",
+    ],
+    { h: "#7d4b31", e: "#ffe0b0", b: "#b7794d", d: "#241116" },
+  );
+
   SPR.warlock = makeSprite(
     [
       "....pppp....",
