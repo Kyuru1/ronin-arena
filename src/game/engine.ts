@@ -1321,8 +1321,6 @@ export class Game {
     if (this.opts.inputMode === "keyboard" && ml > 0.01) this.keyboardAimAngle = Math.atan2(my, mx);
 
     const SPEED = (108 + this.speedBonus - (this.perk === "bottomlessPocket" ? 12 : 0) - (this.perk === "cursedArsenal" ? 8 : 0) + (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0)) * (this.speedT > 0 ? 1.45 : 1);
-    const accel = 1100;
-    const friction = 1000;
 
     if (this.dashT > 0) {
       this.dashT -= dt;
@@ -1345,23 +1343,14 @@ export class Game {
       });
     } else {
       if (ml > 0.01) {
-        this.pvx += mx * accel * dt;
-        this.pvy += my * accel * dt;
-        const sp = Math.hypot(this.pvx, this.pvy);
         const slowing = this.atkT > 0 ? 0.5 : this.currentWeapon === "bow" && this.bowHolding ? 0.72 : 1;
         const maxS = SPEED * slowing;
-        if (sp > maxS) {
-          this.pvx = (this.pvx / sp) * maxS;
-          this.pvy = (this.pvy / sp) * maxS;
-        }
+        this.pvx = mx * maxS;
+        this.pvy = my * maxS;
         this.walkT += dt * 11;
       } else {
-        const sp = Math.hypot(this.pvx, this.pvy);
-        const nf = Math.max(0, sp - friction * dt);
-        if (sp > 0.001) {
-          this.pvx = (this.pvx / sp) * nf;
-          this.pvy = (this.pvy / sp) * nf;
-        }
+        this.pvx = 0;
+        this.pvy = 0;
         this.walkT = 0;
       }
     }
@@ -2806,6 +2795,11 @@ export class Game {
           this.burst(p.x, p.y, 6, "#ffd747", 75);
           Sfx.coin();
         } else {
+          if (p.potion === "health") {
+            this.hp = Math.min(this.maxHp, this.hp + 2);
+            this.addScore(0, p.x, p.y - 8, "+2 VIDA", "#ff4d6d");
+            Sfx.heal();
+          }
           if (p.potion === "strength") this.strengthT = 8;
           if (p.potion === "speed") this.speedT = 8;
           if (p.potion === "agility") this.agilityT = 8;

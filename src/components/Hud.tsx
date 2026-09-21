@@ -69,7 +69,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPoti
       {stats.combo > 1 && <div key={stats.combo} className="anim-pop font-pixel text-shadow-pix absolute left-1/2 top-24 -translate-x-1/2 text-[10px] text-[#ffd44a]">x{comboMult.toFixed(1)} · {stats.combo} {t.kills}</div>}
 
       {stats.potionTutorial && <div className="potion-tutorial-backdrop pointer-events-auto"><div className="potion-tutorial">
-        <strong>POCOES · EFEITOS</strong><span className="potion-health">VIDA: RECUPERA +2</span><span className="potion-strength">FORCA: +50% DANO · 8S</span><span className="potion-speed">VELOCIDADE: +45% · 8S</span><span className="potion-agility">AGILIDADE: DASH -50% · 8S</span><div className="potion-tutorial-actions"><button onClick={() => onPotionDismiss(false)}>ENTENDI</button><button onClick={() => onPotionDismiss(true)}>ENTENDI E NAO MOSTRAR NOVAMENTE</button></div>
+        <strong>POCOES · EFEITOS</strong><span className="potion-health">VIDA: RECUPERA 2 CORACOES</span><span className="potion-strength">FORCA: +50% DANO · 8S</span><span className="potion-speed">VELOCIDADE: +45% MOVIMENTO · 8S</span><span className="potion-agility">AGILIDADE: -50% RECARGA DO DASH · 8S</span><div className="potion-tutorial-actions"><button onClick={() => onPotionDismiss(false)}>ENTENDI</button><button onClick={() => onPotionDismiss(true)}>ENTENDI E NAO MOSTRAR NOVAMENTE</button></div>
       </div></div>}
       {stats.mineTutorial && <div className="font-pixel absolute bottom-28 left-1/2 w-[min(90%,460px)] -translate-x-1/2 border-4 border-[#070305] bg-[#10282b]/95 px-4 py-3 text-center text-[7px] leading-5 text-[#ffd44a] shadow-[0_5px_0_#070305]">{t.mineTutorial}</div>}
 
