@@ -72,3 +72,9 @@
 
 - A camera agora acompanha o Ronin apos aproximadamente 1,5 tamanhos de personagem a partir do centro da tela.
 - O personagem permanece mais proximo do centro durante a movimentacao pela arena.
+
+## Patch Notes 10 - Progressao de Inimigos
+
+- Inimigos de projeteis e o Minion Bomba passam a surgir a partir da wave 3.
+- Ninjas e golems passam a surgir a partir da wave 5.
+- Os demais tipos de inimigos e spawns especiais passam a surgir a partir da wave 7.

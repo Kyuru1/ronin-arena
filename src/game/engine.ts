@@ -2415,25 +2415,25 @@ export class Game {
     };
     const w = this.wave;
     add("grunt", 38);
-    if (w >= 6) add("bat", 16);
-    if (w >= 6) add("spitter", 12);
-    if (w >= 6) add("brute", 10);
-    if (w >= 6) add("hound", 12);
-    if (w >= 6) add("ninja", 12);
+    if (w >= 3) add("spitter", 12);
+    if (w >= 3) add("wisp", 7);
+    if (w >= 3) add("archer", 7);
+    if (w >= 3) add("bombMinion", 7);
+    if (w >= 3) add("monk", 10);
+    if (w >= 3) add("warlock", 9);
+    if (w >= 5) add("ninja", 12);
+    if (w >= 5) add("golem", 7);
+    if (w >= 7) add("bat", 16);
+    if (w >= 7) add("brute", 10);
+    if (w >= 7) add("hound", 12);
     if (w >= 7) add("slime", 10);
-    if (w >= 6) add("wisp", 7);
-    if (w >= 6) add("archer", 7);
-    if (w >= 6) add("skeleton", 12);
-    if (w >= 6) add("crawler", 11);
-    if (w >= 6) add("bomber", 8);
-    if (w >= 6) add("bombMinion", 7);
-    if (w >= 6) add("ram", 6);
-    if (w >= 6) add("shield", 9);
-    if (w >= 6) add("warlock", 9);
-    if (w >= 6) add("monk", 10);
-    if (w >= 6) add("oni", 8);
-    if (w >= 6) add("golem", 7);
-    if (w >= 6) add("demon", 8);
+    if (w >= 7) add("skeleton", 12);
+    if (w >= 7) add("crawler", 11);
+    if (w >= 7) add("bomber", 8);
+    if (w >= 7) add("ram", 6);
+    if (w >= 7) add("shield", 9);
+    if (w >= 7) add("oni", 8);
+    if (w >= 7) add("demon", 8);
     return pick(table) ?? "grunt";
   }
 
@@ -2461,14 +2461,14 @@ export class Game {
       const ry = clamp(this.worldH / 2 + Math.sin(a) * (this.worldH / 2 - 26), 20, this.worldH - 20);
       this.queueMark(rx, ry, 0.55 + i * 0.045, this.chooseType());
     }
-    if (this.wave >= 6 && this.wave % 3 === 0) {
+    if (this.wave >= 7 && this.wave % 3 === 0) {
       const extra = this.wave >= 12 ? 2 : 1;
       for (let k = 0; k < extra; k++) {
         const p = this.randomEdge();
         this.queueMark(p.x, p.y, 1.0, "brute");
       }
     }
-    if (this.wave >= 6 && this.wave % 5 === 0) {
+    if (this.wave >= 7 && this.wave % 5 === 0) {
       const bosses = this.wave >= 15 ? 2 : 1;
       for (let i = 0; i < bosses; i++) {
         const p = this.randomEdge();
