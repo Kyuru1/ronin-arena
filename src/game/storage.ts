@@ -1,9 +1,10 @@
 import { supabase } from "../lib/supabase";
 import type { Difficulty } from "./engine";
+import type { AvatarId } from "./auth";
 
 export interface ScoreEntry {
   name: string;
-  avatarId?: "samurai" | "ninja" | "oni" | "boss" | "bat";
+  avatarId?: AvatarId;
   score: number;
   wave: number;
   kills: number;
@@ -31,9 +32,8 @@ function normalizeDifficulty(value: unknown): Difficulty {
 }
 
 function normalizeAvatar(value: unknown): ScoreEntry["avatarId"] {
-  return value === "ninja" || value === "oni" || value === "boss" || value === "bat" || value === "samurai"
-    ? value
-    : "samurai";
+  const avatars: AvatarId[] = ["samurai", "grunt", "bat", "brute", "spitter", "ninja", "hound", "wisp", "archer", "oni", "shield", "slime", "monk", "demon", "skeleton", "crawler", "bomber", "bombMinion", "ram", "warlock", "golem", "boss"];
+  return avatars.includes(value as AvatarId) ? value as AvatarId : "samurai";
 }
 
 export function difficultyToDb(value: Difficulty): "facil" | "medio" | "dificil" {
@@ -161,7 +161,7 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
   if (!user) return { list: await loadRemoteScores(), rank: -1 };
 
   const normalizedName = String(entry.name ?? "RONIN").replace(/\s+/g, " ").trim().slice(0, 12) || "RONIN";
-  const normalizedAvatar = (entry.avatarId === "ninja" || entry.avatarId === "oni" || entry.avatarId === "boss" || entry.avatarId === "bat" || entry.avatarId === "samurai") ? entry.avatarId : "samurai";
+  const normalizedAvatar = normalizeAvatar(entry.avatarId);
 
   const payload = {
     p_difficulty: difficultyToDb(entry.difficulty),

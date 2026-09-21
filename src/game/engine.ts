@@ -133,6 +133,7 @@ interface Summon {
 
 interface Enemy {
   type: EnemyType;
+  bossType?: Exclude<EnemyType, "boss">;
   x: number;
   y: number;
   vx: number;
@@ -2363,15 +2364,17 @@ export class Game {
   }
 
   private spawnEnemy(type: EnemyType, x: number, y: number) {
+    const bossType = type === "boss" ? this.chooseBossType() : undefined;
     const s = this.enemyStats(type);
     this.enemies.push({
       type,
+      bossType,
       x,
       y,
       vx: 0,
       vy: 0,
-      hp: s.hp,
-      maxHp: s.hp,
+      hp: type === "boss" ? 220 + this.wave * 35 : s.hp,
+      maxHp: type === "boss" ? 220 + this.wave * 35 : s.hp,
       r: s.r,
       speed: s.speed,
       flash: 0,
@@ -2437,6 +2440,13 @@ export class Game {
     return pick(table) ?? "grunt";
   }
 
+  private chooseBossType(): Exclude<EnemyType, "boss"> {
+    const types: Exclude<EnemyType, "boss">[] = ["spitter", "archer", "wisp", "monk", "warlock"];
+    if (this.wave >= 5) types.push("ninja", "golem");
+    if (this.wave >= 7) types.push("bat", "brute", "hound", "slime", "skeleton", "crawler", "bomber", "ram", "shield", "oni", "demon");
+    return pick(types) ?? "spitter";
+  }
+
   /** How many mobs a wave contains in total. */
   private waveQuota(w: number): number {
     const lateWave = Math.max(0, w - 4);
@@ -2468,7 +2478,7 @@ export class Game {
         this.queueMark(p.x, p.y, 1.0, "brute");
       }
     }
-    if (this.wave >= 7 && this.wave % 5 === 0) {
+    if (this.wave >= 5 && this.wave % 5 === 0) {
       const bosses = this.wave >= 15 ? 2 : 1;
       for (let i = 0; i < bosses; i++) {
         const p = this.randomEdge();
@@ -2733,18 +2743,52 @@ export class Game {
             break;
           }
           case "boss": {
+            const bossType = e.bossType ?? "spitter";
             e.cd -= dt;
-            e.vx += nx * e.speed * 4 * dt;
-            e.vy += ny * e.speed * 4 * dt;
-            if (e.cd <= 0) {
-              e.cd = 3.2;
-              for (let v = 0; v < 8; v++) {
-                const a = (v / 8) * TAU + e.t * 0.25;
-                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 115, vy: Math.sin(a) * 115, life: 4, r: 4, dmg: e.dmg });
+            const dashBoss = bossType === "bat" || bossType === "ninja" || bossType === "hound" || bossType === "crawler" || bossType === "demon";
+            if (dashBoss) {
+              if (e.state === 0) {
+                e.vx += nx * e.speed * 4 * dt;
+                e.vy += ny * e.speed * 4 * dt;
+                if (e.cd <= 0) {
+                  e.state = 1;
+                  e.cd = 0.5;
+                  this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(ny, nx), life: 0.5, max: 0.5, color: "#ffb347" });
+                  Sfx.enemyDash();
+                }
+              } else if (e.state === 1) {
+                e.vx *= 1 - Math.min(1, dt * 10);
+                e.vy *= 1 - Math.min(1, dt * 10);
+                if (e.cd <= 0) {
+                  e.state = 2;
+                  e.cd = bossType === "bat" ? 1.2 : 0.75;
+                  const dashSpeed = bossType === "bat" ? 620 : bossType === "ninja" ? 470 : 400;
+                  e.vx = nx * dashSpeed;
+                  e.vy = ny * dashSpeed;
+                  this.burst(e.x, e.y, 20, "#ffb347", 180);
+                }
+              } else if (e.cd <= 0) {
+                e.state = 0;
+                e.cd = 2.2;
               }
-              this.shake = Math.max(this.shake, 4);
-              this.burst(e.x, e.y, 18, "#ff3c4a", 120);
-              Sfx.enemyShoot("burst");
+            } else {
+              e.vx += nx * e.speed * 4 * dt;
+              e.vy += ny * e.speed * 4 * dt;
+              if (e.cd <= 0) {
+                e.cd = bossType === "golem" ? 2.2 : 1.5;
+                const volley = bossType === "golem" ? 14 : 10;
+                const shotSpeed = bossType === "golem" ? 145 : 135;
+                for (let v = 0; v < volley; v++) {
+                  const a = (v / volley) * TAU + e.t * 0.25;
+                  this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * shotSpeed, vy: Math.sin(a) * shotSpeed, life: 4, r: 4, dmg: e.dmg });
+                }
+                if (bossType === "golem") {
+                  this.shockwaves.push({ x: e.x, y: e.y, r: 8, maxR: 55, life: 0.45, maxLife: 0.45, color: "#d79bff" });
+                }
+                this.shake = Math.max(this.shake, bossType === "golem" ? 8 : 4);
+                this.burst(e.x, e.y, 18, bossType === "golem" ? "#d79bff" : "#ff3c4a", 120);
+                Sfx.enemyShoot("burst");
+              }
             }
             break;
           }
@@ -2773,7 +2817,8 @@ export class Game {
       const damp = ((e.type === "bat" || e.type === "crawler") && e.state === 2) || (e.type === "ram" && e.state === 2) ? 1.2 : 6.5;
       e.vx -= e.vx * Math.min(1, damp * dt);
       e.vy -= e.vy * Math.min(1, damp * dt);
-      const maxV = e.type === "bat" || e.type === "crawler" || e.type === "ram" ? 340 : e.speed * 1.6 + 220;
+      const bossDashing = e.type === "boss" && e.state === 2;
+      const maxV = e.type === "bat" || e.type === "crawler" || e.type === "ram" || bossDashing ? 680 : e.speed * 1.6 + 220;
       const sp = Math.hypot(e.vx, e.vy);
       if (sp > maxV) {
         e.vx = (e.vx / sp) * maxV;
@@ -3499,7 +3544,7 @@ export class Game {
 
   private drawEnemy(e: Enemy) {
     const ctx = this.ctx;
-    const spr = SPR[e.type];
+    const spr = e.type === "boss" ? SPR[e.bossType ?? "spitter"] : SPR[e.type];
     const bob =
       e.type === "bat" || e.type === "wisp"
         ? Math.sin(e.t * 12) * 2
@@ -3552,7 +3597,7 @@ export class Game {
     }
     ctx.save();
     ctx.filter = "saturate(2) contrast(1.22) brightness(1.1)";
-    this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY, 1.08);
+    this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY, e.type === "boss" ? 1.65 : 1.08);
     ctx.restore();
     if (e.maxHp > 2 && (e.hp < e.maxHp || e.type === "boss")) {
       const w = e.type === "boss" ? 46 : 14;
@@ -3566,7 +3611,7 @@ export class Game {
         ctx.font = `5px "Press Start 2P", monospace`;
         ctx.textAlign = "center";
         ctx.fillStyle = "#ffe2c4";
-        ctx.fillText("SHOGUN", e.x, y - 3);
+        ctx.fillText(`BOSS ${e.bossType?.toUpperCase() ?? ""}`, e.x, y - 3);
       }
     }
   }

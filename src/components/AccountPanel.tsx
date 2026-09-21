@@ -5,10 +5,27 @@ import { PxButton, PxHeading } from "./PixelUi";
 
 const AVATARS: Array<{ id: AvatarId; label: string; sprite: string }> = [
   { id: "samurai", label: "SAMURAI", sprite: "player" },
-  { id: "ninja", label: "NINJA", sprite: "ninja" },
-  { id: "oni", label: "ONI", sprite: "oni" },
-  { id: "boss", label: "SHOGUN", sprite: "boss" },
+  { id: "grunt", label: "GRUNT", sprite: "grunt" },
   { id: "bat", label: "MORCEGO", sprite: "bat" },
+  { id: "brute", label: "BRUTE", sprite: "brute" },
+  { id: "spitter", label: "SPITTER", sprite: "spitter" },
+  { id: "ninja", label: "NINJA", sprite: "ninja" },
+  { id: "hound", label: "HOUND", sprite: "hound" },
+  { id: "wisp", label: "WISP", sprite: "wisp" },
+  { id: "archer", label: "ARCHER", sprite: "archer" },
+  { id: "oni", label: "ONI", sprite: "oni" },
+  { id: "shield", label: "SHIELD", sprite: "shield" },
+  { id: "slime", label: "SLIME", sprite: "slime" },
+  { id: "monk", label: "MONK", sprite: "monk" },
+  { id: "demon", label: "DEMON", sprite: "demon" },
+  { id: "skeleton", label: "SKELETON", sprite: "skeleton" },
+  { id: "crawler", label: "CRAWLER", sprite: "crawler" },
+  { id: "bomber", label: "BOMBER", sprite: "bomber" },
+  { id: "bombMinion", label: "MINION BOMBA", sprite: "bombMinion" },
+  { id: "ram", label: "RAM", sprite: "ram" },
+  { id: "warlock", label: "WARLOCK", sprite: "warlock" },
+  { id: "golem", label: "GOLEM", sprite: "golem" },
+  { id: "boss", label: "SHOGUN", sprite: "boss" },
 ];
 
 export default function AccountPanel({ profile, onProfile }: { profile: PlayerProfile | null; onProfile: (value: PlayerProfile | null) => void }) {
@@ -46,7 +63,7 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
       <PxButton tone="red" disabled={busy} onClick={() => void submit()} className="w-full py-4 text-[10px] sm:text-[11px]">{busy ? "AGUARDE..." : register ? "CRIAR CONTA" : "ENTRAR"}</PxButton>
       <PxButton tone="menu" onClick={() => setRegister((v) => !v)} className="w-full py-3 text-[9px] sm:text-[10px]">{register ? "JÁ TENHO CONTA" : "CRIAR CONTA"}</PxButton>
     </> : <>
-      <div className="px-inset p-4 font-pixel text-[9px] text-[#ffe2c4] sm:text-[10px]">CONECTADO COMO: {profile.username}</div>
+      <div className="px-inset min-w-0 break-words p-4 font-pixel text-[9px] text-[#ffe2c4] sm:text-[10px]">CONECTADO COMO: {profile.username}</div>
       <input className="px-input font-pixel text-[10px] sm:text-[11px]" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="NOME NO RANKING" maxLength={12} />
       <AvatarPicker value={avatarId} onChange={setAvatarId} />
       <PxButton tone="gold" onClick={() => void update()} className="w-full py-4 text-[10px] sm:text-[11px]">SALVAR PERFIL</PxButton>
@@ -57,5 +74,5 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
   </div>;
 }
 function AvatarPicker({ value, onChange }: { value: AvatarId; onChange: (value: AvatarId) => void }) {
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">{AVATARS.map((avatar) => <button key={avatar.id} onClick={() => onChange(avatar.id)} className={`px-tile flex min-h-24 w-full flex-col items-center justify-center gap-2 p-2 sm:min-h-28 ${value === avatar.id ? "outline outline-2 outline-[#ffd44a]" : ""}`}><PixelSprite name={avatar.sprite} scale={3} /><span className="font-pixel text-[8px] sm:text-[9px]">{avatar.label}</span></button>)}</div>;
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">{AVATARS.map((avatar) => <button key={avatar.id} onClick={() => onChange(avatar.id)} className={`px-tile flex min-h-24 min-w-0 w-full flex-col items-center justify-center gap-2 overflow-hidden p-2 sm:min-h-28 ${value === avatar.id ? "outline outline-2 outline-[#ffd44a]" : ""}`}><PixelSprite name={avatar.sprite} scale={3} /><span className="max-w-full break-words text-center font-pixel text-[8px] leading-3 sm:text-[9px]">{avatar.label}</span></button>)}</div>;
 }

@@ -78,3 +78,10 @@
 - Inimigos de projeteis e o Minion Bomba passam a surgir a partir da wave 3.
 - Ninjas e golems passam a surgir a partir da wave 5.
 - Os demais tipos de inimigos e spawns especiais passam a surgir a partir da wave 7.
+
+## Patch Notes 11 - Bosses Variantes
+
+- Um boss surge a cada 5 waves, sempre usando a aparencia de um NPC da arena.
+- Bosses possuem muito mais vida, tamanho maior e barra de vida propria.
+- Bosses velozes, como morcegos e ninjas, podem atravessar a arena com um dash muito mais longo.
+- Bosses de projeteis disparam rajadas maiores, e o boss golem combina projeteis com uma onda de choque.
