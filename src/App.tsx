@@ -8,6 +8,8 @@ import { GameOverScreen, PauseScreen } from "./components/Screens";
 import MainMenu, { type UiOpts } from "./components/MainMenu";
 import ShopScreen from "./components/ShopScreen";
 import TutorialScreen from "./components/TutorialScreen";
+import { supabase } from "./lib/supabase";
+import { loadProfile, type PlayerProfile } from "./game/auth";
 
 type UiPhase = "menu" | "tutorial" | "playing" | "paused" | "upgrade" | "dead";
 
@@ -32,6 +34,7 @@ const emptyStats: HudStats = {
   speedBonus: 0,
   dashSpeedMult: 1,
   mineTutorial: false,
+  potionTutorial: false,
   weaponLevels: {
     katana: { damage: 0, speed: 0, range: 0, form: 0 },
     bow: { damage: 0, speed: 0, range: 0, form: 0 },
@@ -78,6 +81,7 @@ export default function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<Game | null>(null);
+  const profileRef = useRef<PlayerProfile | null>(null);
 
   const [phase, setPhase] = useState<UiPhase>("menu");
   const [menuClosing, setMenuClosing] = useState(false);
@@ -92,7 +96,27 @@ export default function App() {
   const [isTouch, setIsTouch] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [savedRun, setSavedRun] = useState<SavedRun | null>(null);
+  const [profile, setProfile] = useState<PlayerProfile | null>(null);
 
+  useEffect(() => {
+    profileRef.current = profile;
+  }, [profile]);
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+    const syncProfile = async () => {
+      const { data: { user } } = await client.auth.getUser();
+      if (!user) { setProfile(null); return; }
+      try { setProfile(await loadProfile(user)); } catch { setProfile(null); }
+    };
+    void syncProfile();
+    const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
+      if (!session?.user) { setProfile(null); return; }
+      void loadProfile(session.user).then(setProfile).catch(() => setProfile(null));
+    });
+    return () => subscription.unsubscribe();
+  }, []);
   /* boot */
   useEffect(() => {
     const o = loadOpts();
@@ -129,7 +153,7 @@ export default function App() {
     game.onStats = (s) => setStats(s);
     game.onGameOver = (s) => {
       setFinalStats(s);
-      setPendingScore(s.score > 0);
+      setPendingScore(s.score > 0 && profileRef.current !== null);
       setRank(-1);
       setPhase("dead");
     };
@@ -281,32 +305,25 @@ export default function App() {
     void loadRemoteScores().then(setScores);
   }, []);
 
-  const submitName = useCallback(
-    (name: string) => {
-      const clean = (name.trim() || I18N[opts.language].namePlaceholder).slice(0, 12).toUpperCase();
-      try {
-        localStorage.setItem(NAME_KEY, clean);
-      } catch {
-        /* ignore */
-      }
-      const entry = {
-        name: clean,
-        score: finalStats.score,
-        wave: finalStats.wave,
-        kills: finalStats.kills,
-        time: finalStats.time,
-        difficulty: finalStats.difficulty,
-        date: Date.now(),
-      };
-      void saveRemoteScore(entry).then(({ list, rank: r }) => {
-        setScores(list);
-        setRank(r);
-        setPendingScore(false);
-      });
-    },
-    [finalStats, opts.language],
-  );
-
+  const submitName = useCallback(() => {
+    const activeProfile = profileRef.current;
+    if (!activeProfile) return;
+    const entry: ScoreEntry = {
+      name: activeProfile.username,
+      score: finalStats.score,
+      wave: finalStats.wave,
+      kills: finalStats.kills,
+      time: finalStats.time,
+      difficulty: finalStats.difficulty,
+      date: Date.now(),
+      userId: activeProfile.id,
+    };
+    void saveRemoteScore(entry).then(({ list, rank: r }) => {
+      setScores(list);
+      setRank(r);
+      setPendingScore(false);
+    }).catch(() => setPendingScore(false));
+  }, [finalStats]);
   const lastName = (() => {
     try {
       return localStorage.getItem(NAME_KEY) ?? "";
@@ -463,7 +480,8 @@ export default function App() {
               opts={opts}
               onOpts={applyOpts}
               onFullscreen={toggleFullscreen}
-
+              profile={profile}
+              onProfile={setProfile}
             />
           </div>
         )}
@@ -476,7 +494,7 @@ export default function App() {
             scores={scores}
             rank={rank}
             pendingScore={pendingScore}
-            defaultName={lastName}
+            defaultName={profile?.username ?? lastName}
             onSubmitName={submitName}
             onRestart={restartRun}
             onMenu={toMenu}

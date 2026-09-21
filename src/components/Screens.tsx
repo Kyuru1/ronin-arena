@@ -95,7 +95,6 @@ export function GameOverScreen({
   onMenu: () => void;
   t: Strings;
 }) {
-  const [name, setName] = useState(defaultName);
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#12040a]/88 p-3">
@@ -120,34 +119,15 @@ export function GameOverScreen({
           </div>
 
           {pendingScore ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                onSubmitName(name);
-              }}
-              className="w-full"
-            >
-              <PxHeading>{t.enterName}</PxHeading>
-              <div className="relative">
-                <input
-                  autoFocus
-                  value={name}
-                  maxLength={12}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder={t.namePlaceholder}
-                  className="px-input font-pixel text-[10px]"
-                />
-                <span className="font-pixel anim-caret pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-[#ffd44a]">
-                  _
-                </span>
-              </div>
-              <PxButton type="submit" tone="gold" className="mt-3 w-full py-3 text-[9px] sm:text-[10px]">
+            <div className="w-full">
+              <PxHeading>{t.ranking}</PxHeading>
+              <div className="px-inset mb-3 p-3 text-center font-pixel text-[8px] text-[#ffe2c4]">RECORDE DE: {defaultName}</div>
+              <PxButton tone="gold" onClick={() => onSubmitName(defaultName)} className="w-full py-3 text-[9px] sm:text-[10px]">
                 {t.save}
               </PxButton>
-              <PxButton type="button" tone="dark" onClick={onRestart} className="mt-2 w-full py-2.5 text-[8px]">▶ {t.playAgain}</PxButton>
-              <PxButton type="button" tone="dark" onClick={onMenu} className="mt-2 w-full py-2.5 text-[8px]">← {t.menu}</PxButton>
-            </form>
-          ) : (
+              <PxButton tone="dark" onClick={onRestart} className="mt-2 w-full py-2.5 text-[8px]">▶ {t.playAgain}</PxButton>
+              <PxButton tone="dark" onClick={onMenu} className="mt-2 w-full py-2.5 text-[8px]">← {t.menu}</PxButton>
+            </div>          ) : (
             <>
               {rank >= 0 && (
                 <div className="font-pixel flex items-center gap-2 border-[3px] border-[#070305] bg-[#3a2200] px-3 py-1.5 text-[8px] text-[#ffd44a]">

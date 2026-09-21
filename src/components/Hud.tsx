@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { GAMEPLAY_TEXT } from "../game/gameplayText";
 import type { HudStats } from "../game/engine";
 import type { Language, Strings } from "../game/i18n";
@@ -21,6 +22,13 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, hudSca
   language: Language;
   t: Strings;
 }) {
+  const [dashPos, setDashPos] = useState(() => { try { return JSON.parse(localStorage.getItem("ronin.dash.position") ?? "null") as { x: number; y: number } | null; } catch { return null; } });
+  const moveDash = (event: React.PointerEvent<HTMLButtonElement>) => {
+    const move = (next: PointerEvent) => { const pos = { x: Math.max(8, Math.min(window.innerWidth - 78, next.clientX - 34)), y: Math.max(70, Math.min(window.innerHeight - 88, next.clientY - 34)) }; setDashPos(pos); try { localStorage.setItem("ronin.dash.position", JSON.stringify(pos)); } catch { /* ignore */ } };
+    const end = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", end); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", end);
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  };
   const g = GAMEPLAY_TEXT[language];
   const comboMult = Math.min(1 + stats.combo * 0.12, 6);
   const dashProgress = stats.dashReady ? 1 : 1 - stats.dashCd / stats.dashMax;
@@ -56,10 +64,13 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, hudSca
 
       {stats.combo > 1 && <div key={stats.combo} className="anim-pop font-pixel text-shadow-pix absolute left-1/2 top-24 -translate-x-1/2 text-[10px] text-[#ffd44a]">x{comboMult.toFixed(1)} · {stats.combo} {t.kills}</div>}
 
+      {stats.potionTutorial && <div className="potion-tutorial">
+        <strong>POÇÕES</strong><span className="potion-health">VIDA +2</span><span className="potion-strength">FORÇA +50% DANO</span><span className="potion-speed">VELOCIDADE +45%</span><span className="potion-agility">AGILIDADE: DASH -50%</span>
+      </div>}
       {stats.mineTutorial && <div className="font-pixel absolute bottom-28 left-1/2 w-[min(90%,460px)] -translate-x-1/2 border-4 border-[#070305] bg-[#10282b]/95 px-4 py-3 text-center text-[7px] leading-5 text-[#ffd44a] shadow-[0_5px_0_#070305]">{t.mineTutorial}</div>}
 
       <div className="pointer-events-auto mx-auto flex max-w-full items-end justify-center gap-2 pb-1" style={{ transform: `scale(${hudScale})`, transformOrigin: "bottom center" }}>
-        <button onClick={onDash} className={`dash-gauge dash-action mobile-dash-button ${stats.dashReady ? "is-ready" : ""}`} title={`${g.dash}: ${stats.dashReady ? t.ready : `${stats.dashCd.toFixed(1)}s`}`} aria-label={g.dash}>
+        <button onClick={onDash} onPointerDown={moveDash} style={dashPos ? { position: "fixed", left: dashPos.x, top: dashPos.y, zIndex: 30 } : undefined} className={`dash-gauge dash-action mobile-dash-button ${stats.dashReady ? "is-ready" : ""}`} title={`${g.dash}: ${stats.dashReady ? t.ready : `${stats.dashCd.toFixed(1)}s`}`} aria-label={g.dash}>
           <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="#0b1215" stroke="#352029" strokeWidth="5" /><circle cx="26" cy="26" r="22" fill="none" stroke={stats.dashReady ? "#ffd44a" : "#e0444d"} strokeWidth="5" strokeDasharray={`${dashProgress * 138.23} 138.23`} /></svg>
           <PixelSprite name="player" scale={2} className={stats.dashReady ? "anim-bob" : "opacity-50"} />
           <strong>{stats.dashReady ? "DASH" : `${Math.ceil(stats.dashCd)}s`}</strong>

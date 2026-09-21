@@ -3,12 +3,14 @@ import type { Difficulty } from "./engine";
 
 export interface ScoreEntry {
   name: string;
+  avatarId?: "samurai" | "ninja" | "oni" | "boss" | "bat";
   score: number;
   wave: number;
   kills: number;
   time: number;
   difficulty: Difficulty;
   date: number;
+  userId?: string;
 }
 
 export const MAX = 50;
@@ -35,15 +37,22 @@ export function normalizeScores(entries: unknown): ScoreEntry[] {
   const normalized = entries
     .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
     .filter((entry) => typeof entry.score === "number")
-    .map((entry) => ({
-      name: typeof entry.name === "string" ? entry.name : typeof entry.player_name === "string" ? entry.player_name : "RONIN",
+    .map((entry) => {
+      const name = [entry.name, entry.player_name, entry.username, entry.playerName]
+        .find((value): value is string => typeof value === "string" && value.trim().length > 0)
+        ?.trim() ?? "RONIN";
+      return {
+      name,
+      avatarId: (entry.avatar_id === "ninja" || entry.avatar_id === "oni" || entry.avatar_id === "boss" || entry.avatar_id === "bat" ? entry.avatar_id : "samurai") as ScoreEntry["avatarId"],
       score: Number(entry.score),
       wave: typeof entry.wave === "number" ? entry.wave : 1,
       kills: typeof entry.kills === "number" ? entry.kills : 0,
       time: typeof entry.time === "number" ? entry.time : typeof entry.survival_time_seconds === "number" ? entry.survival_time_seconds : 0,
       difficulty: normalizeDifficulty(entry.difficulty),
       date: typeof entry.date === "number" ? entry.date : typeof entry.created_at === "string" ? Date.parse(entry.created_at) : Date.now(),
-    }));
+      userId: typeof entry.user_id === "string" ? entry.user_id : undefined,
+      };
+    });
 
   return (["easy", "medium", "hard"] as const).flatMap((difficulty) =>
     normalized.filter((entry) => entry.difficulty === difficulty).sort(compareEntries).slice(0, MAX),
@@ -95,13 +104,22 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
   if (supabase) {
     const { data, error } = await supabase
       .from("ranking")
-      .select("player_name, difficulty, score, wave, kills, survival_time_seconds, created_at")
+      .select("user_id, player_name, difficulty, score, wave, kills, survival_time_seconds, created_at")
       .order("score", { ascending: false })
       .order("wave", { ascending: false })
       .order("kills", { ascending: false })
       .limit(150);
     if (!error && data) {
-      const scores = normalizeScores(data);
+      const userIds = [...new Set(data.map((entry) => entry.user_id).filter((id): id is string => typeof id === "string"))];
+      let profiles = new Map<string, { username: string }>();
+      if (userIds.length) {
+        const { data: profileRows } = await supabase.from("profiles").select("id, username").in("id", userIds);
+        profiles = new Map((profileRows ?? []).map((profile) => [profile.id, profile]));
+      }
+      const scores = normalizeScores(data.map((entry) => {
+        const profile = typeof entry.user_id === "string" ? profiles.get(entry.user_id) : undefined;
+        return { ...entry, player_name: profile?.username ?? entry.player_name, avatar_id: "samurai" as const };
+      }));
       saveLocal(scores);
       return scores;
     }
@@ -119,37 +137,25 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
 }
 
 export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreEntry[]; rank: number }> {
-  if (supabase) {
-    const { error } = await supabase.from("ranking").insert({
-      player_name: entry.name,
-      difficulty: difficultyToDb(entry.difficulty),
-      score: Math.max(0, Math.floor(entry.score)),
-      wave: Math.max(1, Math.floor(entry.wave)),
-      kills: Math.max(0, Math.floor(entry.kills)),
-      survival_time_seconds: Math.max(0, Math.floor(entry.time)),
-    });
-    if (!error) {
-      const list = await loadRemoteScores();
-      const sameDifficulty = list.filter((item) => item.difficulty === entry.difficulty);
-      return { list, rank: sameDifficulty.findIndex((item) => item.name === entry.name && item.score === entry.score) };
-    }
-  }
+  if (!supabase) return { list: await loadRemoteScores(), rank: -1 };
 
-  try {
-    const response = await fetch(`${API_URL}/ranking`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(entry),
-    });
-    if (!response.ok) throw new Error("Could not save ranking");
-    const list = normalizeScores(await response.json());
-    saveLocal(list);
-    return { list, rank: list.findIndex((score) => score.name === entry.name && score.score === entry.score) };
-  } catch {
-    return saveScore(entry);
-  }
+  const { data: authData } = await supabase.auth.getUser();
+  const user = authData.user;
+  if (!user) return { list: await loadRemoteScores(), rank: -1 };
+
+  const { error } = await supabase.rpc("submit_ranking", {
+    p_difficulty: difficultyToDb(entry.difficulty),
+    p_score: Math.max(0, Math.floor(entry.score)),
+    p_wave: Math.max(1, Math.floor(entry.wave)),
+    p_kills: Math.max(0, Math.floor(entry.kills)),
+    p_survival_time_seconds: Math.max(0, Math.floor(entry.time)),
+  });
+  if (error) throw error;
+
+  const list = await loadRemoteScores();
+  const sameDifficulty = list.filter((item) => item.difficulty === entry.difficulty);
+  return { list, rank: sameDifficulty.findIndex((item) => item.userId === user.id) };
 }
-
 export function formatTime(sec: number) {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);

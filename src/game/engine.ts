@@ -76,6 +76,7 @@ export interface HudStats {
   speedBonus: number;
   dashSpeedMult: number;
   mineTutorial: boolean;
+  potionTutorial: boolean;
   weaponLevels: WeaponLevels;
   magicType: MagicType;
   difficulty: Difficulty;
@@ -215,15 +216,22 @@ interface PsychicZone {
   type: MagicType;
 }
 
+type PotionType = "health" | "strength" | "speed" | "agility";
+
+interface ArenaProp {
+  x: number; y: number; kind: "tree" | "crate"; life: number; t: number;
+}
+
 interface Pickup {
   x: number;
   y: number;
   vx: number;
   vy: number;
   t: number;
-  kind: "heart" | "gem" | "coin";
+  kind: "heart" | "gem" | "coin" | PotionType;
   magnet: boolean;
   credited?: boolean;
+  potion?: PotionType;
 }
 
 interface SpawnMark {
@@ -365,6 +373,13 @@ export class Game {
   texts: FloatText[] = [];
   shots: Projectile[] = [];
   pickups: Pickup[] = [];
+  props: ArenaProp[] = [];
+  propTimer = 7;
+  potionTutorialT = 0;
+  potionTutorialSeen = false;
+  strengthT = 0;
+  speedT = 0;
+  agilityT = 0;
   marks: SpawnMark[] = [];
   afterimages: { x: number; y: number; life: number }[] = [];
 
@@ -1028,6 +1043,7 @@ export class Game {
       speedBonus: this.speedBonus,
       dashSpeedMult: this.dashSpeedMult,
       mineTutorial: this.mineTutorialT > 0,
+      potionTutorial: this.potionTutorialT > 0,
       weaponLevels: this.weaponLevels,
       magicType: this.magicType,
       difficulty: this.difficulty,
@@ -1110,6 +1126,11 @@ export class Game {
     this.elapsed += dt;
     this.idleT += dt;
     this.mineTutorialT = Math.max(0, this.mineTutorialT - dt);
+    this.potionTutorialT = Math.max(0, this.potionTutorialT - dt);
+    this.strengthT = Math.max(0, this.strengthT - dt);
+    this.speedT = Math.max(0, this.speedT - dt);
+    this.agilityT = Math.max(0, this.agilityT - dt);
+    this.updateProps(dt);
     this.decayFx(realDt);
 
     if (this.combo > 0) {
@@ -1220,7 +1241,7 @@ export class Game {
     }
     if (this.opts.keyboardOnly && ml > 0.01) this.keyboardAimAngle = Math.atan2(my, mx);
 
-    const SPEED = 108 + this.speedBonus - (this.perk === "bottomlessPocket" ? 12 : 0) - (this.perk === "cursedArsenal" ? 8 : 0) + (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0);
+    const SPEED = (108 + this.speedBonus - (this.perk === "bottomlessPocket" ? 12 : 0) - (this.perk === "cursedArsenal" ? 8 : 0) + (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0)) * (this.speedT > 0 ? 1.45 : 1);
     const accel = 1100;
     const friction = 1000;
 
@@ -1313,7 +1334,7 @@ export class Game {
         this.dashT = 0.17;
         this.dashHitSet.clear();
     this.dashSlashes.length = 0;
-        this.dashCd = this.dashMax;
+        this.dashCd = this.dashMax * (this.agilityT > 0 ? 0.5 : 1);
         this.iframe = Math.max(this.iframe, 0.26);
         this.shake = Math.max(this.shake, 3);
         Sfx.dash();
@@ -1992,6 +2013,7 @@ export class Game {
   }
 
   private damageEnemy(e: Enemy, dmg: number, ang: number): boolean {
+    if (this.strengthT > 0) dmg *= 1.5;
     const heavy = this.currentWeapon !== "katana";
     e.hp -= dmg;
     e.flash = 0.14;
@@ -2643,6 +2665,23 @@ export class Game {
     }
   }
 
+  private updateProps(dt: number) {
+    this.propTimer -= dt;
+    if (this.propTimer <= 0 && this.props.length < 5) {
+      const kind = Math.random() < 0.58 ? "crate" : "tree";
+      this.props.push({ x: rnd(28, this.W - 28), y: rnd(34, this.H - 34), kind, life: kind === "crate" ? 2 : 3, t: 0 });
+      this.propTimer = rnd(7, 13);
+    }
+    for (let i = this.props.length - 1; i >= 0; i--) {
+      const prop = this.props[i];
+      prop.t += dt;
+      if (Math.hypot(this.px - prop.x, this.py - prop.y) > 18) continue;
+      this.props.splice(i, 1);
+      const potion: PotionType = pick(["health", "strength", "speed", "agility"]);
+      this.pickups.push({ x: prop.x, y: prop.y, vx: rnd(-20, 20), vy: rnd(-35, -10), t: 0, kind: potion, potion, magnet: false });
+      this.burst(prop.x, prop.y, 12, potion === "health" ? "#ff4d6d" : potion === "strength" ? "#ff8a45" : potion === "speed" ? "#ffd44a" : "#8c8cff", 100);
+    }
+  }
   private updatePickups(dt: number) {
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const p = this.pickups[i];
@@ -2958,7 +2997,19 @@ export class Game {
       ctx.globalAlpha = 1;
     }
 
-    // Pickups (Hearts & Coins)
+    // Random arena props
+    for (const prop of this.props) {
+      ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(Math.round(prop.x - 9), Math.round(prop.y + 6), 18, 3);
+      if (prop.kind === "crate") {
+        ctx.fillStyle = "#9b5937"; ctx.fillRect(Math.round(prop.x - 7), Math.round(prop.y - 6), 14, 12);
+        ctx.fillStyle = "#ffd08a"; ctx.fillRect(Math.round(prop.x - 5), Math.round(prop.y - 4), 10, 2);
+      } else {
+        ctx.fillStyle = "#51352a"; ctx.fillRect(Math.round(prop.x - 3), Math.round(prop.y - 2), 6, 10);
+        ctx.fillStyle = "#3e8b4d"; ctx.fillRect(Math.round(prop.x - 10), Math.round(prop.y - 10), 20, 11);
+        ctx.fillStyle = "#75c85d"; ctx.fillRect(Math.round(prop.x - 6), Math.round(prop.y - 13), 12, 5);
+      }
+    }
+    // Pickups (Hearts, Coins and potions)
     for (const p of this.pickups) {
       const bob = Math.sin(p.t * 6) * 1.5;
       if (p.kind === "heart") {

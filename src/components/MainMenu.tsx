@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import type { Difficulty, Perk } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
+
+const RANKING_SPRITES = { samurai: "player", ninja: "ninja", oni: "oni", boss: "boss", bat: "bat" } as const;
 import type { ScoreEntry } from "../game/storage";
+import AccountPanel from "./AccountPanel";
+import type { PlayerProfile } from "../game/auth";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxChip, PxFrame, PxHeading, PxRow } from "./PixelUi";
 
@@ -18,14 +22,14 @@ export interface UiOpts {
   keyboardOnly: boolean;
 }
 
-type MenuTab = "main" | "settings" | "language" | "ranking";
+type MenuTab = "main" | "settings" | "language" | "ranking" | "account";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }> ;
 }
 
-export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen }: {
+export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile }: {
   onStart: (difficulty?: Difficulty) => void;
   onPerk: (perk: Perk | null) => void;
 
@@ -35,6 +39,8 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   opts: UiOpts;
   onOpts: (o: Partial<UiOpts>) => void;
   onFullscreen: () => void;
+  profile: PlayerProfile | null;
+  onProfile: (profile: PlayerProfile | null) => void;
 }) {
   const [tab, setTab] = useState<MenuTab>("main");
   const [difficultyOpen, setDifficultyOpen] = useState(false);
@@ -60,7 +66,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   if (tab !== "main") {
     return (
       <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
-        <PxFrame className="anim-pop my-auto w-full max-w-xl p-4 sm:p-6">
+        <PxFrame className={`anim-pop my-auto w-full p-4 sm:p-6 ${tab === "account" ? "max-w-3xl" : "max-w-xl"}`}>
           {tab === "settings" && <div className="flex flex-col gap-3">
             <PxHeading>{t.settings}</PxHeading>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -78,7 +84,9 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
           {tab === "language" && <div className="flex flex-col gap-2"><PxHeading>{t.language}</PxHeading>{LANGS.map((language) => <PxButton key={language} tone="menu" active={opts.language === language} onClick={() => onOpts({ language })} className="text-[9px]">{I18N[language].langName}{opts.language === language && <span className="ml-auto text-[#ffd44a]">■</span>}</PxButton>)}</div>}
 
-          {tab === "ranking" && <div className="flex flex-col gap-2"><PxHeading>{t.ranking} · TOP 50</PxHeading><div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div><div className="px-inset"><div className="ranking-head"><span>#</span><span>{t.name}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div><div className="scrollbar-thin max-h-[75vh] overflow-y-auto">{scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0 ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div> : scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).map((score, index) => <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-four ${index < 3 ? "is-top" : ""}`}><span>{index + 1}</span><span>{score.name}</span><span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span></div>)}</div></div></div>}
+          {tab === "account" && <AccountPanel profile={profile} onProfile={onProfile} />}
+
+          {tab === "ranking" && <div className="flex flex-col gap-2"><PxHeading>{t.ranking} · TOP 50</PxHeading><div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div><div className="px-inset"><div className="ranking-head"><span>#</span><span>{t.name}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div><div className="scrollbar-thin max-h-[75vh] overflow-y-auto">{scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0 ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div> : scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).map((score, index) => <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-four ${index < 3 ? "is-top" : ""}`}><span>{index + 1}</span><span className="flex min-w-0 items-center gap-2"><PixelSprite name={RANKING_SPRITES[score.avatarId ?? "samurai"]} scale={0.75} /><span className="truncate">{score.name || "RONIN"}</span></span><span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span></div>)}</div></div></div>}
 
           <PxButton tone="dark" onClick={() => setTab("main")} className="mt-4 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
         </PxFrame>
@@ -151,6 +159,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
           <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("account")} className="justify-center text-[8px]"><PixelSprite name="player" scale={1} />{profile ? profile.username : "PERFIL"}</PxButton>
           <PxButton tone="gold" onClick={() => void installGame()} disabled={!installPrompt} className="menu-install justify-center text-[8px]">↓ {t.install}</PxButton>
         </footer>
       </div>
