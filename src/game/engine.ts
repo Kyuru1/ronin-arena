@@ -2830,7 +2830,7 @@ export class Game {
   private hurtPlayer(dmg: number, nx: number, ny: number) {
     if (this.iframe > 0 || this.dashT > 0 || this.phase !== "playing") return;
     this.hp -= dmg * DIFFICULTY_RULES[this.difficulty].damageTaken;
-    this.iframe = 1.05;
+    this.iframe = 0.18;
     this.combo = 0;
     this.pvx = nx * 190;
     this.pvy = ny * 190;

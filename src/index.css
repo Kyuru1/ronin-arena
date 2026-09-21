@@ -694,7 +694,8 @@ input,
   .combat-wave > div:last-child { font-size: 5px; }
   .dash-gauge { height: 64px; width: 64px; }
   .dash-gauge strong { font-size: 6px; }
-  .weapon-rail { max-width: calc(100vw - 82px); overflow: hidden; }
+  .weapon-rail { max-width: calc(100vw - 82px); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+  .weapon-rail::-webkit-scrollbar { display: none; }
   .weapon-slot { height: 48px; width: 44px; flex: 0 0 44px; }
   .weapon-slot.is-active { height: 58px; width: 58px; flex-basis: 58px; }
   .slot-name { font-size: 4px; }

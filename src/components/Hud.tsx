@@ -80,7 +80,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPoti
           <strong>{stats.dashReady ? "DASH" : `${Math.ceil(stats.dashCd)}s`}</strong>
         </button>
 
-        <div className="weapon-rail">{[0, 1, 2, 3].map((index) => {
+        <div className="weapon-rail">{Array.from({ length: stats.perk === "bottomlessPocket" ? 6 : 4 }, (_, index) => index).map((index) => {
           const weapon = stats.weapons[index];
           const active = index === stats.activeSlot;
           if (!weapon) return <div key={index} className="weapon-slot is-empty"><span>{index + 1}</span></div>;
