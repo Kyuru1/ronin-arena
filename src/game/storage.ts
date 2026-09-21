@@ -101,13 +101,14 @@ function saveLocal(list: ScoreEntry[]) {
 
 export async function loadRemoteScores(): Promise<ScoreEntry[]> {
   if (supabase) {
-    const { data, error } = await supabase
+    const rankingQuery = supabase
       .from("ranking")
       .select("user_id, player_name, difficulty, score, wave, kills, survival_time_seconds, created_at")
       .order("score", { ascending: false })
       .order("wave", { ascending: false })
       .order("kills", { ascending: false })
       .limit(150);
+    const { data, error } = await rankingQuery;
     if (!error && data) {
       const userIds = [...new Set(data.map((entry) => entry.user_id).filter((id): id is string => typeof id === "string"))];
       let profiles = new Map<string, { username: string; avatar_id: string }>();
@@ -121,6 +122,20 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
       }));
       saveLocal(scores);
       return scores;
+    }
+    if (error) {
+      const legacy = await supabase
+        .from("ranking")
+        .select("player_name, difficulty, score, wave, kills, survival_time_seconds, created_at")
+        .order("score", { ascending: false })
+        .order("wave", { ascending: false })
+        .order("kills", { ascending: false })
+        .limit(150);
+      if (!legacy.error && legacy.data) {
+        const scores = normalizeScores(legacy.data);
+        saveLocal(scores);
+        return scores;
+      }
     }
   }
 
@@ -143,24 +158,24 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
   if (!user) return { list: await loadRemoteScores(), rank: -1 };
 
   const payload = {
-    p_difficulty: difficultyToDb(entry.difficulty),
-    p_score: Math.max(0, Math.floor(entry.score)),
-    p_wave: Math.max(1, Math.floor(entry.wave)),
-    p_kills: Math.max(0, Math.floor(entry.kills)),
-    p_survival_time_seconds: Math.max(0, Math.floor(entry.time)),
+    user_id: user.id,
+    player_name: entry.name,
+    difficulty: difficultyToDb(entry.difficulty),
+    score: Math.max(0, Math.floor(entry.score)),
+    wave: Math.max(1, Math.floor(entry.wave)),
+    kills: Math.max(0, Math.floor(entry.kills)),
+    survival_time_seconds: Math.max(0, Math.floor(entry.time)),
   };
-  const { error } = await supabase.rpc("submit_ranking", payload);
-  if (error) {
-    const { error: insertError } = await supabase.from("ranking").insert({
-      user_id: user.id,
-      player_name: entry.name,
-      difficulty: payload.p_difficulty,
-      score: payload.p_score,
-      wave: payload.p_wave,
-      kills: payload.p_kills,
-      survival_time_seconds: payload.p_survival_time_seconds,
+  const { error: insertError } = await supabase.from("ranking").insert(payload);
+  if (insertError) {
+    const { error: rpcError } = await supabase.rpc("submit_ranking", {
+      p_difficulty: payload.difficulty,
+      p_score: payload.score,
+      p_wave: payload.wave,
+      p_kills: payload.kills,
+      p_survival_time_seconds: payload.survival_time_seconds,
     });
-    if (insertError) throw error;
+    if (rpcError) throw insertError;
   }
 
   const list = await loadRemoteScores();
