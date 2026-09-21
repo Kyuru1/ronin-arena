@@ -67,3 +67,8 @@
 - A HUD mostra a pocao ativa, seu icone e o tempo restante.
 - O movimento do Ronin agora para instantaneamente ao soltar a tecla ou o analogico, sem deslizar.
 - Teclado, mouse e controle deixaram de sobrescrever indevidamente o estado de ataque uns dos outros.
+
+## Patch Notes 9 - Camera e Enquadramento
+
+- A camera agora acompanha o Ronin quando ele alcanca 30% da distancia entre o centro e qualquer borda da tela.
+- O personagem permanece mais proximo do centro durante a movimentacao pela arena.
