@@ -60,6 +60,8 @@ export async function saveProfile(profile: PlayerProfile) {
   const username = normalizeUsername(profile.username);
   const { error } = await supabase.from("profiles").upsert({ id: profile.id, username, avatar_id: profile.avatarId, updated_at: new Date().toISOString() });
   if (error) throw error;
+  const { error: rankingAvatarError } = await supabase.rpc("sync_ranking_avatar", { p_avatar_id: profile.avatarId });
+  if (rankingAvatarError) throw rankingAvatarError;
   await supabase.auth.updateUser({ data: { username, avatar_id: profile.avatarId } });
   return { ...profile, username };
 }
