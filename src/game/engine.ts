@@ -1324,7 +1324,7 @@ export class Game {
   /* ----------------------------- player ----------------------------- */
 
   private updateCamera(dt: number) {
-    const cameraDeadZone = 16 * 5;
+    const cameraDeadZone = 16 * 1.5;
     const marginX = this.W / 2 - cameraDeadZone;
     const marginY = this.H / 2 - cameraDeadZone;
     const left = this.cameraX + marginX;
