@@ -344,6 +344,7 @@ export default function App() {
     }
     const entry: ScoreEntry = {
       name: activeProfile.username,
+      avatarId: activeProfile.avatarId,
       score: finalStats.score,
       wave: finalStats.wave,
       kills: finalStats.kills,
