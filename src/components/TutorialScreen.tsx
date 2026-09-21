@@ -11,9 +11,9 @@ export default function TutorialScreen({ language, isTouch, inputMode, onBegin }
   const controls = [
     { icon: "player", title: g.move, detail: inputMode === "gamepad" ? "ANALOGICO ESQUERDO" : isTouch ? g.touchMove : "W A S D / SETAS" },
     { icon: "icoCrosshair", title: g.aim, detail: inputMode === "gamepad" ? "ANALOGICO DIREITO" : inputMode === "keyboardMouse" ? "MOUSE" : isTouch ? g.touchAim : "DIRECAO DO MOVIMENTO" },
-    { icon: "icoKatana", title: g.attack, detail: inputMode === "gamepad" ? "A OU RT" : isTouch ? g.touchAttack : inputMode === "keyboardMouse" ? "CLIQUE ESQUERDO" : "ESPACO" },
-    { icon: "icoDash", title: g.dash, detail: inputMode === "gamepad" ? "B OU RB" : isTouch ? g.touchDash : "SHIFT" },
-    { icon: "icoBook", title: g.swap, detail: inputMode === "gamepad" ? "LB/RB OU DIRECIONAL" : isTouch ? g.touchSwap : "Q / E" },
+    { icon: "icoKatana", title: g.attack, detail: inputMode === "gamepad" ? "XBOX: A OU RT · PLAYSTATION: ✕ OU R2" : isTouch ? g.touchAttack : inputMode === "keyboardMouse" ? "CLIQUE ESQUERDO" : "ESPACO" },
+    { icon: "icoDash", title: g.dash, detail: inputMode === "gamepad" ? "XBOX: B OU RB · PLAYSTATION: ○ OU R1" : isTouch ? g.touchDash : "SHIFT" },
+    { icon: "icoBook", title: g.swap, detail: inputMode === "gamepad" ? "XBOX: LB/RB · PLAYSTATION: L1/R1 · DIRECIONAL" : isTouch ? g.touchSwap : "Q / E" },
     { icon: "coin", title: g.shop, detail: g.shopHelp },
   ];
 
