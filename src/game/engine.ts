@@ -94,10 +94,12 @@ export interface GameOpts {
   language: Language;
   keyboardOnly: boolean;
   keyboardBindings: KeyboardBindings;
+  inputMode: InputMode;
 }
 
 export type KeyboardAction = "up" | "down" | "left" | "right" | "attack" | "dash" | "prev" | "next" | "pause";
 export type KeyboardBindings = Record<KeyboardAction, string>;
+export type InputMode = "keyboard" | "keyboardMouse" | "gamepad" | "touch";
 
 type EnemyType =
   | "grunt"
@@ -413,7 +415,7 @@ export class Game {
   bannerT = 0;
   deathT = 0;
   vignettePulse = 0;
-  opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt", keyboardOnly: false, keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", prev: "q", next: "e", pause: "escape" } };
+  opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt", keyboardOnly: false, keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", prev: "q", next: "e", pause: "escape" }, inputMode: "keyboardMouse" };
 
   // Input
   keys = new Set<string>();
@@ -422,6 +424,8 @@ export class Game {
   mouseActive = false;
   keyboardAimAngle = 0;
   attackHeld = false;
+  keyboardAttackHeld = false;
+  pointerAttackHeld = false;
   dashQueued = false;
   moveStick: { id: number; ox: number; oy: number; x: number; y: number } | null = null;
   aimStick: { id: number; ox: number; oy: number; x: number; y: number } | null = null;
@@ -697,6 +701,8 @@ export class Game {
   private onBlur = () => {
     this.keys.clear();
     this.attackHeld = false;
+    this.keyboardAttackHeld = false;
+    this.pointerAttackHeld = false;
     this.moveStick = null;
     this.aimStick = null;
     if (this.phase === "playing") this.pause();
@@ -712,7 +718,10 @@ export class Game {
     if (this.phase !== "playing") return;
 
     const bindings = this.opts.keyboardBindings;
-    if (k === bindings.attack) this.attackHeld = true;
+    if (k === bindings.attack) {
+      this.keyboardAttackHeld = true;
+      this.attackHeld = true;
+    }
     if (k === bindings.dash) this.dashQueued = true;
 
     // Fast slot hotkeys 1, 2, 3, 4
@@ -727,7 +736,8 @@ export class Game {
   private onKeyUp = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
     this.keys.delete(k);
-    if (k === this.opts.keyboardBindings.attack) this.attackHeld = false;
+    if (k === this.opts.keyboardBindings.attack) this.keyboardAttackHeld = false;
+    this.attackHeld = this.keyboardAttackHeld || this.pointerAttackHeld;
   };
 
   private toCanvas(e: PointerEvent) {
@@ -739,7 +749,7 @@ export class Game {
   }
 
   private onPointerDown = (e: PointerEvent) => {
-    if (this.opts.keyboardOnly) return;
+    if (this.opts.inputMode === "keyboard" || this.opts.inputMode === "gamepad") return;
     unlockAudio();
     if (this.phase !== "playing") return;
     const p = this.toCanvas(e);
@@ -749,7 +759,10 @@ export class Game {
       this.mouseY = p.y;
       this.mouseActive = true;
       if (e.button === 2) this.dashQueued = true;
-      else this.attackHeld = true;
+      else {
+        this.pointerAttackHeld = true;
+        this.attackHeld = true;
+      }
       return;
     }
     if (p.x < this.W * 0.45) {
@@ -760,7 +773,7 @@ export class Game {
   };
 
   private onPointerMove = (e: PointerEvent) => {
-    if (this.opts.keyboardOnly) return;
+    if (this.opts.inputMode === "keyboard" || this.opts.inputMode === "gamepad") return;
     const p = this.toCanvas(e);
     if (e.pointerType === "mouse") {
       this.mouseX = p.x;
@@ -778,9 +791,10 @@ export class Game {
   };
 
   private onPointerUp = (e: PointerEvent) => {
-    if (this.opts.keyboardOnly) return;
+    if (this.opts.inputMode === "keyboard" || this.opts.inputMode === "gamepad") return;
     if (e.pointerType === "mouse") {
-      this.attackHeld = false;
+      this.pointerAttackHeld = false;
+      this.attackHeld = this.keyboardAttackHeld;
       return;
     }
     if (this.moveStick?.id === e.pointerId) this.moveStick = null;
@@ -973,6 +987,10 @@ export class Game {
     this.bowFireCd = 0;
     this.bowFullSfx = false;
     this.mineHeld = false;
+    this.attackHeld = false;
+    this.keyboardAttackHeld = false;
+    this.pointerAttackHeld = false;
+    this.gamepadButtons = [];
     this.mineTutorialT = 0;
     this.leanX = this.leanY = 0;
     this.idleT = 0;
@@ -1241,7 +1259,7 @@ export class Game {
       const dy = this.aimStick.y - this.aimStick.oy;
       if (Math.hypot(dx, dy) > 6) return Math.atan2(dy, dx);
     }
-    if (this.opts.keyboardOnly) return this.keyboardAimAngle;
+    if (this.opts.inputMode === "keyboard") return this.keyboardAimAngle;
     if (this.mouseActive) return Math.atan2(this.mouseY - this.py, this.mouseX - this.px);
     const near = this.nearestEnemy(240);
     if (near) return Math.atan2(near.y - this.py, near.x - this.px);
@@ -1283,7 +1301,7 @@ export class Game {
       }
     }
     const pad = navigator.getGamepads?.()[0];
-    if (pad) {
+    if (pad && this.opts.inputMode === "gamepad") {
       mx += Math.abs(pad.axes[0] ?? 0) > 0.18 ? pad.axes[0] : 0;
       my += Math.abs(pad.axes[1] ?? 0) > 0.18 ? pad.axes[1] : 0;
       const aimX = Math.abs(pad.axes[2] ?? 0) > 0.18 ? pad.axes[2] : 0;
@@ -1300,7 +1318,7 @@ export class Game {
       mx /= ml;
       my /= ml;
     }
-    if (this.opts.keyboardOnly && ml > 0.01) this.keyboardAimAngle = Math.atan2(my, mx);
+    if (this.opts.inputMode === "keyboard" && ml > 0.01) this.keyboardAimAngle = Math.atan2(my, mx);
 
     const SPEED = (108 + this.speedBonus - (this.perk === "bottomlessPocket" ? 12 : 0) - (this.perk === "cursedArsenal" ? 8 : 0) + (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0)) * (this.speedT > 0 ? 1.45 : 1);
     const accel = 1100;
@@ -1499,10 +1517,10 @@ export class Game {
 
   private updateGamepad() {
     const pad = navigator.getGamepads?.()[0];
-    if (!pad || this.phase !== "playing") return;
+    if (!pad || this.phase !== "playing" || this.opts.inputMode !== "gamepad") return;
     const pressed = (index: number) => Boolean(pad.buttons[index]?.pressed);
     const justPressed = (index: number) => pressed(index) && !this.gamepadButtons[index];
-    this.attackHeld = pressed(0) || pressed(7);
+    this.attackHeld = this.keyboardAttackHeld || this.pointerAttackHeld || pressed(0) || pressed(7);
     if (justPressed(1) || justPressed(2)) this.dashQueued = true;
     if (justPressed(4) || justPressed(14)) this.prevWeapon();
     if (justPressed(5) || justPressed(15)) this.nextWeapon();
@@ -1561,7 +1579,7 @@ export class Game {
       Sfx.shieldBash();
       return;
     }
-    if (!this.opts.keyboardOnly) {
+    if (this.opts.inputMode !== "keyboard") {
       let best: Enemy | null = null;
       let bestScore = Infinity;
       for (const e of this.enemies) {

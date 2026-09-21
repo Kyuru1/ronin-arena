@@ -1,18 +1,19 @@
 import { useState } from "react";
 import { GAMEPLAY_TEXT } from "../game/gameplayText";
 import type { Language } from "../game/i18n";
+import type { InputMode } from "../game/engine";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxFrame } from "./PixelUi";
 
-export default function TutorialScreen({ language, isTouch, isGamepad, onBegin }: { language: Language; isTouch: boolean; isGamepad: boolean; onBegin: (neverAgain: boolean) => void }) {
+export default function TutorialScreen({ language, isTouch, inputMode, onBegin }: { language: Language; isTouch: boolean; inputMode: InputMode; onBegin: (neverAgain: boolean) => void }) {
   const [neverAgain, setNeverAgain] = useState(false);
   const g = GAMEPLAY_TEXT[language];
   const controls = [
-    { icon: "player", title: g.move, detail: isGamepad ? "ANALÓGICO ESQUERDO" : isTouch ? g.touchMove : g.moveHelp },
-    { icon: "icoCrosshair", title: g.aim, detail: isGamepad ? "ANALÓGICO DIREITO" : isTouch ? g.touchAim : g.aimHelp },
-    { icon: "icoKatana", title: g.attack, detail: isGamepad ? "A OU RT" : isTouch ? g.touchAttack : g.attackHelp },
-    { icon: "icoDash", title: g.dash, detail: isGamepad ? "B OU RB" : isTouch ? g.touchDash : g.dashHelp },
-    { icon: "icoBook", title: g.swap, detail: isGamepad ? "LB/RB OU DIRECIONAL" : isTouch ? g.touchSwap : g.swapHelp },
+    { icon: "player", title: g.move, detail: inputMode === "gamepad" ? "ANALOGICO ESQUERDO" : isTouch ? g.touchMove : "W A S D / SETAS" },
+    { icon: "icoCrosshair", title: g.aim, detail: inputMode === "gamepad" ? "ANALOGICO DIREITO" : inputMode === "keyboardMouse" ? "MOUSE" : isTouch ? g.touchAim : "DIRECAO DO MOVIMENTO" },
+    { icon: "icoKatana", title: g.attack, detail: inputMode === "gamepad" ? "A OU RT" : isTouch ? g.touchAttack : inputMode === "keyboardMouse" ? "CLIQUE ESQUERDO" : "ESPACO" },
+    { icon: "icoDash", title: g.dash, detail: inputMode === "gamepad" ? "B OU RB" : isTouch ? g.touchDash : "SHIFT" },
+    { icon: "icoBook", title: g.swap, detail: inputMode === "gamepad" ? "LB/RB OU DIRECIONAL" : isTouch ? g.touchSwap : "Q / E" },
     { icon: "coin", title: g.shop, detail: g.shopHelp },
   ];
 

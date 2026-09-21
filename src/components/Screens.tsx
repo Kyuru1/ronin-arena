@@ -5,6 +5,7 @@ import type { Strings } from "../game/i18n";
 import type { UiOpts } from "./MainMenu";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxChip, PxFrame, PxHeading, PxRow } from "./PixelUi";
+import { useMenuNavigation } from "./useMenuNavigation";
 
 function StatCell({ label, value, gold }: { label: string; value: string | number; gold?: boolean }) {
   return (
@@ -34,6 +35,7 @@ export function PauseScreen({
   onOpts: (options: Partial<UiOpts>) => void;
   onFullscreen: () => void;
 }) {
+  useMenuNavigation();
   const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#070305]/85 p-3">
@@ -95,6 +97,7 @@ export function GameOverScreen({
   onMenu: () => void;
   t: Strings;
 }) {
+  useMenuNavigation();
 
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#12040a]/88 p-3">

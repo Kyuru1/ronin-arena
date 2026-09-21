@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Game, type Difficulty, type Perk, type HudStats, type MagicType, type PowerUp, type SavedRun, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
+import { Game, type Difficulty, type InputMode, type Perk, type HudStats, type MagicType, type PowerUp, type SavedRun, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
 import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
 import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
@@ -8,10 +8,11 @@ import { GameOverScreen, PauseScreen } from "./components/Screens";
 import MainMenu, { type UiOpts } from "./components/MainMenu";
 import ShopScreen from "./components/ShopScreen";
 import TutorialScreen from "./components/TutorialScreen";
+import InputModeScreen from "./components/InputModeScreen";
 import { supabase } from "./lib/supabase";
 import { loadProfile, type PlayerProfile } from "./game/auth";
 
-type UiPhase = "menu" | "tutorial" | "playing" | "paused" | "upgrade" | "dead";
+type UiPhase = "menu" | "input-select" | "tutorial" | "playing" | "paused" | "upgrade" | "dead";
 
 const emptyStats: HudStats = {
   hp: 5,
@@ -102,18 +103,7 @@ export default function App() {
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [savedRun, setSavedRun] = useState<SavedRun | null>(null);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
-  const [hasGamepad, setHasGamepad] = useState(false);
-
-  useEffect(() => {
-    const detectGamepad = () => setHasGamepad(Boolean(navigator.getGamepads?.().some((gamepad) => gamepad !== null)));
-    detectGamepad();
-    window.addEventListener("gamepadconnected", detectGamepad);
-    window.addEventListener("gamepaddisconnected", detectGamepad);
-    return () => {
-      window.removeEventListener("gamepadconnected", detectGamepad);
-      window.removeEventListener("gamepaddisconnected", detectGamepad);
-    };
-  }, []);
+  const [inputMode, setInputMode] = useState<InputMode>("keyboardMouse");
 
   useEffect(() => {
     profileRef.current = profile;
@@ -231,13 +221,22 @@ export default function App() {
       } catch {
         /* ignore */
       }
-      if (hidden) launchRun();
-      else {
-        setPhase("tutorial");
-        setMenuClosing(false);
-      }
+      if (isTouch) {
+        gameRef.current?.setOpts({ inputMode: "touch" });
+        if (hidden) launchRun();
+        else { setPhase("tutorial"); setMenuClosing(false); }
+      } else { setPhase("input-select"); setMenuClosing(false); }
     }, 220);
-  }, [difficulty, launchRun]);
+  }, [difficulty, isTouch, launchRun]);
+
+  const chooseInputMode = useCallback((mode: InputMode) => {
+    setInputMode(mode);
+    gameRef.current?.setOpts({ inputMode: mode });
+    let hidden = false;
+    try { hidden = localStorage.getItem(TUTORIAL_KEY) === "1"; } catch { /* ignore */ }
+    if (hidden) launchRun();
+    else setPhase("tutorial");
+  }, [launchRun]);
 
   const restartRun = useCallback(() => {
     const game = gameRef.current;
@@ -436,8 +435,9 @@ export default function App() {
       language: opts.language,
       keyboardOnly: opts.keyboardOnly,
       keyboardBindings: opts.keyboardBindings,
+      inputMode,
     });
-  }, [opts]);
+  }, [inputMode, opts]);
 
   /* hotkeys */
   useEffect(() => {
@@ -517,7 +517,8 @@ export default function App() {
           </div>
         )}
 
-        {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} isGamepad={hasGamepad} onBegin={finishTutorial} />}
+        {phase === "input-select" && <InputModeScreen onSelect={chooseInputMode} />}
+        {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} inputMode={inputMode} onBegin={finishTutorial} />}
         {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (
           <GameOverScreen

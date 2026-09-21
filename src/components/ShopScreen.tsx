@@ -5,6 +5,7 @@ import type { Language, Strings } from "../game/i18n";
 import PixelSprite from "./PixelSprite";
 import WeaponPreview from "./WeaponPreview";
 import { CoinBox, PxButton, PxFrame } from "./PixelUi";
+import { useMenuNavigation } from "./useMenuNavigation";
 
 interface WeaponShopInfo { id: Weapon; cost: number; sellRefund: number; dmg: number; spd: number; range: number; }
 const ALL_WEAPONS: WeaponShopInfo[] = [
@@ -53,6 +54,7 @@ function Pips({ value, color }: { value: number; color: string }) { return <span
 export default function ShopScreen({ wave, stats, onBuyWeapon, onSellWeapon, onSelectSlot, onReorderWeapons, onBuyPowerUp, onUpgradeWeapon, onMagicType, onCloseShop, language, t }: {
   wave: number; stats: HudStats; onBuyWeapon: (w: Weapon, cost: number) => void; onSellWeapon: (slot: number, refund: number) => void; onSelectSlot: (slot: number) => void; onReorderWeapons: (from: number, to: number) => void; onBuyPowerUp: (p: PowerUp, cost: number) => void; onUpgradeWeapon: (w: Weapon, upgrade: WeaponUpgrade, cost: number) => void; onMagicType: (type: MagicType) => void; onCloseShop: () => void; language: Language; t: Strings;
 }) {
+  useMenuNavigation();
   const [tab, setTab] = useState<Tab>("menu"); const [selected, setSelected] = useState<Weapon>(stats.weapons[stats.activeSlot] ?? "katana"); const [dragged, setDragged] = useState<number | null>(null);
   const g = GAMEPLAY_TEXT[language]; const maxWeapons = stats.perk === "bottomlessPocket" ? 6 : 4; const info = ALL_WEAPONS.find((item) => item.id === selected) ?? ALL_WEAPONS[0]; const selectedIndex = stats.weapons.indexOf(selected); const owned = selectedIndex >= 0; const levels = stats.weaponLevels[selected];
   const select = (weapon: Weapon) => setSelected(weapon);

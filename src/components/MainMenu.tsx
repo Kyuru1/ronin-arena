@@ -6,6 +6,7 @@ import AccountPanel from "./AccountPanel";
 import type { PlayerProfile } from "../game/auth";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxChip, PxFrame, PxHeading, PxRow } from "./PixelUi";
+import { useMenuNavigation } from "./useMenuNavigation";
 
 export interface UiOpts {
   sound: boolean;
@@ -41,6 +42,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   profile: PlayerProfile | null;
   onProfile: (profile: PlayerProfile | null) => void;
 }) {
+  useMenuNavigation();
   const [tab, setTab] = useState<MenuTab>("main");
   const [difficultyOpen, setDifficultyOpen] = useState(false);
   const [perkOpen, setPerkOpen] = useState(false);
