@@ -45,9 +45,10 @@ app.get("/api/ranking", async (_request, response) => {
 
 app.post("/api/ranking", async (request, response) => {
   const body = request.body ?? {};
-  const name = typeof body.name === "string" ? body.name.trim().slice(0, 12).toUpperCase() : "RONIN";
+  const name = typeof body.name === "string" ? body.name.trim().replace(/\s+/g, " ").slice(0, 12).toUpperCase() : "RONIN";
   const values = [body.score, body.wave, body.kills, body.time];
-  if (!values.every((value) => Number.isFinite(value) && value >= 0)) {
+  if (!/^[A-Z0-9 _-]+$/.test(name || "RONIN") || !values.every((value) => Number.isInteger(value) && value >= 0)
+    || body.score > 10000000 || body.wave < 1 || body.wave > 10000 || body.kills > 1000000 || body.time > 86400) {
     return response.status(400).json({ error: "Invalid score data" });
   }
 

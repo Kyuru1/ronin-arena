@@ -16,7 +16,9 @@ export interface ScoreEntry {
 export const MAX = 50;
 const KEY = "ronin.ranking.v2";
 const env = (import.meta as unknown as { env?: Record<string, string | undefined> }).env;
-const API_URL = (env?.VITE_RANKING_API_URL || "http://localhost:3001/api").replace(/\/$/, "");
+const API_URL = import.meta.env.DEV
+  ? (env?.VITE_RANKING_API_URL || "http://localhost:3001/api").replace(/\/$/, "")
+  : null;
 
 function compareEntries(a: ScoreEntry, b: ScoreEntry): number {
   return b.score - a.score || b.wave - a.wave || b.kills - a.kills || b.time - a.time || b.date - a.date;
@@ -136,15 +138,19 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
     }
   }
 
-  try {
-    const response = await fetch(`${API_URL}/ranking`);
-    if (!response.ok) throw new Error("Ranking request failed");
-    const scores = normalizeScores(await response.json());
-    saveLocal(scores);
-    return scores;
-  } catch {
-    return loadScores();
+  if (API_URL) {
+    try {
+      const response = await fetch(`${API_URL}/ranking`);
+      if (!response.ok) throw new Error("Ranking request failed");
+      const scores = normalizeScores(await response.json());
+      saveLocal(scores);
+      return scores;
+    } catch {
+      return loadScores();
+    }
   }
+
+  return loadScores();
 }
 
 export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreEntry[]; rank: number }> {
@@ -167,19 +173,7 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
     p_avatar_id: normalizedAvatar,
   };
   const { error: rpcError } = await supabase.rpc("submit_ranking", payload);
-  if (rpcError) {
-    const { error: insertError } = await supabase.from("ranking").insert({
-      user_id: user.id,
-      player_name: normalizedName,
-      avatar_id: normalizedAvatar,
-      difficulty: payload.p_difficulty,
-      score: payload.p_score,
-      wave: payload.p_wave,
-      kills: payload.p_kills,
-      survival_time_seconds: payload.p_survival_time_seconds,
-    });
-    if (insertError) throw insertError;
-  }
+  if (rpcError) throw rpcError;
 
   const list = await loadRemoteScores();
   const sameDifficulty = list.filter((item) => item.difficulty === entry.difficulty);
