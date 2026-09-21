@@ -48,6 +48,13 @@ export interface UpgradeOffer {
   wave: number;
 }
 
+export interface SavedRun {
+  version: 2;
+  savedAt: number;
+  atShop: boolean;
+  stats: HudStats;
+}
+
 export interface HudStats {
   hp: number;
   maxHp: number;
@@ -426,6 +433,61 @@ export class Game {
   setPerk(perk: Perk | null) {
     this.perk = perk;
     this.pushStats(true);
+  }
+  saveRun(atShop = false): SavedRun {
+    return { version: 2, savedAt: Date.now(), atShop, stats: this.stats() };
+  }
+
+  restoreRun(saved: SavedRun): boolean {
+    if (saved.version !== 2 || !saved.stats || saved.stats.hp <= 0) return false;
+    const s = saved.stats;
+    this.difficulty = s.difficulty;
+    this.perk = s.perk;
+    this.hp = s.hp;
+    this.maxHp = s.maxHp;
+    this.score = s.score;
+    this.coins = s.coins;
+    this.wave = s.wave;
+    this.kills = s.kills;
+    this.elapsed = s.time;
+    this.speedBonus = s.speedBonus;
+    this.dashMax = s.dashMax;
+    this.dashSpeedMult = s.dashSpeedMult;
+    this.weapons = [...s.weapons];
+    this.activeSlot = Math.min(s.activeSlot, this.weapons.length - 1);
+    this.weaponLevels = JSON.parse(JSON.stringify(s.weaponLevels)) as WeaponLevels;
+    this.magicType = s.magicType;
+    this.resetTransientState();
+    this.enforceStatLimits();
+    if (saved.atShop) {
+      this.phase = "upgrade";
+      this.waveTotal = 0;
+      this.waveSpawned = 0;
+      this.waveLeft = 0;
+      this.pushStats(true);
+    } else {
+      this.phase = "playing";
+      this.beginWave();
+    }
+    return true;
+  }
+
+  private resetTransientState() {
+    this.enemies.length = 0;
+    this.summons.length = 0;
+    this.parts.length = 0;
+    this.texts.length = 0;
+    this.shots.length = 0;
+    this.arrows.length = 0;
+    this.marks.length = 0;
+    this.pickups.length = 0;
+    this.mines.length = 0;
+    this.psychicZones.length = 0;
+    this.dashSlashes.length = 0;
+    this.dashHitSet.clear();
+    this.waveClearT = -1;
+    this.dashT = 0;
+    this.dashCd = 0;
   }
 
   setDifficulty(difficulty: Difficulty) {

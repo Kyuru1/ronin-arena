@@ -17,6 +17,7 @@ function StatCell({ label, value, gold }: { label: string; value: string | numbe
 
 export function PauseScreen({
   onResume,
+  onSave,
   onQuit,
   stats,
   t,
@@ -25,6 +26,7 @@ export function PauseScreen({
   onFullscreen,
 }: {
   onResume: () => void;
+  onSave: () => void;
   onQuit: () => void;
   stats: HudStats;
   t: Strings;
@@ -45,6 +47,7 @@ export function PauseScreen({
             <StatCell label={t.time} value={formatTime(stats.time)} />
           </div>
           <PxButton tone="menu" onClick={() => setSettingsOpen((open) => !open)} className="w-full py-2.5 text-[8px] sm:text-[9px]">{t.settings}</PxButton>
+          <PxButton tone="gold" onClick={onSave} className="w-full py-2.5 text-[8px] sm:text-[9px]">SALVAR RUN</PxButton>
           <PxButton tone="red" onClick={onResume} className="w-full py-3 text-[10px] sm:text-[11px]">
             ▶ {t.resume}
           </PxButton>

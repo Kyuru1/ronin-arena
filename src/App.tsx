@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Game, type Difficulty, type Perk, type HudStats, type MagicType, type PowerUp, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
+import { Game, type Difficulty, type Perk, type HudStats, type MagicType, type PowerUp, type SavedRun, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
 import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
 import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
@@ -49,6 +49,7 @@ const emptyStats: HudStats = {
 const OPT_KEY = "ronin.options.v2";
 const NAME_KEY = "ronin.lastname";
 const TUTORIAL_KEY = "ronin.tutorial.hidden.v1";
+const RUN_KEY = "ronin.run.save.v2";
 
 const defaultOpts: UiOpts = {
   sound: true,
@@ -90,6 +91,7 @@ export default function App() {
   const [opts, setOpts] = useState<UiOpts>(defaultOpts);
   const [isTouch, setIsTouch] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
+  const [savedRun, setSavedRun] = useState<SavedRun | null>(null);
 
   /* boot */
   useEffect(() => {
@@ -104,6 +106,17 @@ export default function App() {
       typeof window !== "undefined" &&
         (window.matchMedia?.("(pointer: coarse)").matches || "ontouchstart" in window),
     );
+    try {
+      const raw = localStorage.getItem(RUN_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SavedRun;
+        if (parsed.version === 2 && parsed.stats?.hp > 0) setSavedRun(parsed);
+        else localStorage.removeItem(RUN_KEY);
+      }
+      localStorage.removeItem("ronin.run.save.v1");
+    } catch {
+      localStorage.removeItem(RUN_KEY);
+    }
   }, []);
 
   /* create engine once */
@@ -121,6 +134,7 @@ export default function App() {
       setPhase("dead");
     };
     game.onUpgrade = (offer) => {
+      try { localStorage.setItem(RUN_KEY, JSON.stringify(game.saveRun(true))); } catch { /* ignore storage errors */ }
       setUpgrade(offer);
       setPhase("upgrade");
     };
@@ -152,6 +166,7 @@ export default function App() {
     const game = gameRef.current;
     if (!game) return;
     game.setPerk(selectedPerk.current);
+    try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
     game.startGame();
     setRank(-1);
     setPendingScore(false);
@@ -187,6 +202,7 @@ export default function App() {
     if (!game) return;
     game.setDifficulty(difficulty);
     game.setPerk(selectedPerk.current);
+    try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
     game.startGame();
     setRank(-1);
     setPendingScore(false);
@@ -205,6 +221,36 @@ export default function App() {
     launchRun();
   }, [launchRun]);
 
+  const saveRun = useCallback(() => {
+    const game = gameRef.current;
+    if (!game || game.phase !== "paused") return;
+    try {
+      localStorage.setItem(RUN_KEY, JSON.stringify(game.saveRun(false)));
+    } catch {
+      /* ignore storage errors */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!savedRun || !gameRef.current || phase !== "menu") return;
+    const continueRun = window.confirm("Quer continuar desde a sua última vida?\n\nOK: continuar run\nCancelar: começar uma nova partida");
+    if (!continueRun) {
+      try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
+      setSavedRun(null);
+      return;
+    }
+    const game = gameRef.current;
+    if (!game.restoreRun(savedRun)) {
+      try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
+      setSavedRun(null);
+      return;
+    }
+    selectedPerk.current = savedRun.stats.perk;
+    setDifficulty(savedRun.stats.difficulty);
+    if (savedRun.atShop) setUpgrade({ wave: savedRun.stats.wave });
+    setPhase(savedRun.atShop ? "upgrade" : "playing");
+    setSavedRun(null);
+  }, [savedRun, phase]);
   const togglePause = useCallback(() => {
     const g = gameRef.current;
     if (!g) return;
@@ -423,7 +469,7 @@ export default function App() {
         )}
 
         {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} onBegin={finishTutorial} />}
-        {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
+        {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (
           <GameOverScreen
             stats={finalStats}
