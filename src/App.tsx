@@ -329,8 +329,8 @@ export default function App() {
     void loadRemoteScores().then(setScores);
   }, []);
 
-  const submitName = useCallback(async () => {
-    let activeProfile = profileRef.current;
+  const submitName = useCallback(async (profileOverride?: PlayerProfile) => {
+    let activeProfile = profileOverride ?? profileRef.current;
     if (!activeProfile && supabase) {
       const { data: authData } = await supabase.auth.getUser();
       if (authData.user) {
@@ -339,7 +339,7 @@ export default function App() {
       }
     }
     if (!activeProfile) {
-      setPendingScore(false);
+      setPhase("menu");
       return;
     }
     const entry: ScoreEntry = {
@@ -358,10 +358,16 @@ export default function App() {
       setScores(list);
       setRank(r);
       setPendingScore(false);
+      setPhase("dead");
     } catch {
-      setPendingScore(false);
+      setPhase("dead");
     }
   }, [finalStats]);
+
+  useEffect(() => {
+    if (!pendingScore || !profile || phase !== "menu") return;
+    void submitName(profile);
+  }, [pendingScore, profile, phase, submitName]);
   const lastName = (() => {
     try {
       return localStorage.getItem(NAME_KEY) ?? "";
@@ -527,6 +533,7 @@ export default function App() {
               onFullscreen={toggleFullscreen}
               profile={profile}
               onProfile={setProfile}
+              openAccount={pendingScore}
             />
           </div>
         )}

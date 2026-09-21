@@ -29,7 +29,7 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }> ;
 }
 
-export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile }: {
+export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile, openAccount }: {
   onStart: (difficulty?: Difficulty) => void;
   onPerk: (perk: Perk | null) => void;
 
@@ -41,6 +41,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   onFullscreen: () => void;
   profile: PlayerProfile | null;
   onProfile: (profile: PlayerProfile | null) => void;
+  openAccount: boolean;
 }) {
   useMenuNavigation();
   const [tab, setTab] = useState<MenuTab>("main");
@@ -78,6 +79,10 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
     setInstallPrompt(null);
   };
   const t = I18N[opts.language];
+
+  useEffect(() => {
+    if (openAccount) setTab("account");
+  }, [openAccount]);
 
   if (tab !== "main") {
     return (
