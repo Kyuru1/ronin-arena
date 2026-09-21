@@ -161,7 +161,7 @@ export default function App() {
     game.onStats = (s) => setStats(s);
     game.onGameOver = (s) => {
       setFinalStats(s);
-      setPendingScore(s.score > 0 && profileRef.current !== null);
+      setPendingScore(s.score > 0);
       setRank(-1);
       setPhase("dead");
     };
@@ -329,9 +329,19 @@ export default function App() {
     void loadRemoteScores().then(setScores);
   }, []);
 
-  const submitName = useCallback(() => {
-    const activeProfile = profileRef.current;
-    if (!activeProfile) return;
+  const submitName = useCallback(async () => {
+    let activeProfile = profileRef.current;
+    if (!activeProfile && supabase) {
+      const { data: authData } = await supabase.auth.getUser();
+      if (authData.user) {
+        activeProfile = await loadProfile(authData.user);
+        setProfile(activeProfile);
+      }
+    }
+    if (!activeProfile) {
+      setPendingScore(false);
+      return;
+    }
     const entry: ScoreEntry = {
       name: activeProfile.username,
       score: finalStats.score,
@@ -342,11 +352,14 @@ export default function App() {
       date: Date.now(),
       userId: activeProfile.id,
     };
-    void saveRemoteScore(entry).then(({ list, rank: r }) => {
+    try {
+      const { list, rank: r } = await saveRemoteScore(entry);
       setScores(list);
       setRank(r);
       setPendingScore(false);
-    }).catch(() => setPendingScore(false));
+    } catch {
+      setPendingScore(false);
+    }
   }, [finalStats]);
   const lastName = (() => {
     try {

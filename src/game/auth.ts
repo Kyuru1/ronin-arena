@@ -38,7 +38,13 @@ export function authErrorMessage(error: unknown): string {
 export async function loadProfile(user: User): Promise<PlayerProfile> {
   if (!supabase) throw new Error("Supabase não configurado");
   const { data, error } = await supabase.from("profiles").select("username, avatar_id").eq("id", user.id).maybeSingle();
-  if (error) throw error;
+  if (error) {
+    return {
+      id: user.id,
+      username: normalizeUsername(String(user.user_metadata.username ?? "RONIN")),
+      avatarId: safeAvatar(user.user_metadata.avatar_id),
+    };
+  }
   if (data) {
     return { id: user.id, username: normalizeUsername(data.username), avatarId: safeAvatar(data.avatar_id) };
   }
