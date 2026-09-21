@@ -1,62 +1,69 @@
-# Patch Notes - Hoje
+# Patch Notes
 
-## 1. Autenticacao e perfil
+## Patch Notes 1 - Arsenal Evoluido
 
-- O cadastro com email agora informa corretamente quando a conta foi criada, mas ainda precisa ser confirmada pelo link enviado ao email.
-- As mensagens de login e cadastro foram separadas para diferenciar email nao confirmado, credenciais invalidas e limite temporario de tentativas.
-- O login social do Google foi removido temporariamente.
-- O painel de perfil passou a proteger o envio contra cliques duplicados.
-- O nome do jogador e normalizado e deve ser unico, ignorando maiusculas, minusculas e espacos extras.
-- A exclusao da conta remove os dados associados ao usuario autenticado.
+- Katana, arco, martelo e livro arcano agora possuem upgrade de Forma.
+- A katana evoluida ganha uma lamina maior, alcance ampliado e um corte que acerta inimigos durante o dash.
+- O arco evolui para uma pistola automatica, e o martelo evolui para uma versao de alcance gigante.
+- O livro em Forma Psiquica troca o livro pelas maos do Ronin e invoca fogo, gelo, veneno ou agua em areas no chao.
 
-## 2. Ranking global
+## Patch Notes 2 - HUD, Pausa e Acessibilidade
 
-- O ranking global passou a ser associado ao `user_id` autenticado.
-- Nomes antigos do ranking sao preservados mesmo quando o perfil correspondente nao esta disponivel.
-- Entradas antigas sem avatar recebem o visual padrao do samurai.
-- A foto do ranking ficou menor verticalmente para deixar mais espaco para nome, wave, pontos e abates.
-- O ranking continua separado por dificuldade e limitado aos 50 melhores resultados.
-- Foi preparada a limpeza de registros de ranking sem autenticacao e a protecao contra nomes duplicados no banco.
+- A HUD de combate ficou transparente, menor e menos intrusiva para manter a arena visivel.
+- O painel de vida agora mostra a quantidade real de coracoes, de 5 ate o limite de 20.
+- Foram adicionados os tamanhos de HUD minuscula e pequena, alem dos tamanhos existentes.
+- O menu de pausa agora permite alterar som, volume, efeitos, HUD, tela cheia e modo somente teclado durante a partida.
 
-## 3. Loja e arsenal
-
-- A loja foi reorganizada em tres categorias iniciais: armas, estatisticas e upgrades.
-- A tela mostra menos informacoes ao mesmo tempo, facilitando a leitura e a escolha.
-- O upgrade de forma agora usa a arma selecionada, em vez de apontar visualmente para a ultima arma da lista.
-- Katana, arco, martelo, livro arcano e cajado possuem formas evoluidas.
-- Foram corrigidos sprites, textos cortados e detalhes visuais dos itens.
-
-## 4. Pocoes e efeitos
-
-- A pocao de Vida recupera 2 coracoes, respeitando o limite maximo de vida.
-- A pocao de Forca aumenta o dano causado em 50% durante 8 segundos.
-- A pocao de Velocidade aumenta a velocidade de movimento em 45% durante 8 segundos.
-- A pocao de Agilidade reduz a recarga do dash em 50% durante 8 segundos.
-- O tutorial de pocoes pausa a partida na primeira coleta e mostra os efeitos antes de continuar.
-- O jogador pode escolher nao mostrar o tutorial novamente.
-- A HUD exibe a pocao ativa, seu icone e o tempo restante.
-
-## 5. Movimento e combate
-
-- O movimento do Ronin agora responde diretamente a direcao pressionada, com mais precisao.
-- Ao soltar a tecla ou parar o analogico, o personagem para instantaneamente, sem deslizar.
-- O dash continua usando seu proprio impulso e nao perde o comportamento de atravessar a arena.
-- Teclado, mouse e controle deixaram de sobrescrever indevidamente o estado de ataque uns dos outros.
-
-## 6. Controles e acessibilidade
-
-- Foi adicionada uma aba de Controles ao menu principal.
-- O jogador pode consultar os comandos de teclado e controle.
-- As teclas podem ser remapeadas e ficam salvas nas configuracoes.
-- Menus e loja agora podem ser navegados pelo teclado e pelo controle.
-- Foi adicionada uma tela para escolher teclado, teclado e mouse ou gamepad antes da partida.
-- O menu de pausa permite ajustar som, volume, efeitos, escala da HUD, tela cheia e modo somente teclado.
-
-## 7. Arena e conteudo anterior
+## Patch Notes 3 - Desafio de Arena
 
 - Inimigos e projeteis aumentam o dano conforme as waves avancam.
-- Chefes aparecem a cada 5 waves, com dois chefes por rodada a partir da wave 15.
-- Novos inimigos aparecem conforme as waves avancam, incluindo rastejadores, bombardeiros, feiticeiros e golems.
-- A arena recebeu cores, rachaduras, petalas, lanternas e detalhes de pixel art para ficar mais viva.
-- Personagens, inimigos e projeteis receberam ajustes de tamanho, contraste e leitura durante o combate.
-- Rastros e corpos no chao sao limpos a cada tres waves para manter a arena legivel.
+- Chefes chegam a cada 5 waves, com dois chefes por rodada a partir da wave 15.
+- O ranking mantem apenas os 50 melhores resultados.
+- Rastros e corpos no chao sao limpos a cada tres waves concluidas para manter a arena legivel.
+
+## Patch Notes 4 - Ranking Global
+
+- Foi adicionado o ranking global de jogadores.
+- O ranking e baseado na dificuldade e pontuado por wave, pontos e abates.
+
+## Patch Notes 5 - Perks e Necromancia
+
+- Perks foram adicionadas antes do inicio da partida, alterando dano, velocidade, armas extras, efeitos amaldiçoados e ataques especiais.
+- No dificil, as perks mais fortes ficam bloqueadas.
+- Foi adicionado o Cajado de Invocacao, com magia em area azul/preta e aliados invocados.
+- A forma evoluida, Cajado de Necromante, aumenta o alcance e pode ressuscitar inimigos.
+- Menu e loja ficaram mais limpos, com abas melhores para armas e upgrades.
+- Foram corrigidos textos cortados, sprites errados e detalhes da HUD.
+
+## Patch Notes 6 - Arena Mais Viva e Novos Inimigos
+
+- Novos tipos de inimigos surgem conforme as waves avancam, incluindo rastejadores rapidos, bombardeiros, feiticeiros e golems.
+- A arena recebeu cores melhores, detalhes no chao, rachaduras, petalas e lanternas.
+- Personagens e inimigos ficaram maiores, com mais contraste e saturacao.
+- Projeteis especiais ficaram mais faceis de identificar durante o combate.
+
+## Patch Notes 7 - Autenticacao e Ranking
+
+- O cadastro por email agora informa corretamente quando a conta foi criada e aguarda a confirmacao pelo link enviado ao email.
+- As mensagens de login diferenciam email nao confirmado, credenciais invalidas e limite temporario de tentativas.
+- O login social do Google foi removido temporariamente.
+- O ranking passou a ser associado ao `user_id` autenticado.
+- Nomes antigos sao preservados mesmo quando o perfil correspondente nao esta disponivel.
+- Entradas antigas sem avatar usam o visual padrao do samurai, e a foto do ranking ficou menor verticalmente.
+- O nome do jogador deve ser unico, ignorando maiusculas, minusculas e espacos extras.
+- Foi definida a limpeza de rankings sem usuario autenticado.
+
+## Patch Notes 8 - Controles e Pocoes
+
+- Foi adicionada uma aba de Controles ao menu, com comandos de teclado e controle.
+- Teclas podem ser remapeadas e ficam salvas nas configuracoes.
+- Menus e loja agora podem ser navegados por teclado e gamepad.
+- Foi adicionada a selecao de teclado, teclado e mouse ou gamepad antes da partida.
+- A pocao de Vida recupera 2 coracoes, respeitando o limite maximo de vida.
+- A pocao de Forca aumenta o dano em 50% por 8 segundos.
+- A pocao de Velocidade aumenta o movimento em 45% por 8 segundos.
+- A pocao de Agilidade reduz a recarga do dash em 50% por 8 segundos.
+- O tutorial de pocoes pausa a partida, explica os efeitos e pode ser ocultado permanentemente.
+- A HUD mostra a pocao ativa, seu icone e o tempo restante.
+- O movimento do Ronin agora para instantaneamente ao soltar a tecla ou o analogico, sem deslizar.
+- Teclado, mouse e controle deixaram de sobrescrever indevidamente o estado de ataque uns dos outros.
