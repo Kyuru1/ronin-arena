@@ -86,7 +86,9 @@ CREATE OR REPLACE FUNCTION public.submit_ranking(
   p_score INTEGER,
   p_wave INTEGER,
   p_kills INTEGER,
-  p_survival_time_seconds INTEGER
+  p_survival_time_seconds INTEGER,
+  p_player_name TEXT DEFAULT NULL,
+  p_avatar_id TEXT DEFAULT NULL
 )
 RETURNS public.ranking
 LANGUAGE plpgsql
@@ -97,6 +99,8 @@ DECLARE
   current_user_id UUID := auth.uid();
   saved public.ranking;
   profile_row public.profiles;
+  final_player_name TEXT;
+  final_avatar_id TEXT;
 BEGIN
   IF current_user_id IS NULL THEN
     RAISE EXCEPTION 'authentication required';
@@ -110,12 +114,19 @@ BEGIN
   FROM public.profiles
   WHERE id = current_user_id;
 
+  final_player_name := COALESCE(NULLIF(BTRIM(COALESCE(p_player_name, profile_row.username, 'RONIN')), ''), 'RONIN');
+  final_avatar_id := COALESCE(NULLIF(BTRIM(COALESCE(p_avatar_id, profile_row.avatar_id, 'samurai')), ''), 'samurai');
+
+  IF final_avatar_id NOT IN ('samurai', 'ninja', 'oni', 'boss', 'bat') THEN
+    final_avatar_id := 'samurai';
+  END IF;
+
   INSERT INTO public.ranking (
     user_id, player_name, avatar_id, difficulty, score, wave, kills, survival_time_seconds
   ) VALUES (
     current_user_id,
-    COALESCE(NULLIF(BTRIM(profile_row.username), ''), 'RONIN'),
-    COALESCE(profile_row.avatar_id, 'samurai'),
+    final_player_name,
+    final_avatar_id,
     p_difficulty,
     GREATEST(p_score, 0),
     GREATEST(p_wave, 1),
@@ -144,5 +155,5 @@ BEGIN
 END;
 $$;
 
-REVOKE ALL ON FUNCTION public.submit_ranking(TEXT, INTEGER, INTEGER, INTEGER, INTEGER) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.submit_ranking(TEXT, INTEGER, INTEGER, INTEGER, INTEGER) TO authenticated;
+REVOKE ALL ON FUNCTION public.submit_ranking(TEXT, INTEGER, INTEGER, INTEGER, INTEGER, TEXT, TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.submit_ranking(TEXT, INTEGER, INTEGER, INTEGER, INTEGER, TEXT, TEXT) TO authenticated;

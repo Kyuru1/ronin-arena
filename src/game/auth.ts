@@ -64,9 +64,28 @@ export async function saveProfile(profile: PlayerProfile) {
   return { ...profile, username };
 }
 
+function getAuthRedirectUrl(): string {
+  const configured = (import.meta.env.VITE_SUPABASE_AUTH_REDIRECT_URL ?? "").trim();
+  if (configured) return configured;
+
+  if (typeof window === "undefined") return "http://localhost:5173/";
+
+  const appUrl = new URL(window.location.href);
+  appUrl.hash = "";
+  appUrl.search = "";
+  return appUrl.toString();
+}
+
 export async function signUp(email: string, password: string, username: string, avatarId: AvatarId) {
   if (!supabase) throw new Error("Supabase não configurado");
-  const { error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options: { data: { username: normalizeUsername(username), avatar_id: avatarId } } });
+  const { error } = await supabase.auth.signUp({
+    email: email.trim().toLowerCase(),
+    password,
+    options: {
+      emailRedirectTo: getAuthRedirectUrl(),
+      data: { username: normalizeUsername(username), avatar_id: avatarId },
+    },
+  });
   if (error) throw error;
 }
 

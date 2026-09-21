@@ -148,19 +148,24 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
   const user = authData.user;
   if (!user) return { list: await loadRemoteScores(), rank: -1 };
 
+  const normalizedName = String(entry.name ?? "RONIN").replace(/\s+/g, " ").trim().slice(0, 12) || "RONIN";
+  const normalizedAvatar = (entry.avatarId === "ninja" || entry.avatarId === "oni" || entry.avatarId === "boss" || entry.avatarId === "bat" || entry.avatarId === "samurai") ? entry.avatarId : "samurai";
+
   const payload = {
     p_difficulty: difficultyToDb(entry.difficulty),
     p_score: Math.max(0, Math.floor(entry.score)),
     p_wave: Math.max(1, Math.floor(entry.wave)),
     p_kills: Math.max(0, Math.floor(entry.kills)),
     p_survival_time_seconds: Math.max(0, Math.floor(entry.time)),
+    p_player_name: normalizedName,
+    p_avatar_id: normalizedAvatar,
   };
   const { error: rpcError } = await supabase.rpc("submit_ranking", payload);
   if (rpcError) {
     const { error: insertError } = await supabase.from("ranking").insert({
       user_id: user.id,
-      player_name: entry.name,
-      avatar_id: "samurai",
+      player_name: normalizedName,
+      avatar_id: normalizedAvatar,
       difficulty: payload.p_difficulty,
       score: payload.p_score,
       wave: payload.p_wave,
