@@ -78,6 +78,7 @@ export interface HudStats {
   mineTutorial: boolean;
   potionTutorial: boolean;
   activePotion: PotionType | null;
+  activePotions: Array<{ type: Exclude<PotionType, "health">; time: number }>;
   potionTime: number;
   weaponLevels: WeaponLevels;
   magicType: MagicType;
@@ -1105,8 +1106,13 @@ export class Game {
       dashSpeedMult: this.dashSpeedMult,
       mineTutorial: this.mineTutorialT > 0,
       potionTutorial: this.potionTutorialT > 0,
-      activePotion: this.potionDisplayT > 0 ? this.lastPotion : this.strengthT > 0 ? "strength" : this.speedT > 0 ? "speed" : this.agilityT > 0 ? "agility" : null,
-      potionTime: this.potionDisplayT > 0 ? this.potionDisplayT : Math.max(this.strengthT, this.speedT, this.agilityT),
+      activePotion: this.strengthT > 0 ? "strength" : this.speedT > 0 ? "speed" : this.agilityT > 0 ? "agility" : null,
+      activePotions: ([
+        ["strength", this.strengthT],
+        ["speed", this.speedT],
+        ["agility", this.agilityT],
+      ] as const).filter(([, time]) => time > 0).map(([type, time]) => ({ type, time })),
+      potionTime: Math.max(this.strengthT, this.speedT, this.agilityT),
       weaponLevels: this.weaponLevels,
       magicType: this.magicType,
       difficulty: this.difficulty,
@@ -1117,7 +1123,7 @@ export class Game {
   private pushStats(force = false) {
     this.waveLeft = Math.max(0, this.waveTotal - this.waveSpawned) + this.marks.length + this.enemies.length;
     const s = this.stats();
-    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${s.activePotion}|${Math.ceil(s.potionTime)}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}`;
+    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.activePotions)}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}`;
     if (force || key !== this.lastStats) {
       this.lastStats = key;
       this.onStats(s);

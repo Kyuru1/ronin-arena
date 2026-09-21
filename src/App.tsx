@@ -37,6 +37,7 @@ const emptyStats: HudStats = {
   mineTutorial: false,
   potionTutorial: false,
   activePotion: null,
+  activePotions: [],
   potionTime: 0,
   weaponLevels: {
     katana: { damage: 0, speed: 0, range: 0, form: 0 },

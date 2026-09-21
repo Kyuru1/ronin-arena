@@ -49,7 +49,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPoti
           </div>
           <div className="grid grid-cols-10 gap-[2px]">{Array.from({ length: healthSegments }).map((_, index) => <Heart key={index} filled={index < filledHeartSegments} />)}</div>
           <div className="mt-1 flex items-center gap-2"><PixelSprite name="coin" scale={2} /><span className="font-pixel text-[10px] text-[#ffd44a]">{stats.coins}</span><span className="font-pixel text-[5px] text-[#7db7b1]">{g.shopSoon}</span></div>
-          {stats.activePotion && <div className="potion-active font-pixel" style={{ transform: `scale(${hudScale})`, transformOrigin: "top left" }}><PixelSprite name={potionSprites[stats.activePotion]} scale={2} /><div><strong>{potionNames[stats.activePotion]}</strong><span>{Math.ceil(stats.potionTime)}S</span></div></div>}
+          {stats.activePotions.length > 0 && <div className="potion-stack" style={{ transform: `scale(${hudScale})`, transformOrigin: "top left" }}>{stats.activePotions.map((potion) => <div key={potion.type} className="potion-active font-pixel"><PixelSprite name={potionSprites[potion.type]} scale={2} /><div><strong>{potionNames[potion.type]}</strong><span>{Math.ceil(potion.time)}S</span></div></div>)}</div>}
         </section>
 
         <section className="combat-wave justify-self-center">
