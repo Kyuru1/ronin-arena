@@ -21,6 +21,7 @@ const emptyStats: HudStats = {
   coins: 0,
   wave: 1,
   combo: 0,
+  comboP: 0,
   kills: 0,
   time: 0,
   dashReady: true,

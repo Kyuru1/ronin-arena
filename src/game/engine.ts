@@ -62,6 +62,7 @@ export interface HudStats {
   coins: number;
   wave: number;
   combo: number;
+  comboP: number;
   kills: number;
   time: number;
   dashReady: boolean;
@@ -214,6 +215,7 @@ interface Shockwave {
   maxR: number;
   life: number;
   maxLife: number;
+  color?: string;
 }
 
 interface PsychicZone {
@@ -656,6 +658,17 @@ export class Game {
     c.fillStyle = "#8c2835";
     c.fillRect(B - 1, B - 1, W - B * 2 + 2, 1);
     c.fillRect(B - 1, H - B, W - B * 2 + 2, 1);
+    // Stepped corner brackets make the playable boundary legible during dashes.
+    c.strokeStyle = "rgba(255, 212, 74, 0.42)";
+    c.lineWidth = 2;
+    const bracket = 18;
+    for (const [x, y, sx, sy] of [[B + 4, B + 4, 1, 1], [W - B - 4, B + 4, -1, 1], [B + 4, H - B - 4, 1, -1], [W - B - 4, H - B - 4, -1, -1]] as const) {
+      c.beginPath();
+      c.moveTo(x, y + sy * bracket);
+      c.lineTo(x, y);
+      c.lineTo(x + sx * bracket, y);
+      c.stroke();
+    }
     this.floor = f;
 
     const d = document.createElement("canvas");
@@ -1091,6 +1104,7 @@ export class Game {
       coins: this.coins,
       wave: this.wave,
       combo: this.combo,
+      comboP: clamp(this.comboT / 3.2, 0, 1),
       kills: this.kills,
       time: this.elapsed,
       dashReady: this.dashCd <= 0,
@@ -2155,6 +2169,16 @@ export class Game {
     const col = bloodColor(e.type);
     this.burst(e.x, e.y, 18, col, 200);
     this.gibs(e.x, e.y, e.type);
+    const big = e.type === "brute" || e.type === "oni" || e.type === "shield" || e.type === "boss";
+    this.shockwaves.push({
+      x: e.x,
+      y: e.y,
+      r: 4,
+      maxR: big ? 28 : 18,
+      life: big ? 0.34 : 0.22,
+      maxLife: big ? 0.34 : 0.22,
+      color: big ? "#ffd27a" : col,
+    });
     this.bloodDecal(e.x, e.y + 4, e.type === "brute" ? 11 : 7, col);
     this.parts.push({
       x: e.x,
@@ -2169,7 +2193,6 @@ export class Game {
       kind: 1,
     });
 
-    const big = e.type === "brute" || e.type === "oni" || e.type === "shield" || e.type === "boss";
     this.shake = Math.max(this.shake, big ? 8 : 4.5);
     Sfx.kill(this.combo);
 
@@ -3065,7 +3088,7 @@ export class Game {
     for (const sw of this.shockwaves) {
       ctx.save();
       ctx.globalAlpha = (sw.life / sw.maxLife) * 0.75;
-      ctx.strokeStyle = "#ff9a60";
+      ctx.strokeStyle = sw.color ?? "#ff9a60";
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.arc(sw.x, sw.y, sw.r, 0, TAU);

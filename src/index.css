@@ -649,6 +649,14 @@ input,
 .combat-panel, .combat-wave { min-width: 0; border: 0; background: transparent; padding: 0; text-shadow: 2px 2px 0 #070305, -1px -1px 0 #070305; }
 .combat-wave { padding-top: 1px; }
 .combat-wave > div:nth-child(2) { border-color: rgba(7,3,5,.9); background: rgba(7,3,5,.34); box-shadow: 0 2px 0 rgba(7,3,5,.8); }
+.combat-health-track { height: 7px; margin: 2px 0 4px; overflow: hidden; border: 2px solid #070305; background: rgba(42,14,19,.9); box-shadow: inset 0 1px 0 rgba(255,255,255,.12); }
+.combat-health-fill { height: 100%; background: linear-gradient(90deg, #d73345, #ff7662); box-shadow: inset 0 1px 0 rgba(255,255,255,.28); transition: width .12s steps(3); }
+.combat-kills { color: #ff8d79; text-shadow: 2px 2px 0 #070305; }
+.combat-combo { display: flex; min-width: 116px; flex-direction: column; align-items: center; gap: 4px; color: #ffd44a; text-align: center; text-shadow: 2px 2px 0 #070305; }
+.combat-combo strong { font-size: 9px; }
+.combat-combo span { color: #ffe2c4; font-size: 5px; }
+.combat-combo-track { width: 100%; height: 4px; border: 1px solid #070305; background: rgba(42,14,19,.86); }
+.combat-combo-track i { display: block; height: 100%; background: #ffd44a; box-shadow: 0 0 5px rgba(255,212,74,.65); }
 .hud-label { margin-bottom: 3px; }
 .hud-icon { height: 24px; width: 24px; border: 0; background: transparent; color: #ffe2c4; text-shadow: 2px 2px 0 #070305; opacity: .9; }
 .hud-icon:hover, .hud-icon:focus-visible { color: #ffd44a; opacity: 1; outline: 2px solid #ffd44a; outline-offset: 2px; }

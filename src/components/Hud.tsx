@@ -49,8 +49,11 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPoti
             <span className="hud-label">HP</span>
             <span className="font-pixel text-[6px] text-[#ffd2b5]">{stats.hp}/{stats.maxHp}</span>
           </div>
+          <div className="combat-health-track" aria-label={`Vida ${stats.hp} de ${stats.maxHp}`}>
+            <div className="combat-health-fill" style={{ width: `${Math.max(0, Math.min(100, (stats.hp / stats.maxHp) * 100))}%` }} />
+          </div>
           <div className="grid grid-cols-10 gap-[2px]">{Array.from({ length: healthSegments }).map((_, index) => <Heart key={index} filled={index < filledHeartSegments} />)}</div>
-          <div className="mt-1 flex items-center gap-2"><PixelSprite name="coin" scale={2} /><span className="font-pixel text-[10px] text-[#ffd44a]">{stats.coins}</span><span className="font-pixel text-[5px] text-[#7db7b1]">{g.shopSoon}</span></div>
+          <div className="mt-1 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><PixelSprite name="coin" scale={2} /><span className="font-pixel text-[10px] text-[#ffd44a]">{stats.coins}</span></div><span className="font-pixel text-[5px] text-[#7db7b1]">{g.shopSoon}</span></div>
           {stats.activePotions.length > 0 && <div className="potion-stack" style={{ transform: `scale(${hudScale})`, transformOrigin: "top left" }}>{stats.activePotions.map((potion) => <div key={potion.type} className="potion-active font-pixel"><PixelSprite name={potionSprites[potion.type]} scale={2} /><div><strong>{potionNames[potion.type]}</strong><span>{Math.ceil(potion.time)}S</span></div></div>)}</div>}
         </section>
 
@@ -63,12 +66,12 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPoti
         <section className="combat-panel justify-self-end text-right">
           <span className="hud-label">{t.score}</span>
           <strong className="font-pixel block text-[15px] text-white sm:text-[20px]">{stats.score.toLocaleString()}</strong>
-          <span className="font-pixel text-[6px] text-[#b78c91]">{t.best} {best.toLocaleString()}</span>
+          <div className="flex items-center justify-end gap-2"><span className="font-pixel text-[6px] text-[#b78c91]">{t.best} {best.toLocaleString()}</span><span className="combat-kills font-pixel">KO {stats.kills}</span></div>
           <div className="pointer-events-auto mt-1 flex justify-end gap-1"><button onClick={onPause} className="hud-icon" aria-label={t.pause}>II</button></div>
         </section>
       </div>
 
-      {stats.combo > 1 && <div key={stats.combo} className="anim-pop font-pixel text-shadow-pix absolute left-1/2 top-24 -translate-x-1/2 text-[10px] text-[#ffd44a]">x{comboMult.toFixed(1)} · {stats.combo} {t.kills}</div>}
+      {stats.combo > 1 && <div key={stats.combo} className="combat-combo anim-pop absolute left-1/2 top-24 -translate-x-1/2"><strong className="font-pixel text-shadow-pix">COMBO x{comboMult.toFixed(1)}</strong><span className="font-pixel">{stats.combo} {t.kills}</span><div className="combat-combo-track"><i style={{ width: `${stats.comboP * 100}%` }} /></div></div>}
 
       {stats.potionTutorial && <div className="potion-tutorial-backdrop pointer-events-auto"><div className="potion-tutorial">
         <strong>POCOES · EFEITOS</strong><span className="potion-health">VIDA: RECUPERA 2 CORACOES</span><span className="potion-strength">FORCA: +50% DANO · 8S</span><span className="potion-speed">VELOCIDADE: +45% MOVIMENTO · 8S</span><span className="potion-agility">AGILIDADE: -50% RECARGA DO DASH · 8S</span><div className="potion-tutorial-actions"><button onClick={() => onPotionDismiss(false)}>ENTENDI</button><button onClick={() => onPotionDismiss(true)}>ENTENDI E NAO MOSTRAR NOVAMENTE</button></div>
