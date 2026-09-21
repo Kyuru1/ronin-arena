@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import type { Difficulty, Perk } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
-
-const RANKING_SPRITES = { samurai: "player", ninja: "ninja", oni: "oni", boss: "boss", bat: "bat" } as const;
 import type { ScoreEntry } from "../game/storage";
 import AccountPanel from "./AccountPanel";
 import type { PlayerProfile } from "../game/auth";
@@ -22,7 +20,7 @@ export interface UiOpts {
   keyboardOnly: boolean;
 }
 
-type MenuTab = "main" | "settings" | "language" | "ranking" | "account";
+type MenuTab = "main" | "settings" | "language" | "ranking" | "account" | "controls";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -84,9 +82,11 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
           {tab === "language" && <div className="flex flex-col gap-2"><PxHeading>{t.language}</PxHeading>{LANGS.map((language) => <PxButton key={language} tone="menu" active={opts.language === language} onClick={() => onOpts({ language })} className="text-[9px]">{I18N[language].langName}{opts.language === language && <span className="ml-auto text-[#ffd44a]">■</span>}</PxButton>)}</div>}
 
+          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>CONTROLES</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">TECLADO</h3><div className="controls-list"><span>MOVER</span><strong>W A S D / SETAS</strong><span>ATACAR</span><strong>ESPACO ou J</strong><span>DASH</span><strong>SHIFT / K / L</strong><span>TROCAR ARMA</span><strong>1 a 4 / Q e E</strong><span>PAUSAR</span><strong>ESC</strong></div></div><div className="px-inset p-3"><h3 className="controls-title">CONTROLE</h3><div className="controls-list"><span>MOVER</span><strong>ANALOGICO ESQUERDO</strong><span>MIRAR</span><strong>ANALOGICO DIREITO</strong><span>ATACAR</span><strong>A ou RT</strong><span>DASH</span><strong>B ou RB</strong><span>TROCAR ARMA</span><strong>LB / RB ou DIRECIONAL</strong><span>PAUSAR</span><strong>MENU / START</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.</div></div>}
+
           {tab === "account" && <AccountPanel profile={profile} onProfile={onProfile} />}
 
-          {tab === "ranking" && <div className="flex flex-col gap-2"><PxHeading>{t.ranking} · TOP 50</PxHeading><div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div><div className="px-inset"><div className="ranking-head"><span>#</span><span>{t.name}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div><div className="scrollbar-thin max-h-[75vh] overflow-y-auto">{scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0 ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div> : scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).map((score, index) => <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-four ${index < 3 ? "is-top" : ""}`}><span>{index + 1}</span><span className="flex min-w-0 items-center gap-2"><PixelSprite name={RANKING_SPRITES[score.avatarId ?? "samurai"]} scale={0.75} /><span className="truncate">{score.name || "RONIN"}</span></span><span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span></div>)}</div></div></div>}
+          {tab === "ranking" && <div className="flex flex-col gap-2"><PxHeading>{t.ranking} · TOP 50</PxHeading><div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div><div className="px-inset"><div className="ranking-head"><span>#</span><span>{t.name}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div><div className="scrollbar-thin max-h-[75vh] overflow-y-auto">{scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0 ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div> : scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).map((score, index) => <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-four ${index < 3 ? "is-top" : ""}`}><span>{index + 1}</span><span className="flex min-w-0 items-center gap-2"><PixelSprite name={score.avatarId ?? "samurai"} scale={1} /><span className="truncate">{score.name}</span></span><span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span></div>)}</div></div></div>}
 
           <PxButton tone="dark" onClick={() => setTab("main")} className="mt-4 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
         </PxFrame>
@@ -157,6 +157,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
         <footer className="menu-options flex w-full max-w-sm flex-col gap-2">
           <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("controls")} className="justify-center text-[8px]"><PixelSprite name="icoBook" scale={1} />CONTROLES</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("account")} className="justify-center text-[8px]"><PixelSprite name="player" scale={1} />{profile ? profile.username : "PERFIL"}</PxButton>

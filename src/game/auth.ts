@@ -5,6 +5,11 @@ export type AvatarId = "samurai" | "ninja" | "oni" | "boss" | "bat";
 export interface PlayerProfile { id: string; username: string; avatarId: AvatarId; }
 
 const avatars: AvatarId[] = ["samurai", "ninja", "oni", "boss", "bat"];
+export const AUTH_CALLBACK_URL = "https://ysaxbqhdhqiahnytkgqt.supabase.co/auth/v1/callback";
+
+function authRedirectUrl(): string {
+  return typeof window === "undefined" ? "" : window.location.href;
+}
 
 function safeAvatar(value: unknown): AvatarId {
   return avatars.includes(value as AvatarId) ? value as AvatarId : "samurai";
@@ -31,7 +36,7 @@ export function authErrorMessage(error: unknown): string {
   if (message.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
   if (message.includes("user already registered") || message.includes("already been registered")) return "Este e-mail já está cadastrado.";
   if (message.includes("unable to validate email") || message.includes("invalid email")) return "Digite um e-mail válido.";
-  if (message.includes("rate limit")) return "Muitas tentativas. Aguarde um pouco e tente novamente.";
+  if (message.includes("rate limit") || message.includes("too many requests") || message.includes("email rate limit exceeded")) return "O serviço limitou novos envios de e-mail. Aguarde alguns minutos antes de tentar novamente.";
   if (message.includes("supabase não configurado")) return "O serviço de conta ainda não está configurado.";
   return "Não foi possível concluir. Verifique os dados e tente novamente.";
 }
@@ -61,9 +66,14 @@ export async function saveProfile(profile: PlayerProfile) {
 
 export async function signUp(email: string, password: string, username: string, avatarId: AvatarId) {
   if (!supabase) throw new Error("Supabase não configurado");
-  const { data, error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options: { data: { username: normalizeUsername(username), avatar_id: avatarId } } });
+  const { error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options: { emailRedirectTo: authRedirectUrl(), data: { username: normalizeUsername(username), avatar_id: avatarId } } });
   if (error) throw error;
-  return { needsEmailConfirmation: !data.session };
+}
+
+export async function signInWithGoogle() {
+  if (!supabase) throw new Error("Supabase não configurado");
+  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: authRedirectUrl() } });
+  if (error) throw error;
 }
 
 export async function signIn(email: string, password: string) {

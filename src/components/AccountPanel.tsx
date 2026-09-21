@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { authErrorMessage, deleteAccount, signIn, signOut, signUp, saveProfile, type AvatarId, type PlayerProfile } from "../game/auth";
+import { authErrorMessage, deleteAccount, signIn, signInWithGoogle, signOut, signUp, saveProfile, type AvatarId, type PlayerProfile } from "../game/auth";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxHeading } from "./PixelUi";
 
@@ -18,19 +18,25 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
   const [username, setUsername] = useState(profile?.username ?? "");
   const [avatarId, setAvatarId] = useState<AvatarId>(profile?.avatarId ?? "samurai");
   const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
   useEffect(() => {
     setUsername(profile?.username ?? "");
     setAvatarId(profile?.avatarId ?? "samurai");
   }, [profile]);
   const submit = async () => {
+    if (busy) return;
+    setBusy(true);
     try {
-      if (register) {
-        const result = await signUp(email, password, username, avatarId);
-        setRegister(false);
-        setMessage(result.needsEmailConfirmation ? "Conta criada. Confirme o e-mail recebido e depois entre aqui." : "Conta criada e conectada.");
-      }
+      if (register) { await signUp(email, password, username, avatarId); setMessage("Confira seu e-mail para confirmar a conta."); }
       else await signIn(email, password);
     } catch (error) { setMessage(authErrorMessage(error)); }
+    finally { setBusy(false); }
+  };
+  const google = async () => {
+    if (busy) return;
+    setBusy(true);
+    try { await signInWithGoogle(); }
+    catch (error) { setMessage(authErrorMessage(error)); setBusy(false); }
   };
   const update = async () => {
     if (!profile) return;
@@ -43,7 +49,8 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
       <input className="px-input font-pixel text-[10px] sm:text-[11px]" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="E-MAIL" type="email" />
       <input className="px-input font-pixel text-[10px] sm:text-[11px]" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="SENHA (6+ CARACTERES)" type="password" />
       {register && <><input className="px-input font-pixel text-[10px] sm:text-[11px]" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="NOME NO RANKING" maxLength={12} /><AvatarPicker value={avatarId} onChange={setAvatarId} /></>}
-      <PxButton tone="red" onClick={() => void submit()} className="w-full py-4 text-[10px] sm:text-[11px]">{register ? "CRIAR CONTA" : "ENTRAR"}</PxButton>
+      <PxButton tone="red" disabled={busy} onClick={() => void submit()} className="w-full py-4 text-[10px] sm:text-[11px]">{busy ? "AGUARDE..." : register ? "CRIAR CONTA" : "ENTRAR"}</PxButton>
+      <PxButton tone="gold" disabled={busy} onClick={() => void google()} className="w-full py-4 text-[10px] sm:text-[11px]">C CONECTAR COM GOOGLE</PxButton>
       <PxButton tone="menu" onClick={() => setRegister((v) => !v)} className="w-full py-3 text-[9px] sm:text-[10px]">{register ? "JÁ TENHO CONTA" : "CRIAR CONTA"}</PxButton>
     </> : <>
       <div className="px-inset p-4 font-pixel text-[9px] text-[#ffe2c4] sm:text-[10px]">CONECTADO COMO: {profile.username}</div>
@@ -57,5 +64,5 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
   </div>;
 }
 function AvatarPicker({ value, onChange }: { value: AvatarId; onChange: (value: AvatarId) => void }) {
-  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">{AVATARS.map((avatar) => <button key={avatar.id} onClick={() => onChange(avatar.id)} className={`profile-avatar-tile px-tile flex min-h-24 min-w-0 flex-col items-center justify-center gap-2 p-2 sm:min-h-28 ${value === avatar.id ? "outline outline-2 outline-[#ffd44a]" : ""}`}><PixelSprite name={avatar.sprite} scale={3} /><span className="font-pixel text-[8px] sm:text-[9px]">{avatar.label}</span></button>)}</div>;
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5">{AVATARS.map((avatar) => <button key={avatar.id} onClick={() => onChange(avatar.id)} className={`px-tile flex min-h-24 w-full flex-col items-center justify-center gap-2 p-2 sm:min-h-28 ${value === avatar.id ? "outline outline-2 outline-[#ffd44a]" : ""}`}><PixelSprite name={avatar.sprite} scale={3} /><span className="font-pixel text-[8px] sm:text-[9px]">{avatar.label}</span></button>)}</div>;
 }

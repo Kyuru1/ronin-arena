@@ -379,6 +379,7 @@ export class Game {
   propTimer = 7;
   potionTutorialT = 0;
   potionTutorialSeen = false;
+  potionTutorialEnabled = true;
   strengthT = 0;
   speedT = 0;
   agilityT = 0;
@@ -522,6 +523,11 @@ export class Game {
       this.aimStick = null;
     }
     setVolume(this.opts.volume);
+  }
+
+  setPotionTutorialHidden(hidden: boolean) {
+    this.potionTutorialEnabled = !hidden;
+    this.potionTutorialSeen = hidden;
   }
 
   resize(cw: number, ch: number) {
@@ -1018,6 +1024,15 @@ export class Game {
   togglePause() {
     if (this.phase === "playing") this.pause();
     else if (this.phase === "paused") this.resume();
+  }
+
+  dismissPotionTutorial() {
+    if (!this.potionTutorialT) return;
+    this.potionTutorialT = 0;
+    this.potionTutorialSeen = true;
+    this.phase = "playing";
+    this.last = performance.now();
+    this.pushStats(true);
   }
 
   private limits() {
@@ -2761,9 +2776,11 @@ export class Game {
           if (p.potion === "strength") this.strengthT = 8;
           if (p.potion === "speed") this.speedT = 8;
           if (p.potion === "agility") this.agilityT = 8;
-          if (p.potion && !this.potionTutorialSeen) {
+          if (p.potion && this.potionTutorialEnabled && !this.potionTutorialSeen) {
             this.potionTutorialSeen = true;
-            this.potionTutorialT = 5;
+            this.potionTutorialT = 1;
+            this.phase = "paused";
+            this.pushStats(true);
           }
           const v = Math.round(25 * this.comboMult());
           this.addScore(v, p.x, p.y - 8, `+${v}`, "#ffbd86");

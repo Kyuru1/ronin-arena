@@ -10,13 +10,14 @@ function Heart({ filled }: { filled: boolean }) {
   return <svg viewBox="0 0 7 6" className="h-3 w-4 sm:h-4 sm:w-5" shapeRendering="crispEdges"><g fill={filled ? "#ff4353" : "#2a0e13"}><rect x="1" y="0" width="2" height="1" /><rect x="4" y="0" width="2" height="1" /><rect x="0" y="1" width="7" height="2" /><rect x="1" y="3" width="5" height="1" /><rect x="2" y="4" width="3" height="1" /><rect x="3" y="5" width="1" height="1" /></g>{filled && <rect x="1" y="1" width="1" height="1" fill="#ffd2b5" />}</svg>;
 }
 
-export default function Hud({ stats, best, onPause, onSelectSlot, onDash, hudScale, language, t }: {
+export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPotionDismiss, hudScale, language, t }: {
   stats: HudStats;
   best: number;
   onPause: () => void;
   onMute: () => void;
   onSelectSlot: (slot: number) => void;
   onDash: () => void;
+  onPotionDismiss: (neverAgain: boolean) => void;
   muted: boolean;
   hudScale: 0.65 | 0.85 | 1 | 1.25 | 1.5;
   language: Language;
@@ -46,6 +47,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, hudSca
           </div>
           <div className="grid grid-cols-10 gap-[2px]">{Array.from({ length: healthSegments }).map((_, index) => <Heart key={index} filled={index < filledHeartSegments} />)}</div>
           <div className="mt-1 flex items-center gap-2"><PixelSprite name="coin" scale={2} /><span className="font-pixel text-[10px] text-[#ffd44a]">{stats.coins}</span><span className="font-pixel text-[5px] text-[#7db7b1]">{g.shopSoon}</span></div>
+          {stats.activePotion && <div className="potion-active font-pixel">{stats.activePotion === "strength" ? "FORCA" : stats.activePotion === "speed" ? "VELOCIDADE" : "AGILIDADE"} · {Math.ceil(stats.potionTime)}S</div>}
         </section>
 
         <section className="combat-wave justify-self-center">
@@ -64,10 +66,9 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, hudSca
 
       {stats.combo > 1 && <div key={stats.combo} className="anim-pop font-pixel text-shadow-pix absolute left-1/2 top-24 -translate-x-1/2 text-[10px] text-[#ffd44a]">x{comboMult.toFixed(1)} · {stats.combo} {t.kills}</div>}
 
-      {stats.potionTutorial && <div className="potion-tutorial">
-        <strong>POÇÕES · EFEITOS</strong><span className="potion-health">VIDA: RECUPERA +2</span><span className="potion-strength">FORÇA: +50% DANO · 8S</span><span className="potion-speed">VELOCIDADE: +45% · 8S</span><span className="potion-agility">AGILIDADE: DASH -50% · 8S</span>
+      {stats.potionTutorial && <div className="potion-tutorial pointer-events-auto">
+        <strong>POCOES · EFEITOS</strong><span className="potion-health">VIDA: RECUPERA +2</span><span className="potion-strength">FORCA: +50% DANO · 8S</span><span className="potion-speed">VELOCIDADE: +45% · 8S</span><span className="potion-agility">AGILIDADE: DASH -50% · 8S</span><div className="potion-tutorial-actions"><button onClick={() => onPotionDismiss(false)}>ENTENDI</button><button onClick={() => onPotionDismiss(true)}>ENTENDI E NAO MOSTRAR NOVAMENTE</button></div>
       </div>}
-      {stats.activePotion && <div className="potion-active font-pixel">{stats.activePotion === "strength" ? "FORÇA +50% DANO" : stats.activePotion === "speed" ? "VELOCIDADE +45%" : "AGILIDADE DASH -50%"} · {Math.ceil(stats.potionTime)}S</div>}
       {stats.mineTutorial && <div className="font-pixel absolute bottom-28 left-1/2 w-[min(90%,460px)] -translate-x-1/2 border-4 border-[#070305] bg-[#10282b]/95 px-4 py-3 text-center text-[7px] leading-5 text-[#ffd44a] shadow-[0_5px_0_#070305]">{t.mineTutorial}</div>}
 
       <div className="pointer-events-auto mx-auto flex max-w-full items-end justify-center gap-2 pb-1" style={{ transform: `scale(${hudScale})`, transformOrigin: "bottom center" }}>

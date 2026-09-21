@@ -54,6 +54,7 @@ const emptyStats: HudStats = {
 const OPT_KEY = "ronin.options.v2";
 const NAME_KEY = "ronin.lastname";
 const TUTORIAL_KEY = "ronin.tutorial.hidden.v1";
+const POTION_TUTORIAL_KEY = "ronin.potion.tutorial.hidden.v1";
 const RUN_KEY = "ronin.run.save.v2";
 
 const defaultOpts: UiOpts = {
@@ -164,6 +165,7 @@ export default function App() {
     if (!canvas || !wrap) return;
     const game = new Game(canvas);
     gameRef.current = game;
+    try { game.setPotionTutorialHidden(localStorage.getItem(POTION_TUTORIAL_KEY) === "1"); } catch { /* ignore */ }
     game.onStats = (s) => setStats(s);
     game.onGameOver = (s) => {
       setFinalStats(s);
@@ -258,6 +260,13 @@ export default function App() {
     }
     launchRun();
   }, [launchRun]);
+
+  const dismissPotionTutorial = useCallback((neverAgain: boolean) => {
+    if (neverAgain) {
+      try { localStorage.setItem(POTION_TUTORIAL_KEY, "1"); } catch { /* ignore */ }
+    }
+    gameRef.current?.dismissPotionTutorial();
+  }, []);
 
   const saveRun = useCallback(() => {
     const game = gameRef.current;
@@ -479,6 +488,7 @@ export default function App() {
             onPause={togglePause}
             onSelectSlot={selectSlot}
             onDash={() => gameRef.current?.touchDash()}
+            onPotionDismiss={dismissPotionTutorial}
             hudScale={opts.hudScale}
             language={opts.language}
             t={t}

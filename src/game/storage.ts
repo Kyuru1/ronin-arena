@@ -34,16 +34,12 @@ export function difficultyToDb(value: Difficulty): "facil" | "medio" | "dificil"
 
 export function normalizeScores(entries: unknown): ScoreEntry[] {
   if (!Array.isArray(entries)) return [];
-  const normalized = entries
+  const normalized: ScoreEntry[] = entries
     .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
     .filter((entry) => typeof entry.score === "number")
-    .map((entry) => {
-      const name = [entry.name, entry.player_name, entry.username, entry.playerName]
-        .find((value): value is string => typeof value === "string" && value.trim().length > 0)
-        ?.trim() ?? "RONIN";
-      return {
-      name,
-      avatarId: (entry.avatar_id === "ninja" || entry.avatar_id === "oni" || entry.avatar_id === "boss" || entry.avatar_id === "bat" ? entry.avatar_id : "samurai") as ScoreEntry["avatarId"],
+    .map((entry) => ({
+      name: typeof entry.name === "string" ? entry.name : typeof entry.player_name === "string" ? entry.player_name : "RONIN",
+      avatarId: (entry.avatar_id === "ninja" || entry.avatar_id === "oni" || entry.avatar_id === "boss" || entry.avatar_id === "bat" || entry.avatar_id === "samurai") ? entry.avatar_id : "samurai",
       score: Number(entry.score),
       wave: typeof entry.wave === "number" ? entry.wave : 1,
       kills: typeof entry.kills === "number" ? entry.kills : 0,
@@ -51,8 +47,7 @@ export function normalizeScores(entries: unknown): ScoreEntry[] {
       difficulty: normalizeDifficulty(entry.difficulty),
       date: typeof entry.date === "number" ? entry.date : typeof entry.created_at === "string" ? Date.parse(entry.created_at) : Date.now(),
       userId: typeof entry.user_id === "string" ? entry.user_id : undefined,
-      };
-    });
+    }));
 
   return (["easy", "medium", "hard"] as const).flatMap((difficulty) =>
     normalized.filter((entry) => entry.difficulty === difficulty).sort(compareEntries).slice(0, MAX),
@@ -111,14 +106,14 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
       .limit(150);
     if (!error && data) {
       const userIds = [...new Set(data.map((entry) => entry.user_id).filter((id): id is string => typeof id === "string"))];
-      let profiles = new Map<string, { username: string }>();
+      let profiles = new Map<string, { username: string; avatar_id: string }>();
       if (userIds.length) {
-        const { data: profileRows } = await supabase.from("profiles").select("id, username").in("id", userIds);
+        const { data: profileRows } = await supabase.from("profiles").select("id, username, avatar_id").in("id", userIds);
         profiles = new Map((profileRows ?? []).map((profile) => [profile.id, profile]));
       }
       const scores = normalizeScores(data.map((entry) => {
         const profile = typeof entry.user_id === "string" ? profiles.get(entry.user_id) : undefined;
-        return { ...entry, player_name: profile?.username ?? entry.player_name, avatar_id: "samurai" as const };
+        return { ...entry, player_name: profile?.username ?? entry.player_name, avatar_id: profile?.avatar_id ?? "samurai" };
       }));
       saveLocal(scores);
       return scores;
