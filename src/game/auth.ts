@@ -5,12 +5,6 @@ export type AvatarId = "samurai" | "ninja" | "oni" | "boss" | "bat";
 export interface PlayerProfile { id: string; username: string; avatarId: AvatarId; }
 
 const avatars: AvatarId[] = ["samurai", "ninja", "oni", "boss", "bat"];
-export const AUTH_CALLBACK_URL = "https://ysaxbqhdhqiahnytkgqt.supabase.co/auth/v1/callback";
-
-function authRedirectUrl(): string {
-  return typeof window === "undefined" ? "" : window.location.href;
-}
-
 function safeAvatar(value: unknown): AvatarId {
   return avatars.includes(value as AvatarId) ? value as AvatarId : "samurai";
 }
@@ -66,13 +60,7 @@ export async function saveProfile(profile: PlayerProfile) {
 
 export async function signUp(email: string, password: string, username: string, avatarId: AvatarId) {
   if (!supabase) throw new Error("Supabase não configurado");
-  const { error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options: { emailRedirectTo: authRedirectUrl(), data: { username: normalizeUsername(username), avatar_id: avatarId } } });
-  if (error) throw error;
-}
-
-export async function signInWithGoogle() {
-  if (!supabase) throw new Error("Supabase não configurado");
-  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: authRedirectUrl() } });
+  const { error } = await supabase.auth.signUp({ email: email.trim().toLowerCase(), password, options: { data: { username: normalizeUsername(username), avatar_id: avatarId } } });
   if (error) throw error;
 }
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Difficulty, Perk } from "../game/engine";
+import type { Difficulty, KeyboardAction, KeyboardBindings, Perk } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
 import type { ScoreEntry } from "../game/storage";
 import AccountPanel from "./AccountPanel";
@@ -18,6 +18,7 @@ export interface UiOpts {
   hudScale: 0.65 | 0.85 | 1 | 1.25 | 1.5;
   textScale: 0.85 | 1 | 1.15;
   keyboardOnly: boolean;
+  keyboardBindings: KeyboardBindings;
 }
 
 type MenuTab = "main" | "settings" | "language" | "ranking" | "account" | "controls";
@@ -45,6 +46,21 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   const [perkOpen, setPerkOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [rankingDifficulty, setRankingDifficulty] = useState<Difficulty>("medium");
+  const [capturing, setCapturing] = useState<KeyboardAction | null>(null);
+  const bindingLabels: Array<[KeyboardAction, string]> = [["up", "MOVER CIMA"], ["down", "MOVER BAIXO"], ["left", "MOVER ESQUERDA"], ["right", "MOVER DIREITA"], ["attack", "ATACAR"], ["dash", "DASH"], ["prev", "ARMA ANTERIOR"], ["next", "PROXIMA ARMA"]];
+  useEffect(() => {
+    if (!capturing) return;
+    const onCapture = (event: KeyboardEvent) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const value = event.key.toLowerCase();
+      onOpts({ keyboardBindings: { ...opts.keyboardBindings, [capturing]: value } });
+      setCapturing(null);
+    };
+    window.addEventListener("keydown", onCapture, true);
+    return () => window.removeEventListener("keydown", onCapture, true);
+  }, [capturing, onOpts, opts.keyboardBindings]);
+  const keyLabel = (key: string) => key === " " ? "ESPACO" : key === "escape" ? "ESC" : key.length === 1 ? key.toUpperCase() : key.toUpperCase();
   useEffect(() => {
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
@@ -82,7 +98,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
           {tab === "language" && <div className="flex flex-col gap-2"><PxHeading>{t.language}</PxHeading>{LANGS.map((language) => <PxButton key={language} tone="menu" active={opts.language === language} onClick={() => onOpts({ language })} className="text-[9px]">{I18N[language].langName}{opts.language === language && <span className="ml-auto text-[#ffd44a]">■</span>}</PxButton>)}</div>}
 
-          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>CONTROLES</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">TECLADO</h3><div className="controls-list"><span>MOVER</span><strong>W A S D / SETAS</strong><span>ATACAR</span><strong>ESPACO ou J</strong><span>DASH</span><strong>SHIFT / K / L</strong><span>TROCAR ARMA</span><strong>1 a 4 / Q e E</strong><span>PAUSAR</span><strong>ESC</strong></div></div><div className="px-inset p-3"><h3 className="controls-title">CONTROLE</h3><div className="controls-list"><span>MOVER</span><strong>ANALOGICO ESQUERDO</strong><span>MIRAR</span><strong>ANALOGICO DIREITO</strong><span>ATACAR</span><strong>A ou RT</strong><span>DASH</span><strong>B ou RB</strong><span>TROCAR ARMA</span><strong>LB / RB ou DIRECIONAL</strong><span>PAUSAR</span><strong>MENU / START</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.</div></div>}
+          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>CONTROLES</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">TECLADO · CLIQUE PARA REMAPEAR</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? "PRESSIONE" : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">CONTROLE</h3><div className="controls-list"><span>MOVER</span><strong>ANALOGICO ESQUERDO</strong><span>MIRAR</span><strong>ANALOGICO DIREITO</strong><span>ATACAR</span><strong>A ou RT</strong><span>DASH</span><strong>B ou RB</strong><span>TROCAR ARMA</span><strong>LB / RB ou DIRECIONAL</strong><span>PAUSAR</span><strong>MENU / START</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.</div></div>}
 
           {tab === "account" && <AccountPanel profile={profile} onProfile={onProfile} />}
 

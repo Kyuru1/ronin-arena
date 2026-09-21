@@ -93,7 +93,11 @@ export interface GameOpts {
   vsync: boolean;
   language: Language;
   keyboardOnly: boolean;
+  keyboardBindings: KeyboardBindings;
 }
+
+export type KeyboardAction = "up" | "down" | "left" | "right" | "attack" | "dash" | "prev" | "next" | "pause";
+export type KeyboardBindings = Record<KeyboardAction, string>;
 
 type EnemyType =
   | "grunt"
@@ -380,6 +384,8 @@ export class Game {
   potionTutorialT = 0;
   potionTutorialSeen = false;
   potionTutorialEnabled = true;
+  potionDisplayT = 0;
+  lastPotion: PotionType | null = null;
   strengthT = 0;
   speedT = 0;
   agilityT = 0;
@@ -407,7 +413,7 @@ export class Game {
   bannerT = 0;
   deathT = 0;
   vignettePulse = 0;
-  opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt", keyboardOnly: false };
+  opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt", keyboardOnly: false, keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", prev: "q", next: "e", pause: "escape" } };
 
   // Input
   keys = new Set<string>();
@@ -523,6 +529,10 @@ export class Game {
       this.aimStick = null;
     }
     setVolume(this.opts.volume);
+  }
+
+  setKeyboardBindings(bindings: KeyboardBindings) {
+    this.opts.keyboardBindings = { ...this.opts.keyboardBindings, ...bindings };
   }
 
   setPotionTutorialHidden(hidden: boolean) {
@@ -701,22 +711,23 @@ export class Game {
     this.keys.add(k);
     if (this.phase !== "playing") return;
 
-    if (k === " " || k === "j") this.attackHeld = true;
-    if (k === "shift" || k === "k" || k === "l") this.dashQueued = true;
+    const bindings = this.opts.keyboardBindings;
+    if (k === bindings.attack) this.attackHeld = true;
+    if (k === bindings.dash) this.dashQueued = true;
 
     // Fast slot hotkeys 1, 2, 3, 4
     if (k === "1") this.switchSlot(0);
     if (k === "2") this.switchSlot(1);
     if (k === "3") this.switchSlot(2);
     if (k === "4") this.switchSlot(3);
-    if (k === "q") this.prevWeapon();
-    if (k === "e") this.nextWeapon();
+    if (k === bindings.prev) this.prevWeapon();
+    if (k === bindings.next) this.nextWeapon();
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
     this.keys.delete(k);
-    if (k === " " || k === "j") this.attackHeld = false;
+    if (k === this.opts.keyboardBindings.attack) this.attackHeld = false;
   };
 
   private toCanvas(e: PointerEvent) {
@@ -931,6 +942,8 @@ export class Game {
     this.mines.length = 0;
     this.pickups.length = 0;
     this.marks.length = 0;
+    this.potionDisplayT = 0;
+    this.lastPotion = null;
     this.afterimages.length = 0;
     this.impacts.length = 0;
     this.trail.length = 0;
@@ -1074,8 +1087,8 @@ export class Game {
       dashSpeedMult: this.dashSpeedMult,
       mineTutorial: this.mineTutorialT > 0,
       potionTutorial: this.potionTutorialT > 0,
-      activePotion: this.strengthT > 0 ? "strength" : this.speedT > 0 ? "speed" : this.agilityT > 0 ? "agility" : null,
-      potionTime: Math.max(this.strengthT, this.speedT, this.agilityT),
+      activePotion: this.potionDisplayT > 0 ? this.lastPotion : this.strengthT > 0 ? "strength" : this.speedT > 0 ? "speed" : this.agilityT > 0 ? "agility" : null,
+      potionTime: this.potionDisplayT > 0 ? this.potionDisplayT : Math.max(this.strengthT, this.speedT, this.agilityT),
       weaponLevels: this.weaponLevels,
       magicType: this.magicType,
       difficulty: this.difficulty,
@@ -1159,6 +1172,7 @@ export class Game {
     this.idleT += dt;
     this.mineTutorialT = Math.max(0, this.mineTutorialT - dt);
     this.potionTutorialT = Math.max(0, this.potionTutorialT - dt);
+    this.potionDisplayT = Math.max(0, this.potionDisplayT - dt);
     this.strengthT = Math.max(0, this.strengthT - dt);
     this.speedT = Math.max(0, this.speedT - dt);
     this.agilityT = Math.max(0, this.agilityT - dt);
@@ -1251,12 +1265,13 @@ export class Game {
 
   private updatePlayer(dt: number) {
     const k = this.keys;
+    const bindings = this.opts.keyboardBindings;
     let mx = 0;
     let my = 0;
-    if (k.has("a") || k.has("arrowleft")) mx -= 1;
-    if (k.has("d") || k.has("arrowright")) mx += 1;
-    if (k.has("w") || k.has("arrowup")) my -= 1;
-    if (k.has("s") || k.has("arrowdown")) my += 1;
+    if (k.has(bindings.left) || k.has("arrowleft")) mx -= 1;
+    if (k.has(bindings.right) || k.has("arrowright")) mx += 1;
+    if (k.has(bindings.up) || k.has("arrowup")) my -= 1;
+    if (k.has(bindings.down) || k.has("arrowdown")) my += 1;
     if (this.moveStick) {
       const dx = this.moveStick.x - this.moveStick.ox;
       const dy = this.moveStick.y - this.moveStick.oy;
@@ -2776,6 +2791,8 @@ export class Game {
           if (p.potion === "strength") this.strengthT = 8;
           if (p.potion === "speed") this.speedT = 8;
           if (p.potion === "agility") this.agilityT = 8;
+          this.lastPotion = p.potion ?? null;
+          this.potionDisplayT = p.potion === "health" ? 2.5 : 8;
           if (p.potion && this.potionTutorialEnabled && !this.potionTutorialSeen) {
             this.potionTutorialSeen = true;
             this.potionTutorialT = 1;

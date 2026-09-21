@@ -563,6 +563,10 @@ export function buildSprites() {
     ],
     { y: "#ffd44a" },
   );
+  SPR.potionHealth = makeSprite(["...rr...", "..rrrr..", "..rwwr..", ".rwwwwr.", ".rwwwwr.", ".rrrrrr.", "..rrrr..", "........"], { r: "#e0444d", w: "#ffd2b5" });
+  SPR.potionStrength = makeSprite(["...oo...", "..oooo..", "..owwo..", ".owwwwo.", ".owwwwo.", ".oooooo.", "..oooo..", "........"], { o: "#ff8a45", w: "#ffe2c4" });
+  SPR.potionSpeed = makeSprite(["...yy...", "..yyyy..", "..ywwy..", ".ywwwwy.", ".ywwwwy.", ".yyyyyy.", "..yyyy..", "........"], { y: "#ffd44a", w: "#fff0a8" });
+  SPR.potionAgility = makeSprite(["...pp...", "..pppp..", "..pwwp..", ".pwwwwp.", ".pwwwwp.", ".pppppp.", "..pppp..", "........"], { p: "#8c8cff", w: "#e4e1ff" });
   SPR.icoHeart = makeSprite(
     [
       "..rr...rr...",

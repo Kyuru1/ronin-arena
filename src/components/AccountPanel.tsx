@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { authErrorMessage, deleteAccount, signIn, signInWithGoogle, signOut, signUp, saveProfile, type AvatarId, type PlayerProfile } from "../game/auth";
+import { authErrorMessage, deleteAccount, signIn, signOut, signUp, saveProfile, type AvatarId, type PlayerProfile } from "../game/auth";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxHeading } from "./PixelUi";
 
@@ -32,12 +32,6 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
     } catch (error) { setMessage(authErrorMessage(error)); }
     finally { setBusy(false); }
   };
-  const google = async () => {
-    if (busy) return;
-    setBusy(true);
-    try { await signInWithGoogle(); }
-    catch (error) { setMessage(authErrorMessage(error)); setBusy(false); }
-  };
   const update = async () => {
     if (!profile) return;
     try { const next = await saveProfile({ ...profile, username, avatarId }); onProfile(next); setMessage("Perfil atualizado."); }
@@ -50,7 +44,6 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
       <input className="px-input font-pixel text-[10px] sm:text-[11px]" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="SENHA (6+ CARACTERES)" type="password" />
       {register && <><input className="px-input font-pixel text-[10px] sm:text-[11px]" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="NOME NO RANKING" maxLength={12} /><AvatarPicker value={avatarId} onChange={setAvatarId} /></>}
       <PxButton tone="red" disabled={busy} onClick={() => void submit()} className="w-full py-4 text-[10px] sm:text-[11px]">{busy ? "AGUARDE..." : register ? "CRIAR CONTA" : "ENTRAR"}</PxButton>
-      <PxButton tone="gold" disabled={busy} onClick={() => void google()} className="w-full py-4 text-[10px] sm:text-[11px]">C CONECTAR COM GOOGLE</PxButton>
       <PxButton tone="menu" onClick={() => setRegister((v) => !v)} className="w-full py-3 text-[9px] sm:text-[10px]">{register ? "JÁ TENHO CONTA" : "CRIAR CONTA"}</PxButton>
     </> : <>
       <div className="px-inset p-4 font-pixel text-[9px] text-[#ffe2c4] sm:text-[10px]">CONECTADO COMO: {profile.username}</div>

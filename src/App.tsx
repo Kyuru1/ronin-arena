@@ -68,13 +68,15 @@ const defaultOpts: UiOpts = {
   hudScale: 1,
   textScale: 1,
   keyboardOnly: false,
+  keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", prev: "q", next: "e", pause: "escape" },
 };
 
 function loadOpts(): UiOpts {
   try {
     const raw = localStorage.getItem(OPT_KEY);
     if (!raw) return defaultOpts;
-    return { ...defaultOpts, ...(JSON.parse(raw) as Partial<UiOpts>) };
+    const saved = JSON.parse(raw) as Partial<UiOpts>;
+    return { ...defaultOpts, ...saved, keyboardBindings: { ...defaultOpts.keyboardBindings, ...saved.keyboardBindings } };
   } catch {
     return defaultOpts;
   }
@@ -433,6 +435,7 @@ export default function App() {
       vsync: opts.vsync,
       language: opts.language,
       keyboardOnly: opts.keyboardOnly,
+      keyboardBindings: opts.keyboardBindings,
     });
   }, [opts]);
 
@@ -442,7 +445,7 @@ export default function App() {
       const k = e.key.toLowerCase();
       const g = gameRef.current;
       if (!g) return;
-      if (k === "escape" || k === "p") {
+      if (k === opts.keyboardBindings.pause || k === "p") {
         e.preventDefault();
         if (g.phase === "playing" || g.phase === "paused") togglePause();
       } else if (k === "m") {
@@ -451,7 +454,7 @@ export default function App() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [start, togglePause, toggleMute]);
+  }, [opts.keyboardBindings.pause, start, togglePause, toggleMute]);
 
   /* Keep the visible pause screen in sync when the browser suspends the game. */
   useEffect(() => {
