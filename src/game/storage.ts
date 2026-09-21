@@ -36,18 +36,22 @@ export function normalizeScores(entries: unknown): ScoreEntry[] {
   if (!Array.isArray(entries)) return [];
   const normalized: ScoreEntry[] = entries
     .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
-    .filter((entry) => typeof entry.score === "number")
-    .map((entry) => ({
-      name: typeof entry.name === "string" ? entry.name : typeof entry.player_name === "string" ? entry.player_name : "RONIN",
+    .filter((entry) => Number.isFinite(Number(entry.score)))
+    .map((entry) => {
+      const profileName = typeof entry.profile_username === "string" ? entry.profile_username.trim() : "";
+      const storedName = typeof entry.name === "string" ? entry.name.trim() : typeof entry.player_name === "string" ? entry.player_name.trim() : "";
+      return {
+      name: profileName || storedName || "RONIN",
       avatarId: (entry.avatar_id === "ninja" || entry.avatar_id === "oni" || entry.avatar_id === "boss" || entry.avatar_id === "bat" || entry.avatar_id === "samurai") ? entry.avatar_id : "samurai",
       score: Number(entry.score),
-      wave: typeof entry.wave === "number" ? entry.wave : 1,
-      kills: typeof entry.kills === "number" ? entry.kills : 0,
-      time: typeof entry.time === "number" ? entry.time : typeof entry.survival_time_seconds === "number" ? entry.survival_time_seconds : 0,
+      wave: Number.isFinite(Number(entry.wave)) ? Number(entry.wave) : 1,
+      kills: Number.isFinite(Number(entry.kills)) ? Number(entry.kills) : 0,
+      time: Number.isFinite(Number(entry.time)) ? Number(entry.time) : Number.isFinite(Number(entry.survival_time_seconds)) ? Number(entry.survival_time_seconds) : 0,
       difficulty: normalizeDifficulty(entry.difficulty),
-      date: typeof entry.date === "number" ? entry.date : typeof entry.created_at === "string" ? Date.parse(entry.created_at) : Date.now(),
+      date: Number.isFinite(Number(entry.date)) ? Number(entry.date) : typeof entry.created_at === "string" ? Date.parse(entry.created_at) : Date.now(),
       userId: typeof entry.user_id === "string" ? entry.user_id : undefined,
-    }));
+      };
+    });
 
   return (["easy", "medium", "hard"] as const).flatMap((difficulty) =>
     normalized.filter((entry) => entry.difficulty === difficulty).sort(compareEntries).slice(0, MAX),
@@ -113,7 +117,7 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
       }
       const scores = normalizeScores(data.map((entry) => {
         const profile = typeof entry.user_id === "string" ? profiles.get(entry.user_id) : undefined;
-        return { ...entry, player_name: profile?.username ?? entry.player_name, avatar_id: profile?.avatar_id ?? "samurai" };
+        return { ...entry, profile_username: profile?.username, avatar_id: profile?.avatar_id ?? "samurai" };
       }));
       saveLocal(scores);
       return scores;
