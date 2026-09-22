@@ -251,6 +251,8 @@ interface Pickup {
   magnet: boolean;
   credited?: boolean;
   potion?: PotionType;
+  /** Drop pessoal (prop local): nunca entra no sync e so coleta pelo dono. */
+  local?: boolean;
 }
 
 interface SpawnMark {
@@ -442,6 +444,9 @@ export class Game {
   bannerT = 0;
   deathT = 0;
   vignettePulse = 0;
+  shopPending = false;
+  shopLocalDone = false;
+  shopPeerDone = false;
   opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt", keyboardOnly: false, keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", prev: "q", next: "e", pause: "escape" }, inputMode: "keyboardMouse" };
 
   // Input
@@ -517,6 +522,9 @@ export class Game {
     this.enforceStatLimits();
     if (saved.atShop) {
       this.phase = "upgrade";
+      this.shopPending = true;
+      this.shopLocalDone = false;
+      this.shopPeerDone = false;
       this.waveTotal = 0;
       this.waveSpawned = 0;
       this.waveLeft = 0;
@@ -543,6 +551,9 @@ export class Game {
     this.dashSlashes.length = 0;
     this.dashHitSet.clear();
     this.waveClearT = -1;
+    this.shopPending = false;
+    this.shopLocalDone = false;
+    this.shopPeerDone = false;
     this.dashT = 0;
     this.dashCd = 0;
     this.cameraX = clamp(this.px - this.W / 2, 0, Math.max(0, this.worldW - this.W));
@@ -971,6 +982,27 @@ export class Game {
   }
 
   closeShop() {
+    if (this.isCoop) {
+      // Em coop a so avanca quando os DOIS jogadores fecharem a loja.
+      this.shopLocalDone = true;
+      this.onGamePacketOut?.({ type: "SHOP_CONTINUE", wave: this.wave });
+      if (!this.shopPeerDone) {
+        this.phase = "playing";
+        this.last = performance.now();
+        this.iframe = Math.max(this.iframe, 0.8);
+        this.banner = "AGUARDANDO O PARCEIRO NA LOJA...";
+        this.bannerT = 2.5;
+        this.pushStats(true);
+        return;
+      }
+    }
+    this.leaveShop();
+  }
+
+  private leaveShop() {
+    this.shopPending = false;
+    this.shopLocalDone = false;
+    this.shopPeerDone = false;
     this.wave++;
     if ((this.wave - 1) % 3 === 0) this.clearDecals();
     this.phase = "playing";
@@ -1058,6 +1090,9 @@ export class Game {
     this.flash = 0;
     this.hitstop = 0;
     this.deathT = 0;
+    this.shopPending = false;
+    this.shopLocalDone = false;
+    this.shopPeerDone = false;
     this.banner = "";
     this.bannerT = 0;
     this.clearDecals();
@@ -1236,6 +1271,13 @@ export class Game {
         this.phase = "dead";
         this.onGameOver(this.stats());
       }
+      return;
+    }
+
+    // Em coop, se os dois ronins cairem a partida acabou para os dois.
+    if (this.isCoop && this.hp <= 0 && this.peerRonin && this.peerRonin.hp <= 0) {
+      this.onGamePacketOut?.({ type: "GAME_OVER" });
+      this.beginDeath();
       return;
     }
 
@@ -2281,9 +2323,10 @@ export class Game {
     this.shake = Math.max(this.shake, big ? 8 : 4.5);
     Sfx.kill(this.combo);
 
-    // Three coins per kill make the first shop visit immediately useful (double in coop).
+    // Three coins per kill make the first shop visit immediately useful. In coop
+    // each coin pays its full value to both players (2x economy, split equally).
     if (!e.noDrop) {
-      const coinCount = this.isCoop ? 6 : 3;
+      const coinCount = 3;
       for (let c = 0; c < coinCount; c++) {
         this.pickups.push({
           id: this.nextPickupId++,
@@ -2500,6 +2543,9 @@ export class Game {
 
   /** Arms the current wave: sets the quota and drops the first ring of marks. */
   private beginWave() {
+    this.shopPending = false;
+    this.shopLocalDone = false;
+    this.shopPeerDone = false;
     this.waveTotal = this.waveQuota(this.wave);
     this.waveLeft = this.waveTotal;
     this.waveSpawned = 0;
@@ -2585,35 +2631,38 @@ export class Game {
       this.waveSpawned >= this.waveTotal &&
       this.marks.length === 0 &&
       this.enemies.length === 0 &&
-      this.waveClearT < 0
+      this.waveClearT < 0 &&
+      !this.shopPending
     ) {
       this.waveClearT = 1.25; // small breather before the shop
       this.banner = I18N[this.opts.language].waveCleared;
       this.bannerT = 1.4;
       Sfx.crit(4);
-      // Credit every coin immediately, while keeping the pickup animation alive.
+      // Credita cada moeda pendente na hora, mantendo a animacao de coleta viva.
+      // Em coop cada moeda vale coinValue para cada jogador (economia 2x dividida).
       const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
+      let pendingCoins = 0;
       for (const p of this.pickups) {
         if (p.kind === "coin" && !p.credited) {
-          if (this.isCoop) {
-            const split = Math.max(1, Math.floor((coinValue * 2) / 2));
-            this.coins += split;
-            p.credited = true;
-            this.onCoinSplit?.(split);
-            if (this.isHost) {
-              this.onGamePacketOut?.({
-                type: "COIN_DIVIDED",
-                amount: split,
-                totalGuestCoins: 0,
-                totalHostCoins: this.coins,
-              });
-            }
-          } else {
-            this.coins += coinValue;
-            p.credited = true;
-          }
+          p.credited = true;
+          pendingCoins++;
         }
         p.magnet = true;
+      }
+      if (pendingCoins > 0) {
+        const total = pendingCoins * coinValue;
+        this.coins += total;
+        if (this.isCoop) {
+          this.onCoinSplit?.(total);
+          if (this.isHost) {
+            this.onGamePacketOut?.({
+              type: "COIN_DIVIDED",
+              amount: total,
+              totalGuestCoins: 0,
+              totalHostCoins: this.coins,
+            });
+          }
+        }
       }
       if (this.isCoop) {
         if (this.hp <= 0) {
@@ -2622,6 +2671,7 @@ export class Game {
         }
         if (this.peerRonin && this.peerRonin.hp <= 0) {
           this.peerRonin.hp = Math.max(3, Math.floor((this.peerRonin.maxHp || 5) / 2));
+          this.onGamePacketOut?.({ type: "REVIVE_TRIGGER", target: "guest" });
         }
       }
     }
@@ -2629,7 +2679,13 @@ export class Game {
       this.waveClearT -= dt;
       if (this.waveClearT < 0) {
         this.waveClearT = -1;
+        this.shopPending = true;
+        this.shopLocalDone = false;
+        this.shopPeerDone = false;
         this.phase = "upgrade";
+        if (this.isCoop && this.isHost) {
+          this.onGamePacketOut?.({ type: "SHOP_OPEN", wave: this.wave });
+        }
         this.onUpgrade({ wave: this.wave });
       }
     }
@@ -3047,7 +3103,8 @@ export class Game {
       if (prop.kind === "tree") Sfx.treeBreak();
       else Sfx.crateBreak();
       const potion: PotionType = pick(["health", "strength", "speed", "agility"]);
-      this.pickups.push({ id: this.nextPickupId++, x: prop.x, y: prop.y, vx: rnd(-20, 20), vy: rnd(-35, -10), t: 0, kind: potion, potion, magnet: false });
+      // Drop pessoal de prop: coletado apenas pelo dono, fora do sync coop.
+      this.pickups.push({ id: this.nextPickupId++, x: prop.x, y: prop.y, vx: rnd(-20, 20), vy: rnd(-35, -10), t: 0, kind: potion, potion, magnet: false, local: true });
       this.burst(prop.x, prop.y, 12, potion === "health" ? "#ff4d6d" : potion === "strength" ? "#ff8a45" : potion === "speed" ? "#ffd44a" : "#8c8cff", 100);
     }
   }
@@ -3057,8 +3114,9 @@ export class Game {
       p.t += dt;
       const dHost = Math.hypot(this.px - p.x, this.py - p.y);
       const dPeer = this.isCoop && this.peerRonin ? Math.hypot(this.peerRonin.px - p.x, this.peerRonin.py - p.y) : 9999;
-      const targetX = dPeer < dHost ? this.peerRonin!.px : this.px;
-      const targetY = dPeer < dHost ? this.peerRonin!.py : this.py;
+      const peerCloser = dPeer < dHost;
+      const targetX = peerCloser ? this.peerRonin!.px : this.px;
+      const targetY = peerCloser ? this.peerRonin!.py : this.py;
       const d = Math.min(dHost, dPeer);
 
       if (d < 52 || p.magnet) {
@@ -3072,41 +3130,50 @@ export class Game {
       p.vx -= p.vx * Math.min(1, dt * 3);
       p.vy -= p.vy * Math.min(1, dt * 3);
 
-      if (d < 12) {
+      // Drops compartilhados (moedas/coracoes) sao autoritativos no host: o
+      // guest apenas exibe o imã e recebe o efeito via pacote. Drops locais
+      // (pocoes de props) pertencem a quem quebrou o prop e coleta normalmente.
+      const sharedDrop = !p.local;
+      const cosmeticForMe = sharedDrop && this.isCoop && !this.isHost;
+      let collectD = 9999;
+      let collectedByPeer = false;
+      if (!cosmeticForMe) {
+        if (sharedDrop && this.isCoop) {
+          collectD = d;
+          collectedByPeer = peerCloser;
+        } else {
+          collectD = dHost;
+        }
+      }
+
+      if (collectD < 12) {
         this.pickups.splice(i, 1);
         if (p.kind === "heart") {
-          this.hp = Math.min(this.maxHp, this.hp + 1);
+          if (collectedByPeer && this.peerRonin) {
+            this.peerRonin.hp = Math.min(this.peerRonin.maxHp || 5, this.peerRonin.hp + 1);
+            this.onGamePacketOut?.({ type: "PICKUP_EFFECT", kind: "heart", target: "guest" });
+          } else {
+            this.hp = Math.min(this.maxHp, this.hp + 1);
+          }
           this.addScore(0, p.x, p.y - 8, I18N[this.opts.language].healthPickup, "#ff4d6d");
           this.burst(p.x, p.y, 12, "#ff4d6d", 110);
           this.flash = Math.max(this.flash, 0.12 * this.opts.flash);
           this.flashColor = "255,90,120";
           Sfx.heal();
         } else if (p.kind === "coin") {
-          const coinBase = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
-          if (this.isCoop) {
-            // No modo coop ganham o dobro de moedas, e elas são divididas igualmente entre os 2
-            const doubleTotal = coinBase * 2;
-            const split = Math.max(1, Math.floor(doubleTotal / 2));
-            if (!p.credited) {
-              this.coins += split;
-              p.credited = true;
-              this.onCoinSplit?.(split);
-              if (this.isHost) {
-                this.onGamePacketOut?.({
-                  type: "COIN_DIVIDED",
-                  amount: split,
-                  totalGuestCoins: 0,
-                  totalHostCoins: this.coins,
-                });
-              }
-            }
-            this.addScore(5 * doubleTotal, p.x, p.y - 6, `+${split} 👥`, "#ffd747");
-          } else {
-            if (!p.credited) this.coins += coinBase;
-            this.addScore(5 * coinBase, p.x, p.y - 6, `+${coinBase}`, "#ffd747");
+          this.creditCoinDrop(p);
+        } else if (collectedByPeer) {
+          // Poçao coletada pelo parceiro: aplica nele e mostra so o efeito local.
+          this.onGamePacketOut?.({ type: "PICKUP_EFFECT", kind: "potion", potion: p.potion, target: "guest" });
+          if (p.potion === "health" && this.peerRonin) {
+            this.peerRonin.hp = Math.min(this.peerRonin.maxHp || 5, this.peerRonin.hp + 2);
+            this.addScore(0, p.x, p.y - 8, "+2 VIDA", "#ff4d6d");
+            Sfx.heal();
           }
-          this.burst(p.x, p.y, 6, "#ffd747", 75);
-          Sfx.coin();
+          const v = Math.round(25 * this.comboMult());
+          this.addScore(v, p.x, p.y - 8, `+${v}`, "#ffbd86");
+          this.burst(p.x, p.y, 8, "#ffbd86", 90);
+          Sfx.pickup();
         } else {
           if (p.potion === "health") {
             this.hp = Math.min(this.maxHp, this.hp + 2);
@@ -3132,6 +3199,33 @@ export class Game {
       }
       if (p.t > 14) this.pickups.splice(i, 1);
     }
+  }
+
+  /** Moeda coletada: em coop cada moeda vale coinValue para cada jogador (2x dividido). */
+  private creditCoinDrop(p: Pickup) {
+    const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
+    if (!p.credited) {
+      p.credited = true;
+      this.coins += coinValue;
+      if (this.isCoop) {
+        this.onCoinSplit?.(coinValue);
+        if (this.isHost) {
+          this.onGamePacketOut?.({
+            type: "COIN_DIVIDED",
+            amount: coinValue,
+            totalGuestCoins: 0,
+            totalHostCoins: this.coins,
+          });
+        }
+      }
+    }
+    if (this.isCoop) {
+      this.addScore(10 * coinValue, p.x, p.y - 6, `+${coinValue} 👥`, "#ffd747");
+    } else {
+      this.addScore(5 * coinValue, p.x, p.y - 6, `+${coinValue}`, "#ffd747");
+    }
+    this.burst(p.x, p.y, 6, "#ffd747", 75);
+    Sfx.coin();
   }
 
   private hurtPlayer(dmg: number, nx: number, ny: number) {
@@ -3166,6 +3260,16 @@ export class Game {
       return;
     }
 
+    if (this.isCoop) {
+      // Os dois caíram (ou o parceiro ja nao conta): fim de jogo para os dois.
+      this.onGamePacketOut?.({ type: "GAME_OVER" });
+    }
+    this.beginDeath();
+  }
+
+  /** Encerra a run em definitivo (mortos os dois, GAME_OVER do peer ou desconexao). */
+  private beginDeath() {
+    if (this.phase === "dying" || this.phase === "dead") return;
     this.phase = "dying";
     this.deathT = 0;
     this.shake = 20;
@@ -3200,6 +3304,14 @@ export class Game {
       drag: 0,
       kind: 1,
     });
+  }
+
+  /** O parceiro caiu da sessao no meio da partida: encerra a run coop. */
+  public coopPeerLeft() {
+    if (!this.isCoop || this.phase === "dying" || this.phase === "dead" || this.phase === "menu") return;
+    this.banner = "O PARCEIRO SAIU DA PARTIDA";
+    this.bannerT = 2.5;
+    this.beginDeath();
   }
 
   /* ----------------------------- fx ----------------------------- */
@@ -4025,14 +4137,16 @@ export class Game {
         animTimer: e.t,
       }));
 
-      const pickups: CoopPickupState[] = this.pickups.map((p) => ({
-        id: p.id ?? 0,
-        kind: p.kind === "coin" ? "coin" : "potion",
-        potion: p.potion,
-        x: p.x,
-        y: p.y,
-        credited: !!p.credited,
-      }));
+      const pickups: CoopPickupState[] = this.pickups
+        .filter((p) => !p.local)
+        .map((p) => ({
+          id: p.id ?? 0,
+          kind: p.kind === "coin" ? "coin" : p.kind === "heart" ? "heart" : "potion",
+          potion: p.potion,
+          x: p.x,
+          y: p.y,
+          credited: !!p.credited,
+        }));
 
       const hostRonin: PeerRoninState = {
         px: this.px,
@@ -4172,10 +4286,13 @@ export class Game {
       }
       this.enemies = nextList;
 
-      if (pickups && pickups.length > 0) {
-        const pickupMap = new Map(this.pickups.map((p) => [p.id, p]));
+      {
+        // Sincroniza os drops compartilhados (lista vazia remove os pendentes)
+        // preservando os drops locais deste cliente (props quebrados por ele).
+        const localDrops = this.pickups.filter((p) => p.local);
+        const pickupMap = new Map(this.pickups.filter((p) => !p.local).map((p) => [p.id, p]));
         const nextPickups: Pickup[] = [];
-        for (const sp of pickups) {
+        for (const sp of pickups ?? []) {
           let existing = pickupMap.get(sp.id);
           if (!existing) {
             existing = {
@@ -4185,7 +4302,7 @@ export class Game {
               vx: 0,
               vy: 0,
               t: 0,
-              kind: sp.kind === "coin" ? "coin" : ((sp.potion as PotionType) || "health"),
+              kind: sp.kind === "coin" ? "coin" : sp.kind === "heart" ? "heart" : ((sp.potion as PotionType) || "health"),
               potion: sp.potion as PotionType,
               magnet: false,
               credited: sp.credited,
@@ -4195,17 +4312,57 @@ export class Game {
             existing.y += (sp.y - existing.y) * 0.5;
             existing.credited = sp.credited;
           }
-          if (existing) {
-            nextPickups.push(existing);
-          }
+          nextPickups.push(existing);
         }
-        this.pickups = nextPickups;
+        this.pickups = [...nextPickups, ...localDrops];
       }
     } else if (packet.type === "COIN_DIVIDED") {
       this.coins += packet.amount;
       this.addScore(10 * packet.amount, this.px, this.py - 6, `+${packet.amount} 👥`, "#ffd747");
       this.burst(this.px, this.py, 6, "#ffd747", 75);
       Sfx.coin();
+    } else if (packet.type === "REVIVE_TRIGGER") {
+      const forMe = (packet.target === "host") === this.isHost;
+      if (forMe && this.hp <= 0) {
+        this.hp = Math.max(3, Math.floor(this.maxHp / 2));
+        this.banner = "REAVIVADO NA VIRADA DA WAVE!";
+        this.bannerT = 2.5;
+        this.pushStats(true);
+      }
+    } else if (packet.type === "PICKUP_EFFECT") {
+      if (packet.kind === "heart") {
+        this.hp = Math.min(this.maxHp, this.hp + 1);
+        this.addScore(0, this.px, this.py - 8, I18N[this.opts.language].healthPickup, "#ff4d6d");
+        this.burst(this.px, this.py, 12, "#ff4d6d", 110);
+        Sfx.heal();
+      } else if (packet.potion) {
+        const potion = packet.potion as PotionType;
+        if (potion === "health") {
+          this.hp = Math.min(this.maxHp, this.hp + 2);
+          this.addScore(0, this.px, this.py - 8, "+2 VIDA", "#ff4d6d");
+          Sfx.heal();
+        }
+        if (potion === "strength") this.strengthT = 8;
+        if (potion === "speed") this.speedT = 8;
+        if (potion === "agility") this.agilityT = 8;
+        this.lastPotion = potion;
+        this.potionDisplayT = potion === "health" ? 0 : 8;
+        const v = Math.round(25 * this.comboMult());
+        this.addScore(v, this.px, this.py - 8, `+${v}`, "#ffbd86");
+        this.burst(this.px, this.py, 8, "#ffbd86", 90);
+        Sfx.pickup();
+      }
+    } else if (packet.type === "SHOP_OPEN" && !this.isHost) {
+      this.shopPending = true;
+      this.shopLocalDone = false;
+      this.shopPeerDone = false;
+      this.phase = "upgrade";
+      this.onUpgrade({ wave: packet.wave });
+    } else if (packet.type === "SHOP_CONTINUE") {
+      this.shopPeerDone = true;
+      if (this.shopLocalDone) this.leaveShop();
+    } else if (packet.type === "GAME_OVER") {
+      this.beginDeath();
     }
   }
 

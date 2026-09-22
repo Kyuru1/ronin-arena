@@ -15,6 +15,13 @@ export default defineConfig({
   server: {
     host: "0.0.0.0",
     allowedHosts: true,
+    proxy: {
+      // Backend coop (server/index.js) alcancavel pelo browser sem usar localhost.
+      "/coop-ws": {
+        target: "ws://127.0.0.1:3001",
+        ws: true,
+      },
+    },
   },
   resolve: {
     alias: {

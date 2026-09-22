@@ -194,9 +194,11 @@ export function GameOverScreen({
                   ))}
                 </div>
               )}
-              <PxButton tone="red" onClick={onRestart} className="w-full py-3.5 text-[11px] sm:text-[12px]">
-                ▶ {t.playAgain}
-              </PxButton>
+              {!isCoop && (
+                <PxButton tone="red" onClick={onRestart} className="w-full py-3.5 text-[11px] sm:text-[12px]">
+                  ▶ {t.playAgain}
+                </PxButton>
+              )}
               <PxButton tone="dark" onClick={onMenu} className="w-full py-2.5 text-[8px] sm:text-[9px]">
                 {t.menu}
               </PxButton>
