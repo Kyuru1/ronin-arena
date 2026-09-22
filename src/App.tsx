@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Game, type Difficulty, type InputMode, type Perk, type HudStats, type MagicType, type PowerUp, type SavedRun, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
-import { isMuted, setMuted, setVolume, unlockAudio } from "./game/audio";
+import { isMuted, setMuted, setVolume, unlockAudio, Sfx } from "./game/audio";
 import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
 import Hud from "./components/Hud";
@@ -131,6 +131,17 @@ export default function App() {
       void loadProfile(session.user).then(setProfile).catch(() => setProfile(null));
     });
     return () => subscription.unsubscribe();
+  }, []);
+  useEffect(() => {
+    const playButtonSound = (event: MouseEvent) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest("button:not(:disabled)");
+      if (!button) return;
+      unlockAudio();
+      Sfx.uiClick();
+    };
+    document.addEventListener("click", playButtonSound);
+    return () => document.removeEventListener("click", playButtonSound);
   }, []);
   /* boot */
   useEffect(() => {
@@ -644,5 +655,6 @@ export default function App() {
     </div>
   );
 }
+
 
 
