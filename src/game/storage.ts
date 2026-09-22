@@ -160,7 +160,7 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
   const userId = entry.userId ?? authData.session?.user?.id;
   if (!userId) return { list: await loadRemoteScores(), rank: -1 };
 
-  const normalizedName = String(entry.name ?? "RONIN").replace(/\s+/g, " ").trim().slice(0, 12) || "RONIN";
+  const normalizedName = String(entry.name ?? "RONIN").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9 _-]/g, "").replace(/\s+/g, " ").trim().slice(0, 12) || "RONIN";
   const normalizedAvatar = normalizeAvatar(entry.avatarId);
 
   const payload = {
@@ -175,12 +175,12 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
   let { error: rpcError } = await supabase.rpc("submit_ranking", payload);
   if (rpcError && /jwt|token|authentication|auth/i.test(String(rpcError.message ?? rpcError))) {
     const { error: refreshError } = await supabase.auth.refreshSession();
-    if (!refreshError) {
-      ({ error: rpcError } = await supabase.rpc("submit_ranking", payload));
-    }
+    if (!refreshError) ({ error: rpcError } = await supabase.rpc("submit_ranking", payload));
+  }
+  if (rpcError && /invalid avatar|avatar_id/i.test(String(rpcError.message ?? rpcError)) && normalizedAvatar !== "samurai") {
+    ({ error: rpcError } = await supabase.rpc("submit_ranking", { ...payload, p_avatar_id: "samurai" }));
   }
   if (rpcError) throw rpcError;
-
   const list = await loadRemoteScores();
   const sameDifficulty = list.filter((item) => item.difficulty === entry.difficulty);
   return { list, rank: sameDifficulty.findIndex((item) => item.userId === userId) };
