@@ -10,6 +10,7 @@ import ShopScreen from "./components/ShopScreen";
 import TutorialScreen from "./components/TutorialScreen";
 import InputModeScreen from "./components/InputModeScreen";
 import CoopLobbyModal from "./components/CoopLobbyModal";
+import { coopNet } from "./game/coopNet";
 
 import { supabase } from "./lib/supabase";
 import { loadProfile, type PlayerProfile } from "./game/auth";
@@ -109,6 +110,7 @@ export default function App() {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [inputMode, setInputMode] = useState<InputMode>("keyboardMouse");
   const [coopModalOpen, setCoopModalOpen] = useState(false);
+  const [isCoopGame, setIsCoopGame] = useState(false);
 
 
   useEffect(() => {
@@ -208,6 +210,7 @@ export default function App() {
     const game = gameRef.current;
     if (!game) return;
     game.setPerk(selectedPerk.current);
+    game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
     game.startGame();
     setRank(-1);
@@ -220,6 +223,27 @@ export default function App() {
     setCoopModalOpen(true);
   }, []);
 
+  const handleStartCoop = useCallback((isHost: boolean, coopDifficulty: Difficulty) => {
+    const game = gameRef.current;
+    if (!game) return;
+    const partner = isHost ? coopNet.roomState?.guest?.profile : coopNet.roomState?.host?.profile;
+    setIsCoopGame(true);
+    game.isCoop = true;
+    game.isHost = isHost;
+    game.setDifficulty(coopDifficulty);
+    game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
+    game.peerRonin = {
+      px: game.worldW / 2 + (isHost ? 25 : -25), py: game.worldH / 2, face: isHost ? -1 : 1, walk: false,
+      hp: 5, maxHp: 5, weapon: "katana", atkPhase: 0, atkAngle: 0, isDashing: false, perk: null,
+      coins: 0, score: 0, kills: 0, username: partner?.username ?? "RONIN", avatarId: partner?.avatarId ?? "samurai",
+    };
+    game.onGamePacketOut = (packet) => coopNet.sendPacket(packet);
+    coopNet.onGamePacket = (packet) => gameRef.current?.applyPeerPacket(packet);
+    coopNet.onPeerLeft = () => gameRef.current?.coopPeerLeft();
+    unlockAudio();
+    setCoopModalOpen(false);
+    launchRun();
+  }, [launchRun]);
   const selectedPerk = useRef<Perk | null>(null);
   const choosePerk = useCallback((perk: Perk | null) => { selectedPerk.current = perk; gameRef.current?.setPerk(perk); }, []);
 
@@ -255,15 +279,26 @@ export default function App() {
   const restartRun = useCallback(() => {
     const game = gameRef.current;
     if (!game) return;
+    if (game.isCoop || isCoopGame) {
+      coopNet.leaveRoom();
+      game.isCoop = false;
+      game.peerRonin = null;
+      setIsCoopGame(false);
+      game.reset();
+      game.phase = "menu";
+      setPhase("menu");
+      return;
+    }
     game.setDifficulty(difficulty);
     game.setPerk(selectedPerk.current);
+    game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
     game.startGame();
     setRank(-1);
     setPendingScore(false);
     setPhase("playing");
     setMenuClosing(false);
-  }, [difficulty]);
+  }, [difficulty, isCoopGame]);
 
   const finishTutorial = useCallback((neverAgain: boolean) => {
     if (neverAgain) {
@@ -334,13 +369,19 @@ export default function App() {
   const toMenu = useCallback(() => {
     const g = gameRef.current;
     if (!g) return;
+    if (g.isCoop || isCoopGame) {
+      coopNet.leaveRoom();
+      g.isCoop = false;
+      g.peerRonin = null;
+      setIsCoopGame(false);
+    }
     g.reset();
     g.phase = "menu";
     setPhase("menu");
     setStats(emptyStats);
     setUpgrade(null);
     void loadRemoteScores().then(setScores);
-  }, []);
+  }, [isCoopGame]);
 
   const submitName = useCallback(async (profileOverride?: PlayerProfile) => {
     let activeProfile = profileOverride ?? profileRef.current;
@@ -495,7 +536,7 @@ export default function App() {
       if (document.hidden) pauseFromFocusLoss();
     };
     const onPageHide = () => {
-
+      if (gameRef.current?.isCoop) coopNet.leaveRoom();
       pauseFromFocusLoss();
     };
     window.addEventListener("blur", pauseFromFocusLoss);
@@ -555,7 +596,7 @@ export default function App() {
           </div>
         )}
         {coopModalOpen && profile && (
-          <CoopLobbyModal profile={profile} onClose={() => setCoopModalOpen(false)} />
+          <CoopLobbyModal profile={profile} onClose={() => setCoopModalOpen(false)} onStartCoop={handleStartCoop} />
         )}
         {phase === "menu" && savedRun && (
           <SavedRunPrompt
@@ -580,7 +621,7 @@ export default function App() {
             onRestart={restartRun}
             onMenu={toMenu}
             t={t}
-            isCoop={false}
+            isCoop={isCoopGame}
           />
         )}
         {phase === "upgrade" && upgrade && (
@@ -603,4 +644,5 @@ export default function App() {
     </div>
   );
 }
+
 

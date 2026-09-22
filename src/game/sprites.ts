@@ -117,6 +117,34 @@ export function buildSprites() {
     },
   );
 
+  const recolorRonin = (name: string, band: string, armor: string, accent: string) => {
+    const source = SPR.player;
+    const canvas = makeCanvas(source.w, source.h);
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(source.canvas, 0, 0);
+    const data = ctx.getImageData(0, 0, source.w, source.h);
+    for (let i = 0; i < data.data.length; i += 4) {
+      const hex = `#${[data.data[i], data.data[i + 1], data.data[i + 2]].map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+      const next = hex === "#d9343f" ? band : hex === "#481923" ? armor : hex === "#9c2634" ? accent : null;
+      if (!next) continue;
+      data.data[i] = Number.parseInt(next.slice(1, 3), 16);
+      data.data[i + 1] = Number.parseInt(next.slice(3, 5), 16);
+      data.data[i + 2] = Number.parseInt(next.slice(5, 7), 16);
+    }
+    ctx.putImageData(data, 0, 0);
+    const white = makeCanvas(source.w, source.h);
+    const wctx = white.getContext("2d")!;
+    wctx.drawImage(canvas, 0, 0);
+    wctx.globalCompositeOperation = "source-in";
+    wctx.fillStyle = "#ffffff";
+    wctx.fillRect(0, 0, source.w, source.h);
+    SPR[name] = { canvas, white, w: source.w, h: source.h };
+  };
+  recolorRonin("azureRonin", "#38bdf8", "#123a73", "#2563eb");
+  recolorRonin("violetRonin", "#b58cff", "#45236b", "#7c3aed");
+  recolorRonin("goldRonin", "#ffd44a", "#79520f", "#d99318");
+  recolorRonin("jadeRonin", "#5eead4", "#155e5b", "#0f9b84");
+  recolorRonin("shadowRonin", "#94a3b8", "#1f2937", "#475569");
   SPR.grunt = makeSprite(
     [
       "..gggggg..",
@@ -749,3 +777,4 @@ export function buildSprites() {
     { p: "#2a0509" },
   );
 }
+

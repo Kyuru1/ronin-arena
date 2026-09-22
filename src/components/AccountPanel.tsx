@@ -4,28 +4,12 @@ import PixelSprite from "./PixelSprite";
 import { PxButton, PxHeading } from "./PixelUi";
 
 const AVATARS: Array<{ id: AvatarId; label: string; sprite: string }> = [
-  { id: "samurai", label: "SAMURAI", sprite: "player" },
-  { id: "grunt", label: "GRUNT", sprite: "grunt" },
-  { id: "bat", label: "MORCEGO", sprite: "bat" },
-  { id: "brute", label: "BRUTE", sprite: "brute" },
-  { id: "spitter", label: "SPITTER", sprite: "spitter" },
-  { id: "ninja", label: "NINJA", sprite: "ninja" },
-  { id: "hound", label: "HOUND", sprite: "hound" },
-  { id: "wisp", label: "WISP", sprite: "wisp" },
-  { id: "archer", label: "ARCHER", sprite: "archer" },
-  { id: "oni", label: "ONI", sprite: "oni" },
-  { id: "shield", label: "SHIELD", sprite: "shield" },
-  { id: "slime", label: "SLIME", sprite: "slime" },
-  { id: "monk", label: "MONK", sprite: "monk" },
-  { id: "demon", label: "DEMON", sprite: "demon" },
-  { id: "skeleton", label: "SKELETON", sprite: "skeleton" },
-  { id: "crawler", label: "CRAWLER", sprite: "crawler" },
-  { id: "bomber", label: "BOMBER", sprite: "bomber" },
-  { id: "bombMinion", label: "MINION BOMBA", sprite: "bombMinion" },
-  { id: "ram", label: "RAM", sprite: "ram" },
-  { id: "warlock", label: "WARLOCK", sprite: "warlock" },
-  { id: "golem", label: "GOLEM", sprite: "golem" },
-  { id: "boss", label: "SHOGUN", sprite: "boss" },
+  { id: "samurai", label: "RONIN", sprite: "player" },
+  { id: "azureRonin", label: "AZUL", sprite: "azureRonin" },
+  { id: "violetRonin", label: "VIOLETA", sprite: "violetRonin" },
+  { id: "goldRonin", label: "DOURADO", sprite: "goldRonin" },
+  { id: "jadeRonin", label: "JADE", sprite: "jadeRonin" },
+  { id: "shadowRonin", label: "SOMBRA", sprite: "shadowRonin" },
 ];
 
 export default function AccountPanel({ profile, onProfile }: { profile: PlayerProfile | null; onProfile: (value: PlayerProfile | null) => void }) {

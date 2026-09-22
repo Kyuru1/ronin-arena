@@ -333,6 +333,7 @@ export class Game {
   public isCoop = false;
   public isHost = true;
   public peerRonin: (PeerRoninState & { username?: string; avatarId?: AvatarId }) | null = null;
+  public playerAvatar: AvatarId = "samurai";
   public onCoinSplit?: (amount: number) => void;
   public onGamePacketOut?: (packet: GamePacket) => void;
   public nextEnemyId = 1;
@@ -490,6 +491,9 @@ export class Game {
   }
 
   /* ----------------------------- setup ----------------------------- */
+
+  setPlayerAvatar(avatarId: AvatarId) { this.playerAvatar = avatarId; }
+  private localPlayerSprite() { return SPR[this.playerAvatar === "samurai" ? "player" : this.playerAvatar] || SPR.player; }
 
   setPerk(perk: Perk | null) {
     this.perk = perk;
@@ -729,6 +733,8 @@ export class Game {
     cv.removeEventListener("pointermove", this.onPointerMove);
     cv.removeEventListener("pointerup", this.onPointerUp);
     cv.removeEventListener("pointercancel", this.onPointerUp);
+    window.removeEventListener("pointerup", this.onPointerUp);
+    window.removeEventListener("pointercancel", this.onPointerUp);
     cv.removeEventListener("wheel", this.onWheel);
     cv.removeEventListener("contextmenu", prevent);
   }
@@ -742,6 +748,8 @@ export class Game {
     cv.addEventListener("pointermove", this.onPointerMove);
     cv.addEventListener("pointerup", this.onPointerUp);
     cv.addEventListener("pointercancel", this.onPointerUp);
+    window.addEventListener("pointerup", this.onPointerUp);
+    window.addEventListener("pointercancel", this.onPointerUp);
     cv.addEventListener("wheel", this.onWheel, { passive: false });
     cv.addEventListener("contextmenu", prevent);
   }
@@ -805,6 +813,7 @@ export class Game {
 
   private onPointerDown = (e: PointerEvent) => {
     if (this.opts.inputMode === "keyboard" || this.opts.inputMode === "gamepad") return;
+    if (e.pointerType !== "mouse" && this.opts.inputMode !== "touch") return;
     unlockAudio();
     if (this.phase !== "playing") return;
     const p = this.toCanvas(e);
@@ -829,6 +838,7 @@ export class Game {
 
   private onPointerMove = (e: PointerEvent) => {
     if (this.opts.inputMode === "keyboard" || this.opts.inputMode === "gamepad") return;
+    if (e.pointerType !== "mouse" && this.opts.inputMode !== "touch") return;
     const p = this.toCanvas(e);
     if (e.pointerType === "mouse") {
       this.mouseX = p.x;
@@ -847,6 +857,7 @@ export class Game {
 
   private onPointerUp = (e: PointerEvent) => {
     if (this.opts.inputMode === "keyboard" || this.opts.inputMode === "gamepad") return;
+    if (e.pointerType !== "mouse" && this.opts.inputMode !== "touch") return;
     if (e.pointerType === "mouse") {
       this.pointerAttackHeld = false;
       this.attackHeld = this.keyboardAttackHeld;
@@ -2720,6 +2731,7 @@ export class Game {
   }
 
   private updateEnemies(dt: number) {
+    if (this.isCoop && !this.isHost) return;
     const arr = this.enemies;
     for (let i = arr.length - 1; i >= 0; i--) {
       const e = arr[i];
@@ -2733,12 +2745,14 @@ export class Game {
 
       let targetX = this.px;
       let targetY = this.py;
+      let targetIsPeer = false;
       if (this.isCoop && this.peerRonin && this.peerRonin.hp > 0) {
         const dLocal = Math.hypot(this.px - e.x, this.py - e.y);
         const dPeer = Math.hypot(this.peerRonin.px - e.x, this.peerRonin.py - e.y);
         if (this.hp <= 0 || dPeer < dLocal) {
           targetX = this.peerRonin.px;
           targetY = this.peerRonin.py;
+          targetIsPeer = true;
         }
       }
 
@@ -2987,12 +3001,12 @@ export class Game {
       }
 
       if (e.type === "ram" && e.state === 2 && dist < e.r + 10 && e.spawnT <= 0) {
-        this.hurtPlayer(e.dmg, nx, ny);
+        this.hurtCoopTarget(targetIsPeer, e.dmg, nx, ny);
         this.ramCrash(e);
         continue;
       }
       if (e.type !== "ram" && e.type !== "bombMinion" && dist < e.r + 8 && e.touchCd <= 0 && e.spawnT <= 0) {
-        if (this.shieldFacing(e.x, e.y)) {
+        if (!targetIsPeer && this.shieldFacing(e.x, e.y)) {
           const away = Math.atan2(e.y - this.py, e.x - this.px);
           e.touchCd = 0.55;
           e.vx += Math.cos(away) * 420;
@@ -3003,9 +3017,16 @@ export class Game {
           continue;
         }
         e.touchCd = 0.8;
-        this.hurtPlayer(e.dmg, nx, ny);
+        this.hurtCoopTarget(targetIsPeer, e.dmg, nx, ny);
       }
     }
+  }
+
+  private hurtCoopTarget(targetIsPeer: boolean, dmg: number, nx: number, ny: number) {
+    if (!targetIsPeer || !this.isCoop) { this.hurtPlayer(dmg, nx, ny); return; }
+    if (!this.peerRonin || this.peerRonin.hp <= 0) return;
+    this.peerRonin.hp = Math.max(0, this.peerRonin.hp - dmg * DIFFICULTY_RULES[this.difficulty].damageTaken);
+    this.onGamePacketOut?.({ type: "PLAYER_DAMAGE", target: "guest", dmg, nx, ny });
   }
 
   private updateShots(dt: number) {
@@ -3558,14 +3579,20 @@ export class Game {
         ctx.fillRect(p.x - 3, p.y + bob - 3, 6, 6);
         ctx.globalAlpha = 1;
       } else {
-        ctx.fillStyle = "#ff9a76";
-        ctx.fillRect(Math.round(p.x - 2), Math.round(p.y + bob - 2), 4, 4);
-        ctx.fillStyle = "#ffffff";
-        ctx.fillRect(Math.round(p.x - 1), Math.round(p.y + bob - 1), 1, 1);
-        ctx.globalAlpha = 0.3;
-        ctx.fillStyle = "#ff9a76";
-        ctx.fillRect(Math.round(p.x - 4), Math.round(p.y + bob - 4), 8, 8);
+        const potionSprite = p.potion === "health" ? SPR.potionHealth : p.potion === "strength" ? SPR.potionStrength : p.potion === "speed" ? SPR.potionSpeed : SPR.potionAgility;
+        const glow = p.potion === "health" ? "#ff4d6d" : p.potion === "strength" ? "#ff8a45" : p.potion === "speed" ? "#ffd44a" : "#8c8cff";
+        const pulse = 0.28 + 0.16 * Math.sin(p.t * 9);
+        ctx.globalAlpha = pulse;
+        ctx.fillStyle = glow;
+        ctx.fillRect(Math.round(p.x - 6), Math.round(p.y + bob - 6), 12, 12);
         ctx.globalAlpha = 1;
+        this.blit(potionSprite, p.x, p.y + bob, 1, 0, 1);
+        if (p.magnet) {
+          ctx.globalAlpha = 0.45;
+          ctx.fillStyle = glow;
+          ctx.fillRect(Math.round(p.x - 2), Math.round(p.y + bob - 2), 4, 4);
+          ctx.globalAlpha = 1;
+        }
       }
     }
 
@@ -3661,7 +3688,7 @@ export class Game {
     // Afterimages
     for (const a of this.afterimages) {
       ctx.globalAlpha = a.life * 0.35;
-      this.blit(SPR.player, a.x, a.y, this.face, 1, 1);
+      this.blit(this.localPlayerSprite(), a.x, a.y, this.face, 1, 1);
       ctx.globalAlpha = 1;
     }
 
@@ -3940,7 +3967,7 @@ export class Game {
 
     if (!blink) {
       const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
-      this.blit(SPR.player, bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08);
+      this.blit(this.localPlayerSprite(), bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08);
       if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) this.drawPsychicHands(this.aimAngle());
     }
 
@@ -4361,6 +4388,9 @@ export class Game {
     } else if (packet.type === "SHOP_CONTINUE") {
       this.shopPeerDone = true;
       if (this.shopLocalDone) this.leaveShop();
+    } else if (packet.type === "PLAYER_DAMAGE") {
+      const forMe = (packet.target === "host") === this.isHost;
+      if (forMe) this.hurtPlayer(packet.dmg, packet.nx, packet.ny);
     } else if (packet.type === "GAME_OVER") {
       this.beginDeath();
     }
@@ -4376,14 +4406,14 @@ export class Game {
     ctx.save();
 
     // 1. Tag de Nome do Ronin Aliado
-    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.font = '4.2px "Press Start 2P", monospace';
     ctx.textAlign = "center";
     const roleTag = this.isHost ? "P2" : "P1 (HOST)";
     const displayName = `[${roleTag}] ${peer.username || "RONIN"}`;
     const textW = ctx.measureText(displayName).width;
 
     ctx.fillStyle = "rgba(7, 3, 5, 0.75)";
-    ctx.fillRect(px - textW / 2 - 3, py - 22, textW + 6, 8);
+    ctx.fillRect(px - textW / 2 - 2, py - 20, textW + 4, 6);
 
     ctx.fillStyle = peer.hp > 0 ? "#86efac" : "#ef4444";
     ctx.fillText(displayName, px, py - 16);
@@ -4500,3 +4530,7 @@ function gibColor(t: EnemyType) {
 function prevent(e: Event) {
   e.preventDefault();
 }
+
+
+
+
