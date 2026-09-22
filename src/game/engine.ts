@@ -37,7 +37,7 @@ export const DIFFICULTY_RULES = {
   medium: {
     limits: { maxHp: 30, speed: 200, dashMax: 2, dashSpeedMult: 3 },
     damageTaken: 1,
-    coinMultiplier: 1.2,
+    coinMultiplier: 1,
   },
   hard: {
     limits: { maxHp: 15, speed: 154, dashMax: 4, dashSpeedMult: 1.5 },
