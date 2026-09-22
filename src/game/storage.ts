@@ -172,7 +172,13 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
     p_player_name: normalizedName,
     p_avatar_id: normalizedAvatar,
   };
-  const { error: rpcError } = await supabase.rpc("submit_ranking", payload);
+  let { error: rpcError } = await supabase.rpc("submit_ranking", payload);
+  if (rpcError && /jwt|token|authentication|auth/i.test(String(rpcError.message ?? rpcError))) {
+    const { error: refreshError } = await supabase.auth.refreshSession();
+    if (!refreshError) {
+      ({ error: rpcError } = await supabase.rpc("submit_ranking", payload));
+    }
+  }
   if (rpcError) throw rpcError;
 
   const list = await loadRemoteScores();

@@ -208,7 +208,7 @@ export default function App() {
       setPhase("upgrade");
     };
     game.onPause = () => {
-      setPhase((current) => (current === "playing" ? "paused" : current));
+      setPhase(game.phase === "paused" ? "paused" : "playing");
     };
 
     let pending = 0;

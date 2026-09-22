@@ -548,12 +548,12 @@ export class Game {
     if (!this.isCoop || this.hp > 0) return;
     const alive = this.aliveRemoteRonins();
     if (!alive.length) return;
-    const index = Math.max(0, alive.findIndex(([id]) => id === this.spectatorTargetId));
-    this.spectatorTargetId = alive[(index + direction + alive.length) % alive.length][0];
-    this.peerRonin = this.peerRonins[this.spectatorTargetId];
+    const currentIndex = alive.findIndex(([id]) => id === this.spectatorTargetId);
+    const nextIndex = currentIndex < 0 ? (direction > 0 ? 0 : alive.length - 1) : (currentIndex + direction + alive.length) % alive.length;
+    this.spectatorTargetId = alive[nextIndex][0];
+    this.peerRonin = alive[nextIndex][1];
     this.pushStats(true);
   }
-
   setPerk(perk: Perk | null) {
     this.perk = perk;
     this.pushStats(true);
@@ -1207,6 +1207,7 @@ export class Game {
     if (this.phase === "paused") {
       this.phase = "playing";
       this.last = performance.now();
+      this.onPause();
     }
   }
   togglePause() {
@@ -1733,7 +1734,7 @@ export class Game {
       if (this.hp <= 0 && this.isCoop) this.spectateNext(-1); else this.prevWeapon();
     }
     if (justPressed(5) || justPressed(15)) { if (this.hp <= 0 && this.isCoop) this.spectateNext(1); else this.nextWeapon(); }
-    if (justPressed(9)) this.onPause();
+    if (justPressed(9)) this.togglePause();
     this.gamepadButtons = pad.buttons.map((button) => button.pressed);
   }
 
