@@ -39,10 +39,6 @@ jobs:
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
           VITE_COOP_SERVER_URL: ${{ secrets.VITE_COOP_SERVER_URL }}
 
-      # Copia o guia COOP-HOSTING.md para o site (linkado pelo lobby).
-      - name: Copy COOP-HOSTING guide
-        run: cp COOP-HOSTING.md dist/COOP-HOSTING.md
-
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
@@ -61,3 +57,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
