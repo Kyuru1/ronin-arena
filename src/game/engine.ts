@@ -3973,7 +3973,7 @@ export class Game {
       ctx.restore();
     }
 
-    if (!blink) {
+    if (!blink && !(this.isCoop && this.hp <= 0 && this.peerRonin && this.peerRonin.hp > 0)) {
       const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
       this.blit(this.localPlayerSprite(), bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08);
       if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) this.drawPsychicHands(this.aimAngle());
@@ -4261,7 +4261,7 @@ export class Game {
         }
       }
     } else if (packet.type === "HOST_SYNC" && !this.isHost) {
-      const { hostRonin, enemies, pickups, wave, waveTotal, waveLeft } = packet.payload;
+      const { hostRonin, enemies, pickups, wave, waveTotal, waveLeft, paused } = packet.payload;
       if (this.peerRonin) {
         Object.assign(this.peerRonin, hostRonin);
       } else {
@@ -4271,6 +4271,12 @@ export class Game {
       this.wave = wave;
       this.waveTotal = waveTotal;
       this.waveLeft = waveLeft;
+// Update pause state from host
+       if (paused) {
+         this.pause();
+       } else {
+         this.resume();
+       }
 
       const currentMap = new Map(this.enemies.map((e) => [e.id, e]));
       const nextList: Enemy[] = [];
@@ -4409,6 +4415,7 @@ export class Game {
     const ctx = this.ctx;
     const peer = this.peerRonin;
     const px = Math.round(peer.px);
+if (peer.hp <= 0) return;
     const py = Math.round(peer.py);
 
     ctx.save();
@@ -4446,8 +4453,23 @@ export class Game {
       ctx.fillText("[CAÍDO]", px, py + 16);
     }
 
-    this.blit(sprite, px, py, face, 1, 1);
+    this.blit(sprite, px, py, face, 0, 1);
 
+// 3.5. Weapon do aliado
+     if (peer.hp > 0) {
+       ctx.save();
+       ctx.translate(px, py);
+       ctx.rotate(peer.atkAngle);
+       const weaponLen = 16; // default blade length
+       drawWeaponArt(ctx, peer.weapon, {
+         len: weaponLen,
+         draw01: 0,
+         glint: 0,
+         glintP: 0,
+         form: 0
+       });
+       ctx.restore();
+     }
     // 4. Efeito de ataque do aliado
     if (peer.atkPhase > 0) {
       ctx.strokeStyle = "#ffd0b1";
