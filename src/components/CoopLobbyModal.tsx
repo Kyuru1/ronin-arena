@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import type { PlayerProfile } from "../game/auth";
 import type { Difficulty } from "../game/engine";
-import { coopNet, type CoopRoomState } from "../game/coopNet";
+import { coopNet, parseInvite, type CoopRoomState } from "../game/coopNet";
 import { PxFrame, PxButton, PxHeading, PxChip } from "./PixelUi";
 import PixelSprite from "./PixelSprite";
 
@@ -11,14 +11,27 @@ interface CoopLobbyModalProps {
   onStartCoop: (isHost: boolean, difficulty: Difficulty) => void;
 }
 
+const TUNNEL_KEY = "ronin.coop.tunnel.v1";
+const HELP_MD_URL = "/ronin-arena/COOP-HOSTING.md";
+
+function loadRememberedTunnel(): string {
+  try {
+    return localStorage.getItem(TUNNEL_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
 export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLobbyModalProps) {
   const [tab, setTab] = useState<"lobby" | "create" | "join">("lobby");
   const [roomCodeInput, setRoomCodeInput] = useState("");
+  const [tunnelUrl, setTunnelUrl] = useState(loadRememberedTunnel);
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("medium");
   const [roomState, setRoomState] = useState<CoopRoomState | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
 
   // Setup callbacks on mount. A limpeza so remove o handler se ainda for o
   // mesmo (o App pode substituir onPeerLeft ao entrar em partida).
@@ -26,6 +39,11 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
     const roomUpdate = (state: CoopRoomState) => {
       setRoomState(state);
       setLoading(false);
+      // Sala criada no servidor 24/7: endereço não é mais relevante.
+      if (!coopNet.currentEndpoint()) {
+        try { localStorage.removeItem(TUNNEL_KEY); } catch { /* ignore */ }
+        setTunnelUrl("");
+      }
     };
     const gameStart = (startDifficulty: Difficulty) => {
       onStartCoop(coopNet.role === "host", startDifficulty);
@@ -52,23 +70,35 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
     };
   }, [onStartCoop]);
 
-  const ensureConnection = useCallback(async () => {
-    if (coopNet.isConnected()) return true;
+  const ensureConnection = useCallback(async (absoluteServerUrl = "") => {
+    const want = absoluteServerUrl.replace(/\/+$/, "");
+    // Já conectado no endpoint certo: reaproveita a conexão.
+    if (coopNet.isConnected() && coopNet.isSameEndpoint(want)) return true;
+    // Endpoint diferente (ex.: anfitrião colou o túnel depois de usar o
+    // servidor 24/7): reconecta e aguarda antes de criar a sala.
     try {
       setLoading(true);
       setErrorMsg("");
-      await coopNet.connect();
+      await coopNet.connect(want);
       return true;
     } catch {
-      setErrorMsg("Não foi possível conectar ao servidor cooperativo. Tente novamente em instantes.");
+      setErrorMsg("Não foi possível conectar ao servidor cooperativo. Confira a URL do túnel e tente novamente.");
       setLoading(false);
       return false;
     }
   }, []);
 
   const handleCreateRoom = async () => {
-    const ok = await ensureConnection();
+    const url = tunnelUrl.trim();
+    const ok = await ensureConnection(url);
     if (!ok) return;
+    // Lembra a URL do túnel para a próxima vez que for hospedar.
+    try {
+      if (url) localStorage.setItem(TUNNEL_KEY, url);
+      else localStorage.removeItem(TUNNEL_KEY);
+    } catch {
+      /* ignore storage errors */
+    }
     setLoading(true);
     setErrorMsg("");
     coopNet.createRoom(profile, selectedDifficulty);
@@ -76,14 +106,24 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
 
   const handleJoinRoom = async () => {
     if (!roomCodeInput.trim()) {
-      setErrorMsg("Digite o código da sala gerado pelo anfitrião.");
+      setErrorMsg("Digite o código da sala (KYU-XXXX) ou o convite completo (URL#KYU-XXXX).");
       return;
     }
-    const ok = await ensureConnection();
+
+    const parsed = parseInvite(roomCodeInput);
+    if (!parsed) {
+      setErrorMsg("Convite inválido. Use só o código (KYU-XXXX) ou a URL terminada em #KYU-XXXX.");
+      return;
+    }
+
+    // Se o convite inclui URL (túnel do anfitrião), conecta nela; senão
+    // continua no servidor 24/7 do jogo.
+    const ok = await ensureConnection(parsed.url);
     if (!ok) return;
     setLoading(true);
     setErrorMsg("");
-    coopNet.joinRoom(roomCodeInput.trim().toUpperCase(), profile);
+    setRoomCodeInput("");
+    coopNet.joinRoom(parsed.url ? `${parsed.url}#${parsed.code}` : parsed.code, profile);
   };
 
   const handleToggleReady = () => {
@@ -102,12 +142,37 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
     setErrorMsg("");
   };
 
-  const copyCode = () => {
-    if (!roomState?.code) return;
-    navigator.clipboard?.writeText(roomState.code);
+  const copyText = async (text: string) => {
     setCopied(true);
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(text);
+      else {
+        const input = document.createElement("input");
+        input.value = text;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand("copy");
+        document.body.removeChild(input);
+      }
+    } catch {
+      /* ignore clipboard errors */
+    }
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const copyCode = () => {
+    if (!roomState?.code) return;
+    void copyText(roomState.code);
+  };
+
+  const copyFullInvite = () => {
+    if (!roomState?.code) return;
+    const endpoint = coopNet.currentEndpoint();
+    const invite = endpoint ? `${endpoint}#${roomState.code}` : roomState.code;
+    void copyText(invite);
+  };
+
+  const activeEndpoint = coopNet.currentEndpoint();
 
   // If in an active room
   if (roomState) {
@@ -127,10 +192,20 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
                 <div className="font-pixel text-[18px] sm:text-[22px] text-[#ffd44a] tracking-wider">
                   {roomState.code}
                 </div>
+                {activeEndpoint && (
+                  <div className="font-pixel text-[6px] text-[#86efac] mt-0.5 break-all">
+                    🔌 {activeEndpoint}
+                  </div>
+                )}
               </div>
-              <PxButton tone="gold" onClick={copyCode} className="text-[8px] py-2 px-3">
-                {copied ? "COPIADO!" : "COPIAR CÓDIGO"}
-              </PxButton>
+              <div className="flex flex-col gap-1.5">
+                <PxButton tone="gold" onClick={copyFullInvite} className="text-[8px] py-2 px-3">
+                  {copied ? "COPIADO!" : "📋 COPIAR CONVITE"}
+                </PxButton>
+                <PxButton tone="dark" onClick={copyCode} className="text-[7px] py-1.5 px-3">
+                  SÓ O CÓDIGO
+                </PxButton>
+              </div>
             </div>
 
             {/* Rules badges */}
@@ -211,7 +286,7 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
                     AGUARDANDO ENTRADA DO 2º JOGADOR...
                   </div>
                   <div className="font-pixel text-[6px] text-[#a9c3be] mt-1">
-                    Compartilhe o código <strong className="text-[#ffd44a]">{roomState.code}</strong> com seu amigo.
+                    Compartilhe o convite completo com seu amigo — ele cola no campo de código.
                   </div>
                 </div>
               )}
@@ -274,6 +349,20 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
             <span className="font-pixel text-[6px] text-[#86efac]">✔ AUTENTICADO</span>
           </div>
 
+          {showChecklist && (
+            <div className="px-inset p-3 bg-[#14060e]">
+              <div className="font-pixel text-[8px] text-[#ffd44a] mb-1.5">🏟️ HOSPEDAR NO SEU PC — CHECKLIST</div>
+              <div className="font-pixel text-[7px] text-[#ffe2c4] leading-4 space-y-1 text-left">
+                <p>1. No PC do anfitrião, rode no terminal: <strong className="text-[#86efac]">npm install</strong> e <strong className="text-[#86efac]">npm run server</strong>.</p>
+                <p>2. Abra outro terminal e rode o túnel: <strong className="text-[#86efac]">npx localtunnel --port 3001</strong> (à alternativa: cloudflared, ngrok ou playit.gg).</p>
+                <p>3. Copie a URL que aparecer (ex.: https://xxxxx.loca.lt) e cole no campo “HOSPEDAR NO SEU PC”.</p>
+                <p>4. Crie a sala. No botão <strong className="text-[#86efac]">COPIAR CONVITE</strong> agora sai o link completo — mande pro amigo.</p>
+                <p>💡 Sem internet, na mesma rede: use o IP local do PC (ex.: 192.168.0.10:3001) como URL e pule o túnel.</p>
+                <p className="text-[#91b9b5]">📖 Passo a passo completo, com troca de firewall e alternativas: <a href={HELP_MD_URL} target="_blank" rel="noreferrer" className="underline text-[#ffd44a]">COOP-HOSTING.md</a></p>
+              </div>
+            </div>
+          )}
+
           {/* Mode Switcher */}
           <div className="grid grid-cols-2 gap-2">
             <PxButton
@@ -294,11 +383,32 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
             </PxButton>
           </div>
 
+          <PxButton tone="dark" onClick={() => setShowChecklist((v) => !v)} className="w-full py-2 text-[7px]">
+            {showChecklist ? "▲ OCULTAR GUIA RÁPIDO" : "▼ CONFIGURAR HOSPEDAGEM NO PC (GUIA)"}
+          </PxButton>
+
           {/* CREATE TAB */}
           {tab === "create" && (
             <div className="flex flex-col gap-3">
               <div className="font-pixel text-[7px] text-[#91b9b5] leading-4">
                 Crie uma sala cooperativa e chame um amigo. Um código de convite aparece na sua tela — quem tiver o código entra na hora.
+              </div>
+
+              <div className="px-inset p-3">
+                <div className="font-pixel text-[7px] text-[#86efac] mb-1.5">🌐 HOSPEDAR NO SEU PC (OPCIONAL, CUSTO ZERO)</div>
+                <label className="font-pixel text-[6px] text-[#91b9b5] block mb-1">
+                  URL DO TÚNEL OU IP LOCAL (EX.: https://xxxxx.loca.lt OU 192.168.0.10:3001):
+                </label>
+                <input
+                  type="text"
+                  value={tunnelUrl}
+                  onChange={(e) => setTunnelUrl(e.target.value)}
+                  placeholder="deixe vazio para usar o servidor gratuito do jogo"
+                  className="px-input font-pixel text-[9px] w-full lowercase"
+                />
+                <div className="font-pixel text-[6px] text-[#a9c3be] mt-1">
+                  Deixe em branco para usar o servidor 24/7 do jogo (só o código).
+                </div>
               </div>
 
               <div className="px-inset p-3">
@@ -331,20 +441,20 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
           {tab === "join" && (
             <div className="flex flex-col gap-3">
               <div className="font-pixel text-[7px] text-[#91b9b5] leading-4">
-                Insira o código de convite fornecido pelo anfitrião da sala. Qualquer pessoa com o código pode entrar.
+                Cole o convite que o anfitrião mandou. Pode ser só o código ({`KYU-XXXX`}) para o servidor 24/7, ou o link completo (URL#KYU-XXXX) de quem hospeda no próprio PC.
               </div>
 
               <div className="px-inset p-3">
                 <label className="font-pixel text-[7px] text-[#ffd44a] block mb-1">
-                  CÓDIGO DA SALA (EX: KYU-ABCD):
+                  CÓDIGO OU CONVITE:
                 </label>
                 <input
                   type="text"
-                  maxLength={10}
+                  maxLength={260}
                   value={roomCodeInput}
-                  onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
-                  placeholder="KYU-XXXX"
-                  className="px-input font-pixel text-[11px] text-center tracking-widest w-full uppercase"
+                  onChange={(e) => setRoomCodeInput(e.target.value)}
+                  placeholder="KYU-XXXX  ou  https://tunel.loca.lt#KYU-XXXX"
+                  className="px-input font-pixel text-[9px] text-center tracking-widest w-full"
                 />
               </div>
 

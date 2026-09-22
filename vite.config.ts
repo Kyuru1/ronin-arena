@@ -21,6 +21,11 @@ export default defineConfig({
         target: "ws://127.0.0.1:3001",
         ws: true,
       },
+      // Guia de hospedagem (COOP-HOSTING.md na raiz do projeto).
+      "/ronin-arena/COOP-HOSTING.md": {
+        target: "http://127.0.0.1:5200",
+        bypass: () => "/COOP-HOSTING.md",
+      },
     },
   },
   resolve: {
