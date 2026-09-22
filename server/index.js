@@ -32,6 +32,7 @@ async function initializeDatabase() {
   }
 }
 
+app.disable("x-powered-by");
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(",") || true }));
 app.use(express.json({ limit: "10kb" }));
 
@@ -53,6 +54,8 @@ try {
   console.warn("Database initialization skipped:", e.message);
 }
 
+// Rota de saúde: util para o túnel (cloudflared/localtunnel) e para verificar
+// que o servidor coop esta no ar (browser -> JSON, nao pagina).
 app.get("/api/ranking", async (_request, response) => {
   if (!pool) return response.json([]);
   try {
@@ -86,6 +89,10 @@ app.post("/api/ranking", async (request, response) => {
     console.error("Could not save ranking", error);
     return response.status(500).json({ error: "Could not save ranking" });
   }
+});
+
+app.get("/health", (_request, response) => {
+  response.json({ ok: true, rooms: rooms.size, uptime: Math.floor(process.uptime()) });
 });
 
 /* -------------------------------------------------------------
@@ -145,11 +152,53 @@ function broadcastRoom(room) {
   }
 }
 
+function handleLeave(ws) {
+  const currentRoomCode = ws.roomCode;
+  const clientRole = ws.clientRole;
+  if (!currentRoomCode) return;
+  const room = rooms.get(currentRoomCode);
+  if (!room) return;
+
+  if (clientRole === "host") {
+    // Host left: notify guest and close room
+    if (room.guest && room.guest.ws.readyState === WebSocket.OPEN) {
+      room.guest.ws.send(
+        JSON.stringify({
+          type: "PEER_LEFT",
+          message: "O anfitrião encerrou a sala.",
+        }),
+      );
+    }
+    rooms.delete(currentRoomCode);
+  } else if (clientRole === "guest") {
+    // Guest left: inform host
+    room.guest = null;
+    if (room.host.ws.readyState === WebSocket.OPEN) {
+      room.host.ws.send(
+        JSON.stringify({
+          type: "PEER_LEFT",
+          message: "O segundo jogador saiu da sala.",
+        }),
+      );
+      broadcastRoom(room);
+    }
+  }
+
+  ws.roomCode = null;
+  ws.clientRole = null;
+}
+
 wss.on("connection", (ws) => {
   /** @type {string | null} */
-  let currentRoomCode = null;
+  ws.roomCode = null;
   /** @type {"host" | "guest" | null} */
-  let clientRole = null;
+  ws.clientRole = null;
+  /** @type {boolean} */
+  ws.isAlive = true;
+
+  ws.on("pong", () => {
+    ws.isAlive = true;
+  });
 
   ws.on("message", (raw) => {
     let msg;
@@ -159,8 +208,17 @@ wss.on("connection", (ws) => {
       return;
     }
 
+    const currentRoomCode = ws.roomCode;
+    const clientRole = ws.clientRole;
+
     switch (msg.type) {
       case "CREATE_ROOM": {
+        // Um cliente so pode criar uma sala por conexao. Se ja for host,
+        // encerra a sala anterior antes de criar outra.
+        if (currentRoomCode && clientRole === "host") {
+          handleLeave(ws);
+        }
+
         let code = generateRoomCode();
         while (rooms.has(code)) {
           code = generateRoomCode();
@@ -180,8 +238,8 @@ wss.on("connection", (ws) => {
         };
 
         rooms.set(code, room);
-        currentRoomCode = code;
-        clientRole = "host";
+        ws.roomCode = code;
+        ws.clientRole = "host";
 
         ws.send(
           JSON.stringify({
@@ -219,8 +277,8 @@ wss.on("connection", (ws) => {
           ready: false,
         };
 
-        currentRoomCode = targetCode;
-        clientRole = "guest";
+        ws.roomCode = targetCode;
+        ws.clientRole = "guest";
 
         ws.send(
           JSON.stringify({
@@ -262,6 +320,9 @@ wss.on("connection", (ws) => {
         if (!currentRoomCode || clientRole !== "host") return;
         const room = rooms.get(currentRoomCode);
         if (!room || !room.guest) return;
+        if (!room.host.ready || !room.guest.ready) {
+          return; // Exige que os dois estejam prontos antes de iniciar.
+        }
 
         room.started = true;
         const startPayload = JSON.stringify({
@@ -295,55 +356,55 @@ wss.on("connection", (ws) => {
       }
 
       case "LEAVE_ROOM": {
-        handleLeave();
+        handleLeave(ws);
         break;
       }
     }
   });
 
-  function handleLeave() {
-    if (!currentRoomCode) return;
-    const room = rooms.get(currentRoomCode);
-    if (!room) return;
-
-    if (clientRole === "host") {
-      // Host left: notify guest and close room
-      if (room.guest && room.guest.ws.readyState === WebSocket.OPEN) {
-        room.guest.ws.send(
-          JSON.stringify({
-            type: "PEER_LEFT",
-            message: "O anfitrião encerrou a sala.",
-          }),
-        );
-      }
-      rooms.delete(currentRoomCode);
-    } else if (clientRole === "guest") {
-      // Guest left: inform host
-      room.guest = null;
-      if (room.host.ws.readyState === WebSocket.OPEN) {
-        room.host.ws.send(
-          JSON.stringify({
-            type: "PEER_LEFT",
-            message: "O segundo jogador saiu da sala.",
-          }),
-        );
-        broadcastRoom(room);
-      }
-    }
-
-    currentRoomCode = null;
-    clientRole = null;
-  }
-
   ws.on("close", () => {
-    handleLeave();
+    handleLeave(ws);
+    ws.isAlive = false;
   });
 
   ws.on("error", () => {
-    handleLeave();
+    handleLeave(ws);
+    ws.isAlive = false;
   });
 });
 
+// Heartbeat: desconecta conexoes mortas (ruido de rede/tunel) e mantem o
+// socket vivo para o servidor 24/7 e para quem hospeda no proprio PC.
+const HEARTBEAT_MS = 30000;
+const ROOM_TTL_MS = 6 * 60 * 60 * 1000; // salas paradas expiram apos 6h
+const SWEEP_MS = 5 * 60 * 1000;
+
+const heartbeat = setInterval(() => {
+  for (const ws of wss.clients) {
+    if (ws.isAlive === false) {
+      handleLeave(ws);
+      ws.terminate();
+      continue;
+    }
+    ws.isAlive = false;
+    try { ws.ping(); } catch { /* ignore */ }
+  }
+}, HEARTBEAT_MS);
+heartbeat.unref();
+
+// Limpa salas abandonadas (anfitriao caiu sem enviar LEAVE, etc.).
+const sweep = setInterval(() => {
+  const now = Date.now();
+  for (const [code, room] of rooms) {
+    const hostDead = room.host.ws.readyState !== WebSocket.OPEN;
+    const guestDead = !room.guest || room.guest.ws.readyState !== WebSocket.OPEN;
+    const stale = now - room.createdAt > ROOM_TTL_MS;
+    if (stale || (hostDead && guestDead)) rooms.delete(code);
+  }
+}, SWEEP_MS);
+sweep.unref();
+
 server.listen(port, () => {
-  console.log(`Server (HTTP + WebSocket Coop) running at http://localhost:${port}`);
+  console.log(`Ronin coop server (HTTP + WebSocket) ouvindo em http://0.0.0.0:${port}`);
+  console.log(`WebSocket: ws://localhost:${port}  |  Health: http://localhost:${port}/health`);
 });
