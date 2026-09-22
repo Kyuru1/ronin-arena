@@ -237,19 +237,22 @@ export default function App() {
   const handleStartCoop = useCallback((isHost: boolean, coopDifficulty: Difficulty) => {
     const game = gameRef.current;
     if (!game) return;
-    const partner = isHost ? coopNet.roomState?.guest?.profile : coopNet.roomState?.host?.profile;
+    const roomPlayers = coopNet.roomPlayers();
+    const partner = roomPlayers.find(([id]) => id !== profileRef.current?.id)?.[1].profile;
     setIsCoopGame(true);
     game.isCoop = true;
     game.isHost = isHost;
     game.setDifficulty(coopDifficulty);
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
+    game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
+    game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
     game.peerRonin = {
       px: game.worldW / 2 + (isHost ? 25 : -25), py: game.worldH / 2, face: isHost ? -1 : 1, walk: false,
       hp: 5, maxHp: 5, weapon: "katana", atkPhase: 0, atkAngle: 0, isDashing: false, perk: null,
       coins: 0, score: 0, kills: 0, username: partner?.username ?? "RONIN", avatarId: partner?.avatarId ?? "samurai",
     };
     game.onGamePacketOut = (packet) => coopNet.sendPacket(packet);
-    coopNet.onGamePacket = (packet) => gameRef.current?.applyPeerPacket(packet);
+    coopNet.onGamePacket = (packet, senderId) => gameRef.current?.applyPeerPacket(packet, senderId);
     coopNet.onPeerLeft = () => gameRef.current?.coopPeerLeft();
     unlockAudio();
     setCoopModalOpen(false);
@@ -303,6 +306,8 @@ export default function App() {
     game.setDifficulty(difficulty);
     game.setPerk(selectedPerk.current);
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
+    game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
+    game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
     game.startGame();
     setRank(-1);

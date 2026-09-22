@@ -10,6 +10,12 @@ const AVATARS: Array<{ id: AvatarId; label: string; sprite: string }> = [
   { id: "goldRonin", label: "DOURADO", sprite: "goldRonin" },
   { id: "jadeRonin", label: "JADE", sprite: "jadeRonin" },
   { id: "shadowRonin", label: "SOMBRA", sprite: "shadowRonin" },
+  { id: "bananaSamurai", label: "BANANA", sprite: "bananaSamurai" },
+  { id: "strawberryKnight", label: "MORANGO", sprite: "strawberryKnight" },
+  { id: "orangeRonin", label: "LARANJA", sprite: "orangeRonin" },
+  { id: "snowRonin", label: "NEVE", sprite: "snowRonin" },
+  { id: "suitedHero", label: "TERNO", sprite: "suitedHero" },
+  { id: "dressHero", label: "VESTIDO", sprite: "dressHero" },
 ];
 
 export default function AccountPanel({ profile, onProfile }: { profile: PlayerProfile | null; onProfile: (value: PlayerProfile | null) => void }) {

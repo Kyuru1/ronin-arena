@@ -333,6 +333,9 @@ export class Game {
   public isCoop = false;
   public isHost = true;
   public peerRonin: (PeerRoninState & { username?: string; avatarId?: AvatarId }) | null = null;
+  public peerRonins: Record<string, PeerRoninState & { username?: string; avatarId?: AvatarId }> = {};
+  public localPlayerId = "";
+  public localUsername = "RONIN";
   public playerAvatar: AvatarId = "samurai";
   public onCoinSplit?: (amount: number) => void;
   public onGamePacketOut?: (packet: GamePacket) => void;
@@ -493,6 +496,12 @@ export class Game {
   /* ----------------------------- setup ----------------------------- */
 
   setPlayerAvatar(avatarId: AvatarId) { this.playerAvatar = avatarId; }
+  setCoopPlayers(localId: string, localUsername: string, players: Array<[string, { profile: { username: string; avatarId: AvatarId } }]>) {
+    this.localPlayerId = localId; this.localUsername = localUsername;
+    this.peerRonins = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id, player], index) => [id, { px: this.worldW / 2 + (index - 1) * 28, py: this.worldH / 2, face: -1, walk: false, hp: 5, maxHp: 5, weapon: "katana", atkPhase: 0, atkAngle: 0, isDashing: false, perk: null, coins: 0, score: 0, kills: 0, username: player.profile.username, avatarId: player.profile.avatarId }]));
+    this.peerRonin = Object.values(this.peerRonins)[0] ?? null;
+  }
+  private remoteRonins() { return Object.entries(this.peerRonins); }
   private localPlayerSprite() { return SPR[this.playerAvatar === "samurai" ? "player" : this.playerAvatar] || SPR.player; }
 
   setPerk(perk: Perk | null) {
@@ -2745,15 +2754,12 @@ export class Game {
 
       let targetX = this.px;
       let targetY = this.py;
-      let targetIsPeer = false;
-      if (this.isCoop && this.peerRonin && this.peerRonin.hp > 0) {
-        const dLocal = Math.hypot(this.px - e.x, this.py - e.y);
-        const dPeer = Math.hypot(this.peerRonin.px - e.x, this.peerRonin.py - e.y);
-        if (this.hp <= 0 || dPeer < dLocal) {
-          targetX = this.peerRonin.px;
-          targetY = this.peerRonin.py;
-          targetIsPeer = true;
-        }
+      let targetPeerId: string | null = null;
+      let closestDistance = this.hp > 0 ? Math.hypot(this.px - e.x, this.py - e.y) : Number.POSITIVE_INFINITY;
+      if (this.isCoop) for (const [peerId, peer] of this.remoteRonins()) {
+        if (peer.hp <= 0) continue;
+        const distance = Math.hypot(peer.px - e.x, peer.py - e.y);
+        if (distance < closestDistance) { closestDistance = distance; targetX = peer.px; targetY = peer.py; targetPeerId = peerId; }
       }
 
       const dx = targetX - e.x;
@@ -3001,12 +3007,12 @@ export class Game {
       }
 
       if (e.type === "ram" && e.state === 2 && dist < e.r + 10 && e.spawnT <= 0) {
-        this.hurtCoopTarget(targetIsPeer, e.dmg, nx, ny);
+        this.hurtCoopTarget(targetPeerId, e.dmg, nx, ny);
         this.ramCrash(e);
         continue;
       }
       if (e.type !== "ram" && e.type !== "bombMinion" && dist < e.r + 8 && e.touchCd <= 0 && e.spawnT <= 0) {
-        if (!targetIsPeer && this.shieldFacing(e.x, e.y)) {
+        if (!targetPeerId && this.shieldFacing(e.x, e.y)) {
           const away = Math.atan2(e.y - this.py, e.x - this.px);
           e.touchCd = 0.55;
           e.vx += Math.cos(away) * 420;
@@ -3017,16 +3023,18 @@ export class Game {
           continue;
         }
         e.touchCd = 0.8;
-        this.hurtCoopTarget(targetIsPeer, e.dmg, nx, ny);
+        this.hurtCoopTarget(targetPeerId, e.dmg, nx, ny);
       }
     }
   }
 
-  private hurtCoopTarget(targetIsPeer: boolean, dmg: number, nx: number, ny: number) {
-    if (!targetIsPeer || !this.isCoop) { this.hurtPlayer(dmg, nx, ny); return; }
-    if (!this.peerRonin || this.peerRonin.hp <= 0) return;
-    this.peerRonin.hp = Math.max(0, this.peerRonin.hp - dmg * DIFFICULTY_RULES[this.difficulty].damageTaken);
-    this.onGamePacketOut?.({ type: "PLAYER_DAMAGE", target: "guest", dmg, nx, ny });
+  private hurtCoopTarget(targetPeerId: string | null, dmg: number, nx: number, ny: number) {
+    if (!targetPeerId || !this.isCoop) { this.hurtPlayer(dmg, nx, ny); return; }
+    const peer = this.peerRonins[targetPeerId];
+    if (!peer || peer.hp <= 0) return;
+    peer.hp = Math.max(0, peer.hp - dmg * DIFFICULTY_RULES[this.difficulty].damageTaken);
+    this.peerRonin = Object.values(this.peerRonins)[0] ?? null;
+    this.onGamePacketOut?.({ type: "PLAYER_DAMAGE", target: targetPeerId, dmg, nx, ny });
   }
 
   private updateShots(dt: number) {
@@ -3222,7 +3230,7 @@ export class Game {
     }
   }
 
-  /** Moeda coletada: em coop cada moeda vale coinValue para cada jogador (2x dividido). */
+  /** Moeda coletada: no coop ela pertence somente ao coletor. */
   private creditCoinDrop(p: Pickup) {
     const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
     if (!p.credited) {
@@ -4406,7 +4414,7 @@ export class Game {
     ctx.save();
 
     // 1. Tag de Nome do Ronin Aliado
-    ctx.font = '4.2px "Press Start 2P", monospace';
+    ctx.font = '6px "Press Start 2P", monospace';
     ctx.textAlign = "center";
     const roleTag = this.isHost ? "P2" : "P1 (HOST)";
     const displayName = `[${roleTag}] ${peer.username || "RONIN"}`;

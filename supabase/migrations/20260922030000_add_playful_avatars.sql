@@ -1,0 +1,25 @@
+-- Novas skins jogaveis: atualiza o perfil e o ranking para aceitar os avatares
+-- usados pelo cliente. Execute esta migration no Supabase SQL Editor uma unica vez.
+
+ALTER TABLE public.profiles DROP CONSTRAINT IF EXISTS profiles_avatar_id_check;
+ALTER TABLE public.profiles ADD CONSTRAINT profiles_avatar_id_check CHECK (avatar_id IN (
+  'samurai', 'azureRonin', 'violetRonin', 'goldRonin', 'jadeRonin', 'shadowRonin',
+  'bananaSamurai', 'strawberryKnight', 'orangeRonin', 'snowRonin', 'suitedHero', 'dressHero'
+));
+
+ALTER TABLE public.ranking DROP CONSTRAINT IF EXISTS ranking_avatar_id_check;
+ALTER TABLE public.ranking ADD CONSTRAINT ranking_avatar_id_check CHECK (avatar_id IN (
+  'samurai', 'azureRonin', 'violetRonin', 'goldRonin', 'jadeRonin', 'shadowRonin',
+  'bananaSamurai', 'strawberryKnight', 'orangeRonin', 'snowRonin', 'suitedHero', 'dressHero'
+));
+
+CREATE OR REPLACE FUNCTION public.sync_ranking_avatar(p_avatar_id TEXT)
+RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER SET search_path = public AS $$
+BEGIN
+  IF auth.uid() IS NULL THEN RAISE EXCEPTION 'authentication required'; END IF;
+  IF p_avatar_id NOT IN ('samurai', 'azureRonin', 'violetRonin', 'goldRonin', 'jadeRonin', 'shadowRonin', 'bananaSamurai', 'strawberryKnight', 'orangeRonin', 'snowRonin', 'suitedHero', 'dressHero') THEN RAISE EXCEPTION 'invalid avatar'; END IF;
+  UPDATE public.ranking SET avatar_id = p_avatar_id WHERE user_id = auth.uid();
+END;
+$$;
+REVOKE ALL ON FUNCTION public.sync_ranking_avatar(TEXT) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.sync_ranking_avatar(TEXT) TO authenticated;

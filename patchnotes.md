@@ -95,3 +95,19 @@
 - Se os dois ronins cairem, a partida acaba para os dois; se um parceiro desconectar no meio da run, ela termina na hora.
 - Caixas e arvores continuam drops pessoais; moedas e coracoes sao do grupo, coletados pelo jogador mais proximo.
 - Ranking permanece desativado no cooperativo.
+
+## Patch Notes 13 - Coop Online e Skins
+
+- O cooperativo agora usa Supabase Realtime para salas por codigo, permitindo convidar outro jogador sem IP, porta, tunel ou servidor local.
+- A tela de coop foi finalizada com criacao de sala, entrada por codigo, estado de pronto e inicio sincronizado pelo anfitriao.
+- O modo coop recebeu vida individual para cada jogador, mantendo apenas as moedas como recurso compartilhado.
+- Inimigos passam a escolher o alvo mais proximo entre anfitriao e parceiro, deixando o combate mais justo para os dois jogadores.
+- A loja entre waves respeita o pronto dos dois jogadores antes de iniciar a proxima onda.
+- Foram adicionadas skins jogaveis para o Ronin, com escolha no perfil e uso tanto no modo normal quanto no cooperativo.
+- A tela de pausa do singleplayer agora mostra a skin selecionada pelo jogador.
+- Os nomes dos jogadores foram reduzidos e ajustados para evitar quebra vertical nas telas de perfil, selecao e coop.
+- Efeitos visuais das pocoes ficaram mais fluidos, com destaque melhor durante coleta e ativacao.
+- Controles de celular receberam ajustes para reduzir movimento preso ou personagem andando sozinho apos toque, cancelamento ou troca de foco.
+- Ranking continua desativado no cooperativo enquanto o modo online passa por testes de estabilidade.
+
+

@@ -145,6 +145,26 @@ export function buildSprites() {
   recolorRonin("goldRonin", "#ffd44a", "#79520f", "#d99318");
   recolorRonin("jadeRonin", "#5eead4", "#155e5b", "#0f9b84");
   recolorRonin("shadowRonin", "#94a3b8", "#1f2937", "#475569");
+
+  // Playful character skins. They share the player footprint so gameplay collision stays identical.
+  SPR.bananaSamurai = makeSprite([
+    "....yyyy....", "...yyyyyy...", "..yy....yy..", "..yykkkk.yy.", "...ykeeky...", "...yyyyyy...", "....aaaa....", "...aaaaaa...", "....bbbb....", "...bb..bb...", "..dd....dd.."
+  ], { y: "#ffd84a", k: "#2c2230", e: "#fff1af", a: "#a83b46", b: "#f2bf30", d: "#301b1c" });
+  SPR.strawberryKnight = makeSprite([
+    "...rrrrrr...", "..rrrrrrrr..", ".rrwwrrwwrr.", ".rrrkkkkrrr.", ".rrkkeeekrr.", "...rrrrrr...", "...gggggg...", "..gggggggg..", "...gg..gg...", "..dd....dd.."
+  ], { r: "#ef4d5c", w: "#fff1c0", k: "#352033", e: "#ffe0a8", g: "#4aab5b", d: "#301a21" });
+  SPR.orangeRonin = makeSprite([
+    "...oooooo...", "..oooooooo..", ".oooggggooo.", ".oo.kkkk.oo.", ".oo.keek.oo.", "..oooooooo..", "...nnnnnn...", "..nnnnnnnn..", "...nn..nn...", "..dd....dd.."
+  ], { o: "#ff9b3d", g: "#58ad54", k: "#302034", e: "#fff0bb", n: "#d9682f", d: "#311923" });
+  SPR.snowRonin = makeSprite([
+    "....cccc....", "...cccccc...", "..cckkkkcc..", "..cckeekcc..", "...cccccc...", "...wwwwww...", "..wwwwwwww..", "...wwwwww...", "....wwww....", "...dd..dd..."
+  ], { c: "#77cbe0", k: "#26324a", e: "#ffcc70", w: "#effcff", d: "#435166" });
+  SPR.suitedHero = makeSprite([
+    "....hhhh....", "...hhhhhh...", "..hkkkkkkh..", "..hkeeeekh..", "...wwwwww...", "...bbbbbb...", "..bbbbbbbb..", "...bbrrbb...", "...bb..bb...", "..dd....dd.."
+  ], { h: "#e6b89c", k: "#282031", e: "#fff0bb", w: "#f8f2e9", b: "#28354a", r: "#df4a54", d: "#171c2b" });
+  SPR.dressHero = makeSprite([
+    "....hhhh....", "...hhhhhh...", "..hkkkkkkh..", "..hkeeeekh..", "...pppppp...", "..pppppppp..", ".pppppppppp.", "...pppppp...", "..pp....pp..", ".dd......dd."
+  ], { h: "#e9b99b", k: "#4b2438", e: "#fff0bb", p: "#ee79b6", d: "#4d2141" });
   SPR.grunt = makeSprite(
     [
       "..gggggg..",
