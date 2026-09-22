@@ -37,6 +37,11 @@ jobs:
           VITE_RANKING_API_URL: ${{ secrets.VITE_RANKING_API_URL }}
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+          VITE_COOP_SERVER_URL: ${{ secrets.VITE_COOP_SERVER_URL }}
+
+      # Copia o guia COOP-HOSTING.md para o site (linkado pelo lobby).
+      - name: Copy COOP-HOSTING guide
+        run: cp COOP-HOSTING.md dist/COOP-HOSTING.md
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
