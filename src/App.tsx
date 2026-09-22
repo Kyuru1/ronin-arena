@@ -10,7 +10,7 @@ import ShopScreen from "./components/ShopScreen";
 import TutorialScreen from "./components/TutorialScreen";
 import InputModeScreen from "./components/InputModeScreen";
 import CoopLobbyModal from "./components/CoopLobbyModal";
-import { coopNet } from "./game/coopNet";
+
 import { supabase } from "./lib/supabase";
 import { loadProfile, type PlayerProfile } from "./game/auth";
 
@@ -109,7 +109,7 @@ export default function App() {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [inputMode, setInputMode] = useState<InputMode>("keyboardMouse");
   const [coopModalOpen, setCoopModalOpen] = useState(false);
-  const [isCoopGame, setIsCoopGame] = useState(false);
+
 
   useEffect(() => {
     profileRef.current = profile;
@@ -220,55 +220,6 @@ export default function App() {
     setCoopModalOpen(true);
   }, []);
 
-  const handleStartCoop = useCallback((isHost: boolean, coopDifficulty: Difficulty) => {
-    const game = gameRef.current;
-    if (!game) return;
-
-    setIsCoopGame(true);
-    game.isCoop = true;
-    game.isHost = isHost;
-    game.setDifficulty(coopDifficulty);
-    setDifficulty(coopDifficulty);
-
-    const partnerProfile = isHost ? coopNet.roomState?.guest?.profile : coopNet.roomState?.host?.profile;
-    game.peerRonin = {
-      px: isHost ? game.worldW / 2 + 25 : game.worldW / 2 - 25,
-      py: game.worldH / 2,
-      face: isHost ? -1 : 1,
-      walk: false,
-      hp: 5,
-      maxHp: 5,
-      weapon: "katana",
-      atkPhase: 0,
-      atkAngle: 0,
-      isDashing: false,
-      perk: null,
-      coins: 0,
-      score: 0,
-      kills: 0,
-      username: partnerProfile?.username || (isHost ? "RONIN 2" : "RONIN 1"),
-      avatarId: partnerProfile?.avatarId || "samurai",
-    };
-
-    game.onGamePacketOut = (packet) => {
-      coopNet.sendPacket(packet);
-    };
-
-    coopNet.onGamePacket = (packet) => {
-      gameRef.current?.applyPeerPacket(packet);
-    };
-
-    // Persistente durante a partida: desconexão do parceiro encerra a run.
-    coopNet.onPeerLeft = () => {
-      gameRef.current?.coopPeerLeft();
-    };
-
-    unlockAudio();
-    try { localStorage.removeItem(RUN_KEY); } catch { /* ignore */ }
-    setCoopModalOpen(false);
-    launchRun();
-  }, [launchRun]);
-
   const selectedPerk = useRef<Perk | null>(null);
   const choosePerk = useCallback((perk: Perk | null) => { selectedPerk.current = perk; gameRef.current?.setPerk(perk); }, []);
 
@@ -304,20 +255,6 @@ export default function App() {
   const restartRun = useCallback(() => {
     const game = gameRef.current;
     if (!game) return;
-    if (game.isCoop || isCoopGame) {
-      // Em coop não existe "jogar de novo" solo: volta ao menu.
-      coopNet.leaveRoom();
-      coopNet.onPeerLeft = undefined;
-      game.isCoop = false;
-      game.peerRonin = null;
-      setIsCoopGame(false);
-      game.reset();
-      game.phase = "menu";
-      setPhase("menu");
-      setStats(emptyStats);
-      setUpgrade(null);
-      return;
-    }
     game.setDifficulty(difficulty);
     game.setPerk(selectedPerk.current);
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
@@ -326,7 +263,7 @@ export default function App() {
     setPendingScore(false);
     setPhase("playing");
     setMenuClosing(false);
-  }, [difficulty, isCoopGame]);
+  }, [difficulty]);
 
   const finishTutorial = useCallback((neverAgain: boolean) => {
     if (neverAgain) {
@@ -397,13 +334,6 @@ export default function App() {
   const toMenu = useCallback(() => {
     const g = gameRef.current;
     if (!g) return;
-    if (g.isCoop) {
-      coopNet.leaveRoom();
-      coopNet.onPeerLeft = undefined;
-      g.isCoop = false;
-      g.peerRonin = null;
-      setIsCoopGame(false);
-    }
     g.reset();
     g.phase = "menu";
     setPhase("menu");
@@ -413,11 +343,6 @@ export default function App() {
   }, []);
 
   const submitName = useCallback(async (profileOverride?: PlayerProfile) => {
-    if (gameRef.current?.isCoop || isCoopGame) {
-      setPendingScore(false);
-      setPhase("dead");
-      return;
-    }
     let activeProfile = profileOverride ?? profileRef.current;
     if (!activeProfile && supabase) {
       const { data: authData } = await supabase.auth.getUser();
@@ -570,8 +495,7 @@ export default function App() {
       if (document.hidden) pauseFromFocusLoss();
     };
     const onPageHide = () => {
-      // Em coop, sair da sala na hora deixa o parceiro ser notificado.
-      if (gameRef.current?.isCoop) coopNet.leaveRoom();
+
       pauseFromFocusLoss();
     };
     window.addEventListener("blur", pauseFromFocusLoss);
@@ -631,11 +555,7 @@ export default function App() {
           </div>
         )}
         {coopModalOpen && profile && (
-          <CoopLobbyModal
-            profile={profile}
-            onClose={() => setCoopModalOpen(false)}
-            onStartCoop={handleStartCoop}
-          />
+          <CoopLobbyModal profile={profile} onClose={() => setCoopModalOpen(false)} />
         )}
         {phase === "menu" && savedRun && (
           <SavedRunPrompt
@@ -660,7 +580,7 @@ export default function App() {
             onRestart={restartRun}
             onMenu={toMenu}
             t={t}
-            isCoop={isCoopGame}
+            isCoop={false}
           />
         )}
         {phase === "upgrade" && upgrade && (
@@ -683,3 +603,4 @@ export default function App() {
     </div>
   );
 }
+

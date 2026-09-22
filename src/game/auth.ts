@@ -29,7 +29,11 @@ export function authErrorMessage(error: unknown): string {
   if (message.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
   if (message.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar.";
   if (message.includes("user already registered") || message.includes("already been registered")) return "Este e-mail já está cadastrado.";
+  if (message.includes("signup is disabled")) return "O cadastro está desativado no Supabase.";
+  if (message.includes("email address is invalid")) return "Digite um e-mail válido.";
   if (message.includes("unable to validate email") || message.includes("invalid email")) return "Digite um e-mail válido.";
+  if (message.includes("missing email")) return "Digite seu e-mail.";
+  if (message.includes("missing password")) return "Digite sua senha.";
   if (message.includes("rate limit") || message.includes("too many requests") || message.includes("email rate limit exceeded")) return "O serviço limitou novos envios de e-mail. Aguarde alguns minutos antes de tentar novamente.";
   if (message.includes("supabase não configurado")) return "O serviço de conta ainda não está configurado.";
   return "Não foi possível concluir. Verifique os dados e tente novamente.";
@@ -78,10 +82,17 @@ function getAuthRedirectUrl(): string {
   return appUrl.toString();
 }
 
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 export async function signUp(email: string, password: string, username: string, avatarId: AvatarId) {
   if (!supabase) throw new Error("Supabase não configurado");
-  const { error } = await supabase.auth.signUp({
-    email: email.trim().toLowerCase(),
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanEmail) throw new Error("Missing email");
+  if (!password) throw new Error("Missing password");
+  const { data, error } = await supabase.auth.signUp({
+    email: cleanEmail,
     password,
     options: {
       emailRedirectTo: getAuthRedirectUrl(),
@@ -89,11 +100,25 @@ export async function signUp(email: string, password: string, username: string, 
     },
   });
   if (error) throw error;
+  if (!data.user) throw new Error("Não foi possível criar a conta.");
 }
 
 export async function signIn(email: string, password: string) {
   if (!supabase) throw new Error("Supabase não configurado");
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanEmail) throw new Error("Missing email");
+  if (!password) throw new Error("Missing password");
+  const { error } = await supabase.auth.signInWithPassword({ email: cleanEmail, password });
+  if (error) throw error;
+}
+
+export async function resetPassword(email: string) {
+  if (!supabase) throw new Error("Supabase não configurado");
+  const cleanEmail = normalizeEmail(email);
+  if (!cleanEmail) throw new Error("Missing email");
+  const { error } = await supabase.auth.resetPasswordForEmail(cleanEmail, {
+    redirectTo: getAuthRedirectUrl(),
+  });
   if (error) throw error;
 }
 
