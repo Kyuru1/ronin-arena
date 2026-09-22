@@ -3,7 +3,13 @@ import { Sfx, unlockAudio, setVolume, type Weapon } from "./audio";
 import { drawWeaponArt } from "./weaponArt";
 import { I18N, type Language } from "./i18n";
 import type { AvatarId } from "./auth";
-import type { GamePacket, PeerRoninState, CoopEnemyState, CoopPickupState } from "./coopNet";
+import type {
+  GamePacket,
+  PeerRoninState,
+  CoopEnemyState,
+  CoopPickupState,
+  CoopShotState,
+} from "./coopNet";
 export type { Weapon } from "./audio";
 
 export type Phase = "menu" | "playing" | "paused" | "upgrade" | "dying" | "dead";
@@ -11,7 +17,15 @@ export type PowerUp = "speed" | "heart" | "dashCd" | "dashDist";
 export type WeaponUpgrade = "damage" | "speed" | "range" | "form";
 export type MagicType = "fire" | "ice" | "poison" | "water";
 export type Difficulty = "easy" | "medium" | "hard";
-export type Perk = "bladeMonk" | "bloodContract" | "bottomlessPocket" | "predatorInstinct" | "sharpGlass" | "kyuEcho" | "cursedArsenal" | "lastBullet";
+export type Perk =
+  | "bladeMonk"
+  | "bloodContract"
+  | "bottomlessPocket"
+  | "predatorInstinct"
+  | "sharpGlass"
+  | "kyuEcho"
+  | "cursedArsenal"
+  | "lastBullet";
 export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
 export const DIFFICULTY_RULES = {
@@ -103,7 +117,16 @@ export interface GameOpts {
   inputMode: InputMode;
 }
 
-export type KeyboardAction = "up" | "down" | "left" | "right" | "attack" | "dash" | "prev" | "next" | "pause";
+export type KeyboardAction =
+  | "up"
+  | "down"
+  | "left"
+  | "right"
+  | "attack"
+  | "dash"
+  | "prev"
+  | "next"
+  | "pause";
 export type KeyboardBindings = Record<KeyboardAction, string>;
 export type InputMode = "keyboard" | "keyboardMouse" | "gamepad" | "touch";
 
@@ -131,8 +154,17 @@ type EnemyType =
   | "boss";
 
 interface Summon {
-  x: number; y: number; vx: number; vy: number; r: number; life: number; maxLife: number;
-  kind: "summoned" | "revived"; type: EnemyType; attackCd: number; flash: number;
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  r: number;
+  life: number;
+  maxLife: number;
+  kind: "summoned" | "revived";
+  type: EnemyType;
+  attackCd: number;
+  flash: number;
 }
 
 interface Enemy {
@@ -239,7 +271,11 @@ interface PsychicZone {
 export type PotionType = "health" | "strength" | "speed" | "agility";
 
 interface ArenaProp {
-  x: number; y: number; kind: "tree" | "crate"; life: number; t: number;
+  x: number;
+  y: number;
+  kind: "tree" | "crate";
+  life: number;
+  t: number;
 }
 
 interface Pickup {
@@ -295,7 +331,16 @@ function angDiff(a: number, b: number) {
 
 const WEAPON_CONFIG: Record<
   Weapon,
-  { wind: number; strike: number; rec: number; cd: number; arc: number; range: number; dmg: number; kb: number }
+  {
+    wind: number;
+    strike: number;
+    rec: number;
+    cd: number;
+    arc: number;
+    range: number;
+    dmg: number;
+    kb: number;
+  }
 > = {
   katana: { wind: 0.05, strike: 0.12, rec: 0.09, cd: 0.12, arc: 1.55, range: 34, dmg: 2, kb: 160 },
   bow: { wind: 0.12, strike: 0.08, rec: 0.12, cd: 0.18, arc: 0.8, range: 24, dmg: 3, kb: 120 },
@@ -345,7 +390,13 @@ export class Game {
   public nextEnemyId = 1;
   public nextPickupId = 1;
   private netSyncTimer = 0;
-  private pendingGuestHits: Array<{ enemyId: number; dmg: number; crit?: boolean; kx?: number; ky?: number }> = [];
+  private pendingGuestHits: Array<{
+    enemyId: number;
+    dmg: number;
+    crit?: boolean;
+    kx?: number;
+    ky?: number;
+  }> = [];
 
   // Player stats & inventory
   px = 0;
@@ -386,6 +437,7 @@ export class Game {
   bowCharge = 0; // 0..1
   bowHolding = false;
   bowReleasing = 0; // short snap-back animation timer
+  bowReleaseDraw = 0; // valor congelado no momento do release (bug visual do arco)
   bowFireCd = 0;
   bowFullSfx = false;
   bowDrawSfxT = 0;
@@ -438,10 +490,10 @@ export class Game {
   maxCombo = 0;
   elapsed = 0;
   wave = 1;
-  waveTotal = 0; // mobs this wave will spawn in total
-  waveSpawned = 0; // how many have been queued so far
-  waveLeft = 0; // legacy mirror (kept for HUD convenience)
-  waveClearT = -1; // countdown after clearing a wave (-1 = idle)
+  waveTotal = 0;
+  waveSpawned = 0;
+  waveLeft = 0;
+  waveClearT = -1;
   spawnTimer = 1.0;
   shake = 0;
   flash = 0;
@@ -454,7 +506,27 @@ export class Game {
   shopPending = false;
   shopLocalDone = false;
   shopPeerDone = false;
-  opts: GameOpts = { shake: 1, flash: 1, volume: 0.45, quality: "high", vsync: true, language: "pt", keyboardOnly: false, keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", prev: "q", next: "e", pause: "escape" }, inputMode: "keyboardMouse" };
+  opts: GameOpts = {
+    shake: 1,
+    flash: 1,
+    volume: 0.45,
+    quality: "high",
+    vsync: true,
+    language: "pt",
+    keyboardOnly: false,
+    keyboardBindings: {
+      up: "w",
+      down: "s",
+      left: "a",
+      right: "d",
+      attack: " ",
+      dash: "shift",
+      prev: "q",
+      next: "e",
+      pause: "escape",
+    },
+    inputMode: "keyboardMouse",
+  };
 
   // Input
   keys = new Set<string>();
@@ -498,39 +570,57 @@ export class Game {
 
   /* ----------------------------- setup ----------------------------- */
 
-  setPlayerAvatar(avatarId: AvatarId) { this.playerAvatar = avatarId; }
-  setCoopPlayers(localId: string, localUsername: string, players: Array<[string, { profile: { username: string; avatarId: AvatarId } }]>) {
-    this.localPlayerId = localId; this.localUsername = localUsername;
-    this.peerRonins = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id, player], index) => [id, {
-      px: this.worldW / 2 + (index - 1) * 28,
-      py: this.worldH / 2,
-      face: -1,
-      walk: false,
-      hp: 5,
-      maxHp: 5,
-      weapon: "katana",
-      weapons: ["katana"],
-      activeSlot: 0,
-      weaponLevels: createWeaponLevels(),
-      atkPhase: 2,
-      atkAngle: 0,
-      weaponAngle: 0,
-      attacking: false,
-      bowCharge: 0,
-      arrows: [],
-      isDashing: false,
-      perk: null,
-      coins: 0,
-      score: 0,
-      kills: 0,
-      username: player.profile.username,
-      avatarId: player.profile.avatarId,
-    }]));
+  setPlayerAvatar(avatarId: AvatarId) {
+    this.playerAvatar = avatarId;
+  }
+  setCoopPlayers(
+    localId: string,
+    localUsername: string,
+    players: Array<[string, { profile: { username: string; avatarId: AvatarId } }]>,
+  ) {
+    this.localPlayerId = localId;
+    this.localUsername = localUsername;
+    this.peerRonins = Object.fromEntries(
+      players
+        .filter(([id]) => id !== localId)
+        .map(([id, player], index) => [
+          id,
+          {
+            px: this.worldW / 2 + (index - 1) * 28,
+            py: this.worldH / 2,
+            face: -1,
+            walk: false,
+            hp: 5,
+            maxHp: 5,
+            weapon: "katana",
+            weapons: ["katana"],
+            activeSlot: 0,
+            weaponLevels: createWeaponLevels(),
+            atkPhase: 2,
+            atkAngle: 0,
+            weaponAngle: 0,
+            attacking: false,
+            bowCharge: 0,
+            arrows: [],
+            isDashing: false,
+            perk: null,
+            coins: 0,
+            score: 0,
+            kills: 0,
+            username: player.profile.username,
+            avatarId: player.profile.avatarId,
+          },
+        ]),
+    );
     this.peerRonin = Object.values(this.peerRonins)[0] ?? null;
     this.spectatorTargetId = null;
   }
-  private remoteRonins() { return Object.entries(this.peerRonins); }
-  private localPlayerSprite() { return SPR[this.playerAvatar === "samurai" ? "player" : this.playerAvatar] || SPR.player; }
+  private remoteRonins() {
+    return Object.entries(this.peerRonins);
+  }
+  private localPlayerSprite() {
+    return SPR[this.playerAvatar === "samurai" ? "player" : this.playerAvatar] || SPR.player;
+  }
 
   private aliveRemoteRonins() {
     return this.remoteRonins().filter(([, peer]) => peer.hp > 0);
@@ -538,9 +628,15 @@ export class Game {
 
   private spectatedRonin() {
     const alive = this.aliveRemoteRonins();
-    if (!alive.length) { this.spectatorTargetId = null; return null; }
+    if (!alive.length) {
+      this.spectatorTargetId = null;
+      return null;
+    }
     let selected = alive.find(([id]) => id === this.spectatorTargetId);
-    if (!selected) { selected = alive[0]; this.spectatorTargetId = selected[0]; }
+    if (!selected) {
+      selected = alive[0];
+      this.spectatorTargetId = selected[0];
+    }
     return selected;
   }
 
@@ -549,7 +645,12 @@ export class Game {
     const alive = this.aliveRemoteRonins();
     if (!alive.length) return;
     const currentIndex = alive.findIndex(([id]) => id === this.spectatorTargetId);
-    const nextIndex = currentIndex < 0 ? (direction > 0 ? 0 : alive.length - 1) : (currentIndex + direction + alive.length) % alive.length;
+    const nextIndex =
+      currentIndex < 0
+        ? direction > 0
+          ? 0
+          : alive.length - 1
+        : (currentIndex + direction + alive.length) % alive.length;
     this.spectatorTargetId = alive[nextIndex][0];
     this.peerRonin = alive[nextIndex][1];
     this.pushStats(true);
@@ -720,14 +821,19 @@ export class Game {
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
       c.beginPath();
-      c.moveTo(cx + Math.cos(a) * Math.min(W, H) * 0.22, cy + Math.sin(a) * Math.min(W, H) * 0.22);
+      c.moveTo(
+        cx + Math.cos(a) * Math.min(W, H) * 0.22,
+        cy + Math.sin(a) * Math.min(W, H) * 0.22,
+      );
       c.lineTo(cx + Math.cos(a) * Math.min(W, H) * 0.3, cy + Math.sin(a) * Math.min(W, H) * 0.3);
       c.stroke();
     }
-    // Four low-profile shrine lanterns add life near the edges without covering play space.
+    // Four low-profile shrine lanterns
     const lanterns = [
-      { x: 28, y: 28 }, { x: W - 28, y: 28 },
-      { x: 28, y: H - 28 }, { x: W - 28, y: H - 28 },
+      { x: 28, y: 28 },
+      { x: W - 28, y: 28 },
+      { x: 28, y: H - 28 },
+      { x: W - 28, y: H - 28 },
     ];
     for (const lantern of lanterns) {
       c.fillStyle = "rgba(8,3,7,0.7)";
@@ -762,11 +868,16 @@ export class Game {
     c.fillStyle = "#8c2835";
     c.fillRect(B - 1, B - 1, W - B * 2 + 2, 1);
     c.fillRect(B - 1, H - B, W - B * 2 + 2, 1);
-    // Stepped corner brackets make the playable boundary legible during dashes.
+    // Stepped corner brackets
     c.strokeStyle = "rgba(255, 212, 74, 0.42)";
     c.lineWidth = 2;
     const bracket = 18;
-    for (const [x, y, sx, sy] of [[B + 4, B + 4, 1, 1], [W - B - 4, B + 4, -1, 1], [B + 4, H - B - 4, 1, -1], [W - B - 4, H - B - 4, -1, -1]] as const) {
+    for (const [x, y, sx, sy] of [
+      [B + 4, B + 4, 1, 1],
+      [W - B - 4, B + 4, -1, 1],
+      [B + 4, H - B - 4, 1, -1],
+      [W - B - 4, H - B - 4, -1, -1],
+    ] as const) {
       c.beginPath();
       c.moveTo(x, y + sy * bracket);
       c.lineTo(x, y);
@@ -949,6 +1060,7 @@ export class Game {
       this.bowHolding = false;
       this.bowCharge = 0;
       this.bowReleasing = 0;
+      this.bowReleaseDraw = 0;
       this.bowFireCd = 0;
       Sfx.equip();
       this.pushStats(true);
@@ -957,7 +1069,13 @@ export class Game {
 
   reorderWeapons(fromIndex: number, toIndex: number): boolean {
     if (this.perk === "bladeMonk" || fromIndex === toIndex) return false;
-    if (fromIndex < 0 || toIndex < 0 || fromIndex >= this.weapons.length || toIndex >= this.weapons.length) return false;
+    if (
+      fromIndex < 0 ||
+      toIndex < 0 ||
+      fromIndex >= this.weapons.length ||
+      toIndex >= this.weapons.length
+    )
+      return false;
     const [weapon] = this.weapons.splice(fromIndex, 1);
     this.weapons.splice(toIndex, 0, weapon);
     if (this.activeSlot === fromIndex) this.activeSlot = toIndex;
@@ -980,7 +1098,8 @@ export class Game {
   buyWeapon(weapon: Weapon, cost: number): boolean {
     if (this.coins < cost) return false;
     if (this.weapons.includes(weapon)) return false;
-    const maxWeapons = this.perk === "bladeMonk" ? 1 : this.perk === "bottomlessPocket" ? 6 : 4;
+    const maxWeapons =
+      this.perk === "bladeMonk" ? 1 : this.perk === "bottomlessPocket" ? 6 : 4;
     if (this.weapons.length >= maxWeapons) return false;
     this.coins -= cost;
     this.weapons.push(weapon);
@@ -1008,7 +1127,15 @@ export class Game {
     if (!this.weapons.includes(weapon) || this.coins < cost) return false;
     const max = upgrade === "form" ? 1 : 3;
     if (this.weaponLevels[weapon][upgrade] >= max) return false;
-    if (upgrade === "form" && weapon !== "katana" && weapon !== "bow" && weapon !== "hammer" && weapon !== "book" && weapon !== "staff") return false;
+    if (
+      upgrade === "form" &&
+      weapon !== "katana" &&
+      weapon !== "bow" &&
+      weapon !== "hammer" &&
+      weapon !== "book" &&
+      weapon !== "staff"
+    )
+      return false;
     this.coins -= cost;
     this.weaponLevels[weapon][upgrade]++;
     Sfx.buy();
@@ -1024,9 +1151,10 @@ export class Game {
 
   buyPowerUp(power: PowerUp, cost: number): boolean {
     if (this.coins < cost) return false;
-    const atLimit = power === "dashDist" && this.perk === "bladeMonk"
-      ? this.dashSpeedMult >= this.limits().dashSpeedMult
-      : isPowerUpAtLimit(this, power, this.difficulty);
+    const atLimit =
+      power === "dashDist" && this.perk === "bladeMonk"
+        ? this.dashSpeedMult >= this.limits().dashSpeedMult
+        : isPowerUpAtLimit(this, power, this.difficulty);
     if (atLimit) return false;
     this.coins -= cost;
     if (power === "speed") {
@@ -1039,10 +1167,22 @@ export class Game {
     } else if (power === "dashCd") {
       this.dashMax = Math.max(this.limits().dashMax, this.dashMax - 0.8);
       this.dashCd = 0;
-      this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashCooldownBoost, "#f8d7a5");
+      this.addScore(
+        40,
+        this.px,
+        this.py - 16,
+        I18N[this.opts.language].dashCooldownBoost,
+        "#f8d7a5",
+      );
     } else if (power === "dashDist") {
       this.dashSpeedMult = Math.min(this.limits().dashSpeedMult, this.dashSpeedMult + 0.25);
-      this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].dashDistanceBoost, "#f8d7a5");
+      this.addScore(
+        40,
+        this.px,
+        this.py - 16,
+        I18N[this.opts.language].dashDistanceBoost,
+        "#f8d7a5",
+      );
     }
 
     const limits = this.limits();
@@ -1128,7 +1268,8 @@ export class Game {
     this.weapons = ["katana"];
     this.activeSlot = 0;
     this.weaponLevels = createWeaponLevels();
-    this.perkBuffT = 0; this.perkEchoT = 0;
+    this.perkBuffT = 0;
+    this.perkEchoT = 0;
     this.magicType = "fire";
     this.magicCd = 0;
     this.keyboardAimAngle = 0;
@@ -1138,6 +1279,7 @@ export class Game {
     this.bowCharge = 0;
     this.bowHolding = false;
     this.bowReleasing = 0;
+    this.bowReleaseDraw = 0;
     this.bowFireCd = 0;
     this.bowFullSfx = false;
     this.mineHeld = false;
@@ -1226,9 +1368,7 @@ export class Game {
 
   private limits() {
     const base = DIFFICULTY_RULES[this.difficulty].limits;
-    return this.perk === "bladeMonk"
-      ? { ...base, dashSpeedMult: base.dashSpeedMult * 1.5 }
-      : base;
+    return this.perk === "bladeMonk" ? { ...base, dashSpeedMult: base.dashSpeedMult * 1.5 } : base;
   }
 
   private enforceStatLimits() {
@@ -1265,14 +1405,25 @@ export class Game {
       dashSpeedMult: this.dashSpeedMult,
       mineTutorial: this.mineTutorialT > 0,
       potionTutorial: this.potionTutorialT > 0,
-      activePotion: this.strengthT > 0 ? "strength" : this.speedT > 0 ? "speed" : this.agilityT > 0 ? "agility" : null,
+      activePotion:
+        this.strengthT > 0
+          ? "strength"
+          : this.speedT > 0
+            ? "speed"
+            : this.agilityT > 0
+              ? "agility"
+              : null,
       isSpectating: !!spectated,
       spectatedName: spectated?.username ?? null,
-      activePotions: ([
-        ["strength", this.strengthT],
-        ["speed", this.speedT],
-        ["agility", this.agilityT],
-      ] as const).filter(([, time]) => time > 0).map(([type, time]) => ({ type, time })),
+      activePotions: (
+        [
+          ["strength", this.strengthT],
+          ["speed", this.speedT],
+          ["agility", this.agilityT],
+        ] as const
+      )
+        .filter(([, time]) => time > 0)
+        .map(([type, time]) => ({ type, time })),
       potionTime: Math.max(this.strengthT, this.speedT, this.agilityT),
       weaponLevels: spectated?.weaponLevels ?? this.weaponLevels,
       magicType: this.magicType,
@@ -1282,7 +1433,8 @@ export class Game {
   }
 
   private pushStats(force = false) {
-    this.waveLeft = Math.max(0, this.waveTotal - this.waveSpawned) + this.marks.length + this.enemies.length;
+    this.waveLeft =
+      Math.max(0, this.waveTotal - this.waveSpawned) + this.marks.length + this.enemies.length;
     const s = this.stats();
     const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.activePotions)}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}|${s.isSpectating}|${s.spectatedName}`;
     if (force || key !== this.lastStats) {
@@ -1537,9 +1689,16 @@ export class Game {
       mx /= ml;
       my /= ml;
     }
-    if (this.opts.inputMode === "keyboard" && ml > 0.01) this.keyboardAimAngle = Math.atan2(my, mx);
+    if (this.opts.inputMode === "keyboard" && ml > 0.01)
+      this.keyboardAimAngle = Math.atan2(my, mx);
 
-    const SPEED = (108 + this.speedBonus - (this.perk === "bottomlessPocket" ? 12 : 0) - (this.perk === "cursedArsenal" ? 8 : 0) + (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0)) * (this.speedT > 0 ? 1.45 : 1);
+    const SPEED =
+      (108 +
+        this.speedBonus -
+        (this.perk === "bottomlessPocket" ? 12 : 0) -
+        (this.perk === "cursedArsenal" ? 8 : 0) +
+        (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0)) *
+      (this.speedT > 0 ? 1.45 : 1);
 
     if (this.dashT > 0) {
       this.dashT -= dt;
@@ -1562,7 +1721,8 @@ export class Game {
       });
     } else {
       if (ml > 0.01) {
-        const slowing = this.atkT > 0 ? 0.5 : this.currentWeapon === "bow" && this.bowHolding ? 0.72 : 1;
+        const slowing =
+          this.atkT > 0 ? 0.5 : this.currentWeapon === "bow" && this.bowHolding ? 0.72 : 1;
         const maxS = SPEED * slowing;
         this.pvx = mx * maxS;
         this.pvy = my * maxS;
@@ -1595,7 +1755,14 @@ export class Game {
     }
     if (this.dashT > 0 && this.currentWeapon === "katana" && this.weaponLevels.katana.form > 0) {
       this.cutDuringDash();
-      if (this.dashSlashes.length < 18) this.dashSlashes.push({ x: this.px, y: this.py, a: Math.atan2(this.dashDy, this.dashDx), life: 0.24, max: 0.24 });
+      if (this.dashSlashes.length < 18)
+        this.dashSlashes.push({
+          x: this.px,
+          y: this.py,
+          a: Math.atan2(this.dashDy, this.dashDx),
+          life: 0.24,
+          max: 0.24,
+        });
     }
 
     this.iframe = Math.max(0, this.iframe - dt);
@@ -1620,7 +1787,7 @@ export class Game {
         this.dashDy = dy / l;
         this.dashT = 0.17;
         this.dashHitSet.clear();
-    this.dashSlashes.length = 0;
+        this.dashSlashes.length = 0;
         this.dashCd = this.dashMax * (this.agilityT > 0 ? 0.5 : 1);
         this.iframe = Math.max(this.iframe, 0.26);
         this.shake = Math.max(this.shake, 3);
@@ -1656,11 +1823,7 @@ export class Game {
 
         Sfx.swing(this.currentWeapon);
         const p =
-          this.currentWeapon === "hammer"
-            ? 60
-            : this.currentWeapon === "shield"
-              ? 80
-              : 88;
+          this.currentWeapon === "hammer" ? 60 : this.currentWeapon === "shield" ? 80 : 88;
         this.pvx += Math.cos(this.atkAngle) * p;
         this.pvy += Math.sin(this.atkAngle) * p;
         this.leanX = Math.cos(this.atkAngle) * 2;
@@ -1685,7 +1848,12 @@ export class Game {
       }
     } else if (this.atkT > 0) {
       this.atkT -= dt;
-      if (this.currentWeapon !== "bow" && this.currentWeapon !== "mine" && this.currentWeapon !== "book" && this.currentWeapon !== "staff") {
+      if (
+        this.currentWeapon !== "bow" &&
+        this.currentWeapon !== "mine" &&
+        this.currentWeapon !== "book" &&
+        this.currentWeapon !== "staff"
+      ) {
         this.doSwingHits();
       }
       if (this.atkT <= 0) {
@@ -1731,9 +1899,13 @@ export class Game {
     this.attackHeld = this.keyboardAttackHeld || this.pointerAttackHeld || pressed(0) || pressed(7);
     if (justPressed(1) || justPressed(2)) this.dashQueued = true;
     if (justPressed(4) || justPressed(14)) {
-      if (this.hp <= 0 && this.isCoop) this.spectateNext(-1); else this.prevWeapon();
+      if (this.hp <= 0 && this.isCoop) this.spectateNext(-1);
+      else this.prevWeapon();
     }
-    if (justPressed(5) || justPressed(15)) { if (this.hp <= 0 && this.isCoop) this.spectateNext(1); else this.nextWeapon(); }
+    if (justPressed(5) || justPressed(15)) {
+      if (this.hp <= 0 && this.isCoop) this.spectateNext(1);
+      else this.nextWeapon();
+    }
     if (justPressed(9)) this.togglePause();
     this.gamepadButtons = pad.buttons.map((button) => button.pressed);
   }
@@ -1759,20 +1931,70 @@ export class Game {
     Sfx.swing("staff");
   }
 
-  private spawnSummon(x: number, y: number, kind: "summoned" | "revived", type: EnemyType = "skeleton") {
+  private spawnSummon(
+    x: number,
+    y: number,
+    kind: "summoned" | "revived",
+    type: EnemyType = "skeleton",
+  ) {
     if (this.summons.length >= 6) return;
-    this.summons.push({ x, y, vx: 0, vy: 0, r: 8, life: kind === "revived" ? 22 : 16, maxLife: kind === "revived" ? 22 : 16, kind, type, attackCd: 0.4, flash: 0 });
+    this.summons.push({
+      x,
+      y,
+      vx: 0,
+      vy: 0,
+      r: 8,
+      life: kind === "revived" ? 22 : 16,
+      maxLife: kind === "revived" ? 22 : 16,
+      kind,
+      type,
+      attackCd: 0.4,
+      flash: 0,
+    });
     this.burst(x, y, 12, kind === "revived" ? "#9f63ff" : "#4db9ff", 100);
   }
 
   private updateSummons(dt: number) {
     for (let i = this.summons.length - 1; i >= 0; i--) {
-      const s = this.summons[i]; s.life -= dt; s.attackCd -= dt;
-      if (s.life <= 0) { this.summons.splice(i, 1); continue; }
-      let target: Enemy | null = null; let best = Infinity;
-      for (const e of this.enemies) { const d = Math.hypot(e.x - s.x, e.y - s.y); if (d < best) { best = d; target = e; } }
-      if (target) { const a = Math.atan2(target.y - s.y, target.x - s.x); if (best > 20) { s.vx += Math.cos(a) * 260 * dt; s.vy += Math.sin(a) * 260 * dt; } const sp = Math.hypot(s.vx, s.vy); if (sp > 74) { s.vx = s.vx / sp * 74; s.vy = s.vy / sp * 74; } if (best < target.r + 10 && s.attackCd <= 0) { target.hp -= this.playerDamage(1 + Math.floor(this.weaponLevels.staff.damage / 2)); target.flash = 0.12; s.attackCd = s.kind === "revived" ? 0.55 : 0.72; this.burst(target.x, target.y, 4, s.kind === "revived" ? "#b276ff" : "#69d7ff", 60); if (target.hp <= 0) this.killEnemy(target, a, false); } }
-      s.x += s.vx * dt; s.y += s.vy * dt; s.vx *= 0.92; s.vy *= 0.92;
+      const s = this.summons[i];
+      s.life -= dt;
+      s.attackCd -= dt;
+      if (s.life <= 0) {
+        this.summons.splice(i, 1);
+        continue;
+      }
+      let target: Enemy | null = null;
+      let best = Infinity;
+      for (const e of this.enemies) {
+        const d = Math.hypot(e.x - s.x, e.y - s.y);
+        if (d < best) {
+          best = d;
+          target = e;
+        }
+      }
+      if (target) {
+        const a = Math.atan2(target.y - s.y, target.x - s.x);
+        if (best > 20) {
+          s.vx += Math.cos(a) * 260 * dt;
+          s.vy += Math.sin(a) * 260 * dt;
+        }
+        const sp = Math.hypot(s.vx, s.vy);
+        if (sp > 74) {
+          s.vx = (s.vx / sp) * 74;
+          s.vy = (s.vy / sp) * 74;
+        }
+        if (best < target.r + 10 && s.attackCd <= 0) {
+          target.hp -= this.playerDamage(1 + Math.floor(this.weaponLevels.staff.damage / 2));
+          target.flash = 0.12;
+          s.attackCd = s.kind === "revived" ? 0.55 : 0.72;
+          this.burst(target.x, target.y, 4, s.kind === "revived" ? "#b276ff" : "#69d7ff", 60);
+          if (target.hp <= 0) this.killEnemy(target, a, false);
+        }
+      }
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vx *= 0.92;
+      s.vy *= 0.92;
     }
   }
 
@@ -1832,8 +2054,22 @@ export class Game {
       strike: base.strike / speed,
       rec: base.rec / speed,
       cd: base.cd / speed,
-      range: base.range + levels.range * 5 + (weapon === "staff" && levels.form > 0 ? 28 : 0) + (evolvedHammer ? 28 : 0) + (evolvedKatana ? 24 : 0),
-      dmg: (base.dmg + levels.damage * (weapon === "hammer" ? 2 : 1) + (evolvedHammer ? 5 : 0) + (evolvedKatana ? 2 : 0)) * (this.perk === "bladeMonk" ? 1.85 : 1) * (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) * (this.perk === "sharpGlass" ? 1.35 : 1) * (this.perk === "cursedArsenal" ? 1.2 : 1) * (this.perk === "kyuEcho" && this.perkEchoT >= 6 ? 1.65 : 1),
+      range:
+        base.range +
+        levels.range * 5 +
+        (weapon === "staff" && levels.form > 0 ? 28 : 0) +
+        (evolvedHammer ? 28 : 0) +
+        (evolvedKatana ? 24 : 0),
+      dmg:
+        (base.dmg +
+          levels.damage * (weapon === "hammer" ? 2 : 1) +
+          (evolvedHammer ? 5 : 0) +
+          (evolvedKatana ? 2 : 0)) *
+        (this.perk === "bladeMonk" ? 1.85 : 1) *
+        (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) *
+        (this.perk === "sharpGlass" ? 1.35 : 1) *
+        (this.perk === "cursedArsenal" ? 1.2 : 1) *
+        (this.perk === "kyuEcho" && this.perkEchoT >= 6 ? 1.65 : 1),
       kb: base.kb + levels.range * 25 + (evolvedHammer ? 180 : 0) + (evolvedKatana ? 80 : 0),
     };
   }
@@ -1958,10 +2194,17 @@ export class Game {
   private releaseBow(automatic = false) {
     const levels = this.weaponLevels.bow;
     const charge = automatic ? 0.55 : this.bowCharge;
+    // Guarda o valor do desenho antes de zerar, para a animação do release
+    // não exibir o arco "solto" durante o snap-back.
+    this.bowReleaseDraw = charge;
     this.bowCharge = 0;
     const ang = this.aimAngle();
     const sp = automatic ? 680 : 300 + charge * 300;
-    const dmg = (automatic ? 2 + levels.damage : 2 + Math.round(charge * 4) + levels.damage) * (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) * (this.perk === "sharpGlass" ? 1.35 : 1) * (this.perk === "cursedArsenal" ? 1.2 : 1);
+    const dmg =
+      (automatic ? 2 + levels.damage : 2 + Math.round(charge * 4) + levels.damage) *
+      (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) *
+      (this.perk === "sharpGlass" ? 1.35 : 1) *
+      (this.perk === "cursedArsenal" ? 1.2 : 1);
     const pierce = automatic ? 1 : 1 + Math.round(charge * 3);
     this.bowReleasing = automatic ? 0.03 : 0.14;
     this.arrows.push({
@@ -1977,7 +2220,13 @@ export class Game {
     });
     Sfx.bowShoot(charge);
     this.glint = 1;
-    this.burst(this.px + Math.cos(ang) * 16, this.py + Math.sin(ang) * 16, automatic ? 3 : charge >= 0.99 ? 8 : 4, "#ffd0a2", 110);
+    this.burst(
+      this.px + Math.cos(ang) * 16,
+      this.py + Math.sin(ang) * 16,
+      automatic ? 3 : charge >= 0.99 ? 8 : 4,
+      "#ffd0a2",
+      110,
+    );
     if (!automatic && charge >= 0.99) this.shake = Math.max(this.shake, 4);
   }
 
@@ -1997,7 +2246,12 @@ export class Game {
     const levels = this.weaponLevels.book;
     const angle = this.aimAngle();
     const baseRange = 72 + levels.range * 7;
-    const range = this.magicType === "fire" ? baseRange * 0.78 : this.magicType === "water" ? baseRange * 1.15 : baseRange;
+    const range =
+      this.magicType === "fire"
+        ? baseRange * 0.78
+        : this.magicType === "water"
+          ? baseRange * 1.15
+          : baseRange;
     const color = this.magicColor();
     let hits = 0;
 
@@ -2053,7 +2307,12 @@ export class Game {
   }
 
   private applyMagicHit(enemy: Enemy, enemyAngle: number, levels: WeaponLevels["book"]): void {
-    const direct = this.magicType === "fire" ? 4 + levels.damage * 2 : this.magicType === "water" ? 2 + levels.damage : 1 + levels.damage;
+    const direct =
+      this.magicType === "fire"
+        ? 4 + levels.damage * 2
+        : this.magicType === "water"
+          ? 2 + levels.damage
+          : 1 + levels.damage;
     const killed = this.damageEnemy(enemy, direct, enemyAngle);
     if (killed) return;
     if (this.magicType === "fire") {
@@ -2074,14 +2333,21 @@ export class Game {
   }
 
   private magicColor(): string {
-    return this.magicType === "fire" ? "#ff5a3d" : this.magicType === "ice" ? "#86e7ff" : this.magicType === "poison" ? "#8cdf55" : "#62a9ff";
+    return this.magicType === "fire"
+      ? "#ff5a3d"
+      : this.magicType === "ice"
+        ? "#86e7ff"
+        : this.magicType === "poison"
+          ? "#8cdf55"
+          : "#62a9ff";
   }
 
   private spawnMagicSparks(x: number, y: number, angle: number, type: MagicType, count: number) {
     for (let i = 0; i < count; i++) {
       const spread = type === "water" ? 0.42 : type === "poison" ? 0.98 : 0.74;
       const sparkAngle = angle + rnd(-spread, spread);
-      const speed = type === "ice" ? rnd(130, 285) : type === "water" ? rnd(85, 190) : rnd(90, 235);
+      const speed =
+        type === "ice" ? rnd(130, 285) : type === "water" ? rnd(85, 190) : rnd(90, 235);
       const fire = type === "fire";
       const poison = type === "poison";
       const ice = type === "ice";
@@ -2090,13 +2356,24 @@ export class Game {
         x: x + Math.cos(sparkAngle) * rnd(0, 10),
         y: y + Math.sin(sparkAngle) * rnd(0, 10),
         vx: Math.cos(sparkAngle) * speed,
-        vy: Math.sin(sparkAngle) * speed + (fire ? -rnd(20, 70) : poison ? -rnd(8, 42) : water ? rnd(-30, 30) : 0),
+        vy:
+          Math.sin(sparkAngle) * speed +
+          (fire ? -rnd(20, 70) : poison ? -rnd(8, 42) : water ? rnd(-30, 30) : 0),
         life: fire ? rnd(0.22, 0.5) : poison ? rnd(0.35, 0.7) : rnd(0.18, 0.42),
         max: poison ? 0.7 : 0.5,
         size: fire ? rnd(2, 4) : poison ? rnd(2, 5) : ice ? rnd(1, 3) : 2,
-        color: i % 6 === 0 ? "#ffffff" : fire ? pick(["#ff5a3d", "#ffb347", "#ffd44a"]) : poison ? pick(["#8cdf55", "#d8ff6a", "#4d9b52"]) : ice ? pick(["#86e7ff", "#d9fbff", "#4aaee8"]) : pick(["#62a9ff", "#c1f6ff", "#3992d8"]),
+        color:
+          i % 6 === 0
+            ? "#ffffff"
+            : fire
+              ? pick(["#ff5a3d", "#ffb347", "#ffd44a"])
+              : poison
+                ? pick(["#8cdf55", "#d8ff6a", "#4d9b52"])
+                : ice
+                  ? pick(["#86e7ff", "#d9fbff", "#4aaee8"])
+                  : pick(["#62a9ff", "#c1f6ff", "#3992d8"]),
         drag: poison ? 2.1 : 3.5,
-        kind: fire ? (i % 3 === 0 ? 3 : 0) : poison ? 0 : ice ? 2 : (i % 2 === 0 ? 3 : 2),
+        kind: fire ? (i % 3 === 0 ? 3 : 0) : poison ? 0 : ice ? 2 : i % 2 === 0 ? 3 : 2,
         rot: water ? angle + (i % 2 ? Math.PI / 2 : -Math.PI / 2) : sparkAngle,
       });
     }
@@ -2113,25 +2390,44 @@ export class Game {
       const poison = type === "poison";
       const ice = type === "ice";
       const water = type === "water";
-      const color = fire ? pick(["#ff5a3d", "#ffb347", "#ffd44a"]) : poison ? pick(["#8cdf55", "#d8ff6a", "#4d9b52"]) : ice ? pick(["#86e7ff", "#d9fbff", "#4aaee8"]) : pick(["#62a9ff", "#c1f6ff", "#3992d8"]);
+      const color = fire
+        ? pick(["#ff5a3d", "#ffb347", "#ffd44a"])
+        : poison
+          ? pick(["#8cdf55", "#d8ff6a", "#4d9b52"])
+          : ice
+            ? pick(["#86e7ff", "#d9fbff", "#4aaee8"])
+            : pick(["#62a9ff", "#c1f6ff", "#3992d8"]);
       this.parts.push({
         x: px,
         y: py,
-        vx: fire ? rnd(-45, 45) : water ? Math.cos(a) * rnd(45, 120) : Math.cos(a) * rnd(15, 90),
-        vy: fire ? -rnd(70, 165) : poison ? -rnd(12, 65) : ice ? -rnd(35, 115) : Math.sin(a) * rnd(20, 75),
+        vx: fire
+          ? rnd(-45, 45)
+          : water
+            ? Math.cos(a) * rnd(45, 120)
+            : Math.cos(a) * rnd(15, 90),
+        vy: fire
+          ? -rnd(70, 165)
+          : poison
+            ? -rnd(12, 65)
+            : ice
+              ? -rnd(35, 115)
+              : Math.sin(a) * rnd(20, 75),
         life: fire ? rnd(0.3, 0.65) : poison ? rnd(0.45, 0.8) : rnd(0.25, 0.58),
         max: poison ? 0.8 : 0.65,
         size: fire ? rnd(2, 5) : poison ? rnd(3, 6) : ice ? rnd(1, 3) : 2,
         color,
         drag: poison ? 1.8 : 2.8,
-        kind: fire ? (i % 4 === 0 ? 3 : 0) : poison ? 0 : ice ? 2 : (i % 2 === 0 ? 3 : 2),
+        kind: fire ? (i % 4 === 0 ? 3 : 0) : poison ? 0 : ice ? 2 : i % 2 === 0 ? 3 : 2,
         rot: water ? a + Math.PI / 2 : a,
       });
     }
   }
   private cutDuringDash() {
     const angle = Math.atan2(this.dashDy, this.dashDx);
-    const damage = (4 + this.weaponLevels.katana.damage * 2) * (this.perk === "sharpGlass" ? 1.35 : 1) * (this.perk === "cursedArsenal" ? 1.2 : 1);
+    const damage =
+      (4 + this.weaponLevels.katana.damage * 2) *
+      (this.perk === "sharpGlass" ? 1.35 : 1) *
+      (this.perk === "cursedArsenal" ? 1.2 : 1);
     for (const enemy of this.enemies.slice()) {
       if (this.dashHitSet.has(enemy)) continue;
       if (Math.hypot(enemy.x - this.px, enemy.y - this.py) > enemy.r + 17) continue;
@@ -2233,7 +2529,9 @@ export class Game {
       const mine = this.mines[i];
       mine.armT -= dt;
       mine.life -= dt;
-      const target = mine.armT <= 0 && this.enemies.find((e) => Math.hypot(e.x - mine.x, e.y - mine.y) < e.r + 14);
+      const target =
+        mine.armT <= 0 &&
+        this.enemies.find((e) => Math.hypot(e.x - mine.x, e.y - mine.y) < e.r + 14);
       if (!target && mine.life > 0) continue;
 
       this.mines.splice(i, 1);
@@ -2245,7 +2543,8 @@ export class Game {
       Sfx.mineExplode();
       for (const enemy of this.enemies.slice()) {
         const d = Math.hypot(enemy.x - mine.x, enemy.y - mine.y);
-        if (d <= mineRange + enemy.r) this.damageEnemy(enemy, mineDamage, Math.atan2(enemy.y - mine.y, enemy.x - mine.x));
+        if (d <= mineRange + enemy.r)
+          this.damageEnemy(enemy, mineDamage, Math.atan2(enemy.y - mine.y, enemy.x - mine.x));
       }
     }
   }
@@ -2282,7 +2581,14 @@ export class Game {
       e.fireTick -= dt;
       if (e.fireTick <= 0) {
         e.fireTick = 0.5;
-        if (!this.statusDamage(e, this.playerDamage(2 + Math.floor(this.weaponLevels.book.damage / 2)), "#ff5a3d")) return false;
+        if (
+          !this.statusDamage(
+            e,
+            this.playerDamage(2 + Math.floor(this.weaponLevels.book.damage / 2)),
+            "#ff5a3d",
+          )
+        )
+          return false;
       }
     }
     if (e.poisonT > 0) {
@@ -2290,7 +2596,8 @@ export class Game {
       e.poisonTick -= dt;
       if (e.poisonTick <= 0) {
         e.poisonTick = 0.5;
-        if (!this.statusDamage(e, this.playerDamage(3 + this.weaponLevels.book.damage), "#8cdf55")) return false;
+        if (!this.statusDamage(e, this.playerDamage(3 + this.weaponLevels.book.damage), "#8cdf55"))
+          return false;
       }
     }
     return true;
@@ -2334,7 +2641,8 @@ export class Game {
         ky: Math.sin(ang) * 40,
       });
     }
-    const tank = e.type === "brute" || e.type === "oni" || e.type === "shield" || e.type === "boss";
+    const tank =
+      e.type === "brute" || e.type === "oni" || e.type === "shield" || e.type === "boss";
     const kb = this.swingData().kb * (tank ? 0.4 : 1);
     e.vx += Math.cos(ang) * kb;
     e.vy += Math.sin(ang) * kb;
@@ -2366,7 +2674,13 @@ export class Game {
   private killEnemy(e: Enemy, ang: number, allowRevive = true) {
     const idx = this.enemies.indexOf(e);
     if (idx >= 0) this.enemies.splice(idx, 1);
-    if (allowRevive && this.currentWeapon === "staff" && this.weaponLevels.staff.form > 0 && Math.random() < 0.5) this.spawnSummon(e.x, e.y, "revived", e.type);
+    if (
+      allowRevive &&
+      this.currentWeapon === "staff" &&
+      this.weaponLevels.staff.form > 0 &&
+      Math.random() < 0.5
+    )
+      this.spawnSummon(e.x, e.y, "revived", e.type);
 
     this.combo++;
     this.comboT = 3.2;
@@ -2380,7 +2694,8 @@ export class Game {
     const col = bloodColor(e.type);
     this.burst(e.x, e.y, 18, col, 200);
     this.gibs(e.x, e.y, e.type);
-    const big = e.type === "brute" || e.type === "oni" || e.type === "shield" || e.type === "boss";
+    const big =
+      e.type === "brute" || e.type === "oni" || e.type === "shield" || e.type === "boss";
     this.shockwaves.push({
       x: e.x,
       y: e.y,
@@ -2530,7 +2845,16 @@ export class Game {
       case "golem":
         return { hp: 24 + hpB * 3, r: 13, speed: 28 + spB * 0.35, score: 120, dmg: enemyDamage };
       case "boss":
-        return { hp: 68 + w * 8, r: 18, speed: 34 + w * 0.7, score: 1500, dmg: this.difficulty === "hard" ? Number.POSITIVE_INFINITY : 3 + Math.floor(Math.max(0, w - 1) / 10) * 5 };
+        return {
+          hp: 68 + w * 8,
+          r: 18,
+          speed: 34 + w * 0.7,
+          score: 1500,
+          dmg:
+            this.difficulty === "hard"
+              ? Number.POSITIVE_INFINITY
+              : 3 + Math.floor(Math.max(0, w - 1) / 10) * 5,
+        };
     }
   }
 
@@ -2615,7 +2939,20 @@ export class Game {
   private chooseBossType(): Exclude<EnemyType, "boss"> {
     const types: Exclude<EnemyType, "boss">[] = ["spitter", "archer", "wisp", "monk", "warlock"];
     if (this.wave >= 5) types.push("ninja", "golem");
-    if (this.wave >= 7) types.push("bat", "brute", "hound", "slime", "skeleton", "crawler", "bomber", "ram", "shield", "oni", "demon");
+    if (this.wave >= 7)
+      types.push(
+        "bat",
+        "brute",
+        "hound",
+        "slime",
+        "skeleton",
+        "crawler",
+        "bomber",
+        "ram",
+        "shield",
+        "oni",
+        "demon",
+      );
     return pick(types) ?? "spitter";
   }
 
@@ -2700,7 +3037,13 @@ export class Game {
     // can't stall with an archer kiting in a corner.
     if (this.waveSpawned >= this.waveTotal && this.marks.length === 0 && this.enemies.length <= 3) {
       for (const e of this.enemies) {
-        if (e.type === "spitter" || e.type === "archer" || e.type === "wisp" || e.type === "monk" || e.type === "warlock") {
+        if (
+          e.type === "spitter" ||
+          e.type === "archer" ||
+          e.type === "wisp" ||
+          e.type === "monk" ||
+          e.type === "warlock"
+        ) {
           const dx = this.px - e.x;
           const dy = this.py - e.y;
           const d = Math.hypot(dx, dy) || 1;
@@ -2782,16 +3125,29 @@ export class Game {
     const radius = 42;
     const damage = this.wave <= 10 ? 2 : 5;
     if (this.hp > 0) {
-      const dx = this.px - e.x; const dy = this.py - e.y; const distance = Math.hypot(dx, dy);
+      const dx = this.px - e.x;
+      const dy = this.py - e.y;
+      const distance = Math.hypot(dx, dy);
       if (distance <= radius) this.hurtPlayer(damage, dx / (distance || 1), dy / (distance || 1));
     }
     for (const [playerId, peer] of this.remoteRonins()) {
-      const dx = peer.px - e.x; const dy = peer.py - e.y; const distance = Math.hypot(dx, dy);
-      if (peer.hp > 0 && distance <= radius) this.hurtCoopTarget(playerId, damage, dx / (distance || 1), dy / (distance || 1));
+      const dx = peer.px - e.x;
+      const dy = peer.py - e.y;
+      const distance = Math.hypot(dx, dy);
+      if (peer.hp > 0 && distance <= radius)
+        this.hurtCoopTarget(playerId, damage, dx / (distance || 1), dy / (distance || 1));
     }
     const index = this.enemies.indexOf(e);
     if (index >= 0) this.enemies.splice(index, 1);
-    this.shockwaves.push({ x: e.x, y: e.y, r: 5, maxR: radius, life: 0.38, maxLife: 0.38, color: "#ff7b38" });
+    this.shockwaves.push({
+      x: e.x,
+      y: e.y,
+      r: 5,
+      maxR: radius,
+      life: 0.38,
+      maxLife: 0.38,
+      color: "#ff7b38",
+    });
     this.burst(e.x, e.y, 34, "#ff8b3d", 240);
     this.gibs(e.x, e.y, e.type);
     this.bloodDecal(e.x, e.y + 3, 8, "#e85b32");
@@ -2802,8 +3158,23 @@ export class Game {
   private ramCrash(e: Enemy) {
     const index = this.enemies.indexOf(e);
     if (index >= 0) this.enemies.splice(index, 1);
-    this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(e.vy, e.vx), life: 0.26, max: 0.26, color: "#ffd27a" });
-    this.shockwaves.push({ x: e.x, y: e.y, r: 4, maxR: 24, life: 0.28, maxLife: 0.28, color: "#ffd27a" });
+    this.enemyDashFx.push({
+      x: e.x,
+      y: e.y,
+      a: Math.atan2(e.vy, e.vx),
+      life: 0.26,
+      max: 0.26,
+      color: "#ffd27a",
+    });
+    this.shockwaves.push({
+      x: e.x,
+      y: e.y,
+      r: 4,
+      maxR: 24,
+      life: 0.28,
+      maxLife: 0.28,
+      color: "#ffd27a",
+    });
     this.burst(e.x, e.y, 20, "#b7794d", 180);
     this.gibs(e.x, e.y, e.type);
     Sfx.ramImpact();
@@ -2826,12 +3197,19 @@ export class Game {
       let targetX = this.px;
       let targetY = this.py;
       let targetPeerId: string | null = null;
-      let closestDistance = this.hp > 0 ? Math.hypot(this.px - e.x, this.py - e.y) : Number.POSITIVE_INFINITY;
-      if (this.isCoop) for (const [peerId, peer] of this.remoteRonins()) {
-        if (peer.hp <= 0) continue;
-        const distance = Math.hypot(peer.px - e.x, peer.py - e.y);
-        if (distance < closestDistance) { closestDistance = distance; targetX = peer.px; targetY = peer.py; targetPeerId = peerId; }
-      }
+      let closestDistance =
+        this.hp > 0 ? Math.hypot(this.px - e.x, this.py - e.y) : Number.POSITIVE_INFINITY;
+      if (this.isCoop)
+        for (const [peerId, peer] of this.remoteRonins()) {
+          if (peer.hp <= 0) continue;
+          const distance = Math.hypot(peer.px - e.x, peer.py - e.y);
+          if (distance < closestDistance) {
+            closestDistance = distance;
+            targetX = peer.px;
+            targetY = peer.py;
+            targetPeerId = peerId;
+          }
+        }
 
       const dx = targetX - e.x;
       const dy = targetY - e.y;
@@ -2862,7 +3240,14 @@ export class Game {
               if (e.cd <= 0 && dist < (e.type === "demon" ? 180 : e.type === "crawler" ? 170 : 150)) {
                 e.state = 1;
                 e.cd = e.type === "demon" ? 0.55 : e.type === "crawler" ? 0.24 : 0.35;
-                this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(ny, nx), life: 0.3, max: 0.3, color: e.type === "crawler" ? "#ffb05d" : "#ff5361" });
+                this.enemyDashFx.push({
+                  x: e.x,
+                  y: e.y,
+                  a: Math.atan2(ny, nx),
+                  life: 0.3,
+                  max: 0.3,
+                  color: e.type === "crawler" ? "#ffb05d" : "#ff5361",
+                });
                 Sfx.enemyDash();
               }
             } else if (e.state === 1) {
@@ -2871,7 +3256,8 @@ export class Game {
               if (e.cd <= 0) {
                 e.state = 2;
                 e.cd = e.type === "demon" ? 0.75 : e.type === "crawler" ? 0.32 : 0.42;
-                const dashSpeed = e.type === "demon" ? 340 : e.type === "ninja" ? 320 : e.type === "crawler" ? 360 : 270;
+                const dashSpeed =
+                  e.type === "demon" ? 340 : e.type === "ninja" ? 320 : e.type === "crawler" ? 360 : 270;
                 e.vx = nx * dashSpeed;
                 e.vy = ny * dashSpeed;
                 this.burst(e.x, e.y, 8, e.type === "crawler" ? "#ffb05d" : "#ff5361", 100);
@@ -2888,7 +3274,8 @@ export class Game {
           case "monk":
           case "warlock": {
             e.cd -= dt;
-            const wanted = e.type === "wisp" ? 125 : e.type === "archer" ? 145 : e.type === "warlock" ? 135 : 100;
+            const wanted =
+              e.type === "wisp" ? 125 : e.type === "archer" ? 145 : e.type === "warlock" ? 135 : 100;
             const err = dist - wanted;
             e.vx += nx * Math.sign(err) * e.speed * 4 * dt;
             e.vy += ny * Math.sign(err) * e.speed * 4 * dt;
@@ -2896,13 +3283,34 @@ export class Game {
             e.vx += -ny * e.speed * circle * dt;
             e.vy += nx * e.speed * circle * dt;
             if (e.cd <= 0 && dist < 210) {
-              e.cd = e.type === "archer" ? rnd(1.2, 1.8) : e.type === "warlock" ? rnd(2.1, 2.8) : rnd(1.7, 2.5);
+              e.cd =
+                e.type === "archer"
+                  ? rnd(1.2, 1.8)
+                  : e.type === "warlock"
+                    ? rnd(2.1, 2.8)
+                    : rnd(1.7, 2.5);
               e.flash = 0.1;
-              const sp = e.type === "archer" ? 160 : e.type === "wisp" ? 125 : e.type === "warlock" ? 118 : 108;
+              const sp =
+                e.type === "archer"
+                  ? 160
+                  : e.type === "wisp"
+                    ? 125
+                    : e.type === "warlock"
+                      ? 118
+                      : 108;
               const volley = e.type === "monk" ? 3 : e.type === "warlock" ? 5 : 1;
               for (let v = 0; v < volley; v++) {
                 const a = Math.atan2(ny, nx) + (v - (volley - 1) / 2) * (e.type === "warlock" ? 0.18 : 0.24);
-                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 4, r: 3, dmg: e.dmg, color: e.type === "warlock" ? "#ad73ff" : undefined });
+                this.shots.push({
+                  x: e.x,
+                  y: e.y,
+                  vx: Math.cos(a) * sp,
+                  vy: Math.sin(a) * sp,
+                  life: 4,
+                  r: 3,
+                  dmg: e.dmg,
+                  color: e.type === "warlock" ? "#ad73ff" : undefined,
+                });
               }
               this.burst(e.x + nx * 6, e.y + ny * 6, 4, e.type === "warlock" ? "#a677ff" : "#ff764f", 60);
               Sfx.enemyShoot(e.type === "warlock" ? "magic" : "arrow");
@@ -2926,7 +3334,16 @@ export class Game {
               e.cd = 2.8;
               for (let v = 0; v < 6; v++) {
                 const a = (v / 6) * TAU + e.t * 0.4;
-                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 100, vy: Math.sin(a) * 100, life: 2.2, r: 3, dmg: e.dmg, color: "#ffb25b" });
+                this.shots.push({
+                  x: e.x,
+                  y: e.y,
+                  vx: Math.cos(a) * 100,
+                  vy: Math.sin(a) * 100,
+                  life: 2.2,
+                  r: 3,
+                  dmg: e.dmg,
+                  color: "#ffb25b",
+                });
               }
               this.burst(e.x, e.y, 12, "#ffb25b", 95);
               Sfx.enemyShoot("burst");
@@ -2962,7 +3379,14 @@ export class Game {
                 e.state = 2;
                 e.vx = nx * 330;
                 e.vy = ny * 330;
-                this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(ny, nx), life: 0.42, max: 0.42, color: "#ffd27a" });
+                this.enemyDashFx.push({
+                  x: e.x,
+                  y: e.y,
+                  a: Math.atan2(ny, nx),
+                  life: 0.42,
+                  max: 0.42,
+                  color: "#ffd27a",
+                });
                 this.burst(e.x, e.y, 12, "#ffd27a", 105);
                 Sfx.enemyDash();
               }
@@ -2972,7 +3396,12 @@ export class Game {
           case "boss": {
             const bossType = e.bossType ?? "spitter";
             e.cd -= dt;
-            const dashBoss = bossType === "bat" || bossType === "ninja" || bossType === "hound" || bossType === "crawler" || bossType === "demon";
+            const dashBoss =
+              bossType === "bat" ||
+              bossType === "ninja" ||
+              bossType === "hound" ||
+              bossType === "crawler" ||
+              bossType === "demon";
             if (dashBoss) {
               if (e.state === 0) {
                 e.vx += nx * e.speed * 4 * dt;
@@ -2980,7 +3409,14 @@ export class Game {
                 if (e.cd <= 0) {
                   e.state = 1;
                   e.cd = 0.5;
-                  this.enemyDashFx.push({ x: e.x, y: e.y, a: Math.atan2(ny, nx), life: 0.5, max: 0.5, color: "#ffb347" });
+                  this.enemyDashFx.push({
+                    x: e.x,
+                    y: e.y,
+                    a: Math.atan2(ny, nx),
+                    life: 0.5,
+                    max: 0.5,
+                    color: "#ffb347",
+                  });
                   Sfx.enemyDash();
                 }
               } else if (e.state === 1) {
@@ -3007,10 +3443,26 @@ export class Game {
                 const shotSpeed = bossType === "golem" ? 145 : 135;
                 for (let v = 0; v < volley; v++) {
                   const a = (v / volley) * TAU + e.t * 0.25;
-                  this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * shotSpeed, vy: Math.sin(a) * shotSpeed, life: 4, r: 4, dmg: e.dmg });
+                  this.shots.push({
+                    x: e.x,
+                    y: e.y,
+                    vx: Math.cos(a) * shotSpeed,
+                    vy: Math.sin(a) * shotSpeed,
+                    life: 4,
+                    r: 4,
+                    dmg: e.dmg,
+                  });
                 }
                 if (bossType === "golem") {
-                  this.shockwaves.push({ x: e.x, y: e.y, r: 8, maxR: 55, life: 0.45, maxLife: 0.45, color: "#d79bff" });
+                  this.shockwaves.push({
+                    x: e.x,
+                    y: e.y,
+                    r: 8,
+                    maxR: 55,
+                    life: 0.45,
+                    maxLife: 0.45,
+                    color: "#d79bff",
+                  });
                 }
                 this.shake = Math.max(this.shake, bossType === "golem" ? 8 : 4);
                 this.burst(e.x, e.y, 18, bossType === "golem" ? "#d79bff" : "#ff3c4a", 120);
@@ -3041,11 +3493,18 @@ export class Game {
         }
       }
 
-      const damp = ((e.type === "bat" || e.type === "crawler") && e.state === 2) || (e.type === "ram" && e.state === 2) ? 1.2 : 6.5;
+      const damp =
+        ((e.type === "bat" || e.type === "crawler") && e.state === 2) ||
+        (e.type === "ram" && e.state === 2)
+          ? 1.2
+          : 6.5;
       e.vx -= e.vx * Math.min(1, damp * dt);
       e.vy -= e.vy * Math.min(1, damp * dt);
       const bossDashing = e.type === "boss" && e.state === 2;
-      const maxV = e.type === "bat" || e.type === "crawler" || e.type === "ram" || bossDashing ? 680 : e.speed * 1.6 + 220;
+      const maxV =
+        e.type === "bat" || e.type === "crawler" || e.type === "ram" || bossDashing
+          ? 680
+          : e.speed * 1.6 + 220;
       const sp = Math.hypot(e.vx, e.vy);
       if (sp > maxV) {
         e.vx = (e.vx / sp) * maxV;
@@ -3072,7 +3531,11 @@ export class Game {
         e.vy = -Math.abs(e.vy) * 0.4;
       }
 
-      if (e.type === "ram" && e.state === 2 && (e.x === M || e.x === this.worldW - M || e.y === M || e.y === this.worldH - M)) {
+      if (
+        e.type === "ram" &&
+        e.state === 2 &&
+        (e.x === M || e.x === this.worldW - M || e.y === M || e.y === this.worldH - M)
+      ) {
         this.ramCrash(e);
         continue;
       }
@@ -3082,7 +3545,13 @@ export class Game {
         this.ramCrash(e);
         continue;
       }
-      if (e.type !== "ram" && e.type !== "bombMinion" && dist < e.r + 8 && e.touchCd <= 0 && e.spawnT <= 0) {
+      if (
+        e.type !== "ram" &&
+        e.type !== "bombMinion" &&
+        dist < e.r + 8 &&
+        e.touchCd <= 0 &&
+        e.spawnT <= 0
+      ) {
         if (!targetPeerId && this.shieldFacing(e.x, e.y)) {
           const away = Math.atan2(e.y - this.py, e.x - this.px);
           e.touchCd = 0.55;
@@ -3100,7 +3569,10 @@ export class Game {
   }
 
   private hurtCoopTarget(targetPeerId: string | null, dmg: number, nx: number, ny: number) {
-    if (!targetPeerId || !this.isCoop) { this.hurtPlayer(dmg, nx, ny); return; }
+    if (!targetPeerId || !this.isCoop) {
+      this.hurtPlayer(dmg, nx, ny);
+      return;
+    }
     const peer = this.peerRonins[targetPeerId];
     if (!peer || peer.hp <= 0) return;
     peer.hp = Math.max(0, peer.hp - dmg * DIFFICULTY_RULES[this.difficulty].damageTaken);
@@ -3145,7 +3617,12 @@ export class Game {
         const peerDistance = Math.hypot(s.x - peer.px, s.y - peer.py);
         if (peerDistance >= 9) continue;
         this.shots.splice(i, 1);
-        this.hurtCoopTarget(playerId, s.dmg, (peer.px - s.x) / (peerDistance || 1), (peer.py - s.y) / (peerDistance || 1));
+        this.hurtCoopTarget(
+          playerId,
+          s.dmg,
+          (peer.px - s.x) / (peerDistance || 1),
+          (peer.py - s.y) / (peerDistance || 1),
+        );
         hitPeer = true;
         break;
       }
@@ -3203,7 +3680,13 @@ export class Game {
     this.propTimer -= dt;
     if (this.propTimer <= 0 && this.props.length < 5) {
       const kind = Math.random() < 0.58 ? "crate" : "tree";
-      this.props.push({ x: rnd(28, this.worldW - 28), y: rnd(34, this.worldH - 34), kind, life: kind === "crate" ? 2 : 3, t: 0 });
+      this.props.push({
+        x: rnd(28, this.worldW - 28),
+        y: rnd(34, this.worldH - 34),
+        kind,
+        life: kind === "crate" ? 2 : 3,
+        t: 0,
+      });
       this.propTimer = rnd(7, 13);
     }
     for (let i = this.props.length - 1; i >= 0; i--) {
@@ -3215,8 +3698,31 @@ export class Game {
       else Sfx.crateBreak();
       const potion: PotionType = pick(["health", "strength", "speed", "agility"]);
       // Drop pessoal de prop: coletado apenas pelo dono, fora do sync coop.
-      this.pickups.push({ id: this.nextPickupId++, x: prop.x, y: prop.y, vx: rnd(-20, 20), vy: rnd(-35, -10), t: 0, kind: potion, potion, magnet: false, local: true });
-      this.burst(prop.x, prop.y, 12, potion === "health" ? "#ff4d6d" : potion === "strength" ? "#ff8a45" : potion === "speed" ? "#ffd44a" : "#8c8cff", 100);
+      this.pickups.push({
+        id: this.nextPickupId++,
+        x: prop.x,
+        y: prop.y,
+        vx: rnd(-20, 20),
+        vy: rnd(-35, -10),
+        t: 0,
+        kind: potion,
+        potion,
+        magnet: false,
+        local: true,
+      });
+      this.burst(
+        prop.x,
+        prop.y,
+        12,
+        potion === "health"
+          ? "#ff4d6d"
+          : potion === "strength"
+            ? "#ff8a45"
+            : potion === "speed"
+              ? "#ffd44a"
+              : "#8c8cff",
+        100,
+      );
     }
   }
   private updatePickups(dt: number) {
@@ -3224,7 +3730,8 @@ export class Game {
       const p = this.pickups[i];
       p.t += dt;
       const dHost = Math.hypot(this.px - p.x, this.py - p.y);
-      const dPeer = this.isCoop && this.peerRonin ? Math.hypot(this.peerRonin.px - p.x, this.peerRonin.py - p.y) : 9999;
+      const dPeer =
+        this.isCoop && this.peerRonin ? Math.hypot(this.peerRonin.px - p.x, this.peerRonin.py - p.y) : 9999;
       const peerCloser = dPeer < dHost;
       const targetX = peerCloser ? this.peerRonin!.px : this.px;
       const targetY = peerCloser ? this.peerRonin!.py : this.py;
@@ -3420,7 +3927,8 @@ export class Game {
 
   /** O parceiro caiu da sessao no meio da partida: encerra a run coop. */
   public coopPeerLeft() {
-    if (!this.isCoop || this.phase === "dying" || this.phase === "dead" || this.phase === "menu") return;
+    if (!this.isCoop || this.phase === "dying" || this.phase === "dead" || this.phase === "menu")
+      return;
     this.banner = "O PARCEIRO SAIU DA PARTIDA";
     this.bannerT = 2.5;
     this.beginDeath();
@@ -3644,14 +4152,20 @@ export class Game {
 
     // Random arena props
     for (const prop of this.props) {
-      ctx.fillStyle = "rgba(0,0,0,.3)"; ctx.fillRect(Math.round(prop.x - 9), Math.round(prop.y + 6), 18, 3);
+      ctx.fillStyle = "rgba(0,0,0,.3)";
+      ctx.fillRect(Math.round(prop.x - 9), Math.round(prop.y + 6), 18, 3);
       if (prop.kind === "crate") {
-        ctx.fillStyle = "#9b5937"; ctx.fillRect(Math.round(prop.x - 7), Math.round(prop.y - 6), 14, 12);
-        ctx.fillStyle = "#ffd08a"; ctx.fillRect(Math.round(prop.x - 5), Math.round(prop.y - 4), 10, 2);
+        ctx.fillStyle = "#9b5937";
+        ctx.fillRect(Math.round(prop.x - 7), Math.round(prop.y - 6), 14, 12);
+        ctx.fillStyle = "#ffd08a";
+        ctx.fillRect(Math.round(prop.x - 5), Math.round(prop.y - 4), 10, 2);
       } else {
-        ctx.fillStyle = "#51352a"; ctx.fillRect(Math.round(prop.x - 3), Math.round(prop.y - 2), 6, 10);
-        ctx.fillStyle = "#3e8b4d"; ctx.fillRect(Math.round(prop.x - 10), Math.round(prop.y - 10), 20, 11);
-        ctx.fillStyle = "#75c85d"; ctx.fillRect(Math.round(prop.x - 6), Math.round(prop.y - 13), 12, 5);
+        ctx.fillStyle = "#51352a";
+        ctx.fillRect(Math.round(prop.x - 3), Math.round(prop.y - 2), 6, 10);
+        ctx.fillStyle = "#3e8b4d";
+        ctx.fillRect(Math.round(prop.x - 10), Math.round(prop.y - 10), 20, 11);
+        ctx.fillStyle = "#75c85d";
+        ctx.fillRect(Math.round(prop.x - 6), Math.round(prop.y - 13), 12, 5);
       }
     }
     // Pickups (Hearts, Coins and potions)
@@ -3670,8 +4184,22 @@ export class Game {
         ctx.fillRect(p.x - 3, p.y + bob - 3, 6, 6);
         ctx.globalAlpha = 1;
       } else {
-        const potionSprite = p.potion === "health" ? SPR.potionHealth : p.potion === "strength" ? SPR.potionStrength : p.potion === "speed" ? SPR.potionSpeed : SPR.potionAgility;
-        const glow = p.potion === "health" ? "#ff4d6d" : p.potion === "strength" ? "#ff8a45" : p.potion === "speed" ? "#ffd44a" : "#8c8cff";
+        const potionSprite =
+          p.potion === "health"
+            ? SPR.potionHealth
+            : p.potion === "strength"
+              ? SPR.potionStrength
+              : p.potion === "speed"
+                ? SPR.potionSpeed
+                : SPR.potionAgility;
+        const glow =
+          p.potion === "health"
+            ? "#ff4d6d"
+            : p.potion === "strength"
+              ? "#ff8a45"
+              : p.potion === "speed"
+                ? "#ffd44a"
+                : "#8c8cff";
         const pulse = 0.28 + 0.16 * Math.sin(p.t * 9);
         ctx.globalAlpha = pulse;
         ctx.fillStyle = glow;
@@ -3693,9 +4221,10 @@ export class Game {
     if (this.phase !== "dying" && this.phase !== "dead") {
       this.shadow(this.px + this.leanX * 0.4, this.py + 8, 7);
     }
-    if (this.isCoop) for (const [, peer] of this.remoteRonins()) {
-      if (peer.hp > 0) this.shadow(peer.px, peer.py + 8, 7);
-    }
+    if (this.isCoop)
+      for (const [, peer] of this.remoteRonins()) {
+        if (peer.hp > 0) this.shadow(peer.px, peer.py + 8, 7);
+      }
 
     // Enemies sorted by Y
     const list = [...this.enemies].sort((a, b) => a.y - b.y);
@@ -3748,8 +4277,14 @@ export class Game {
       ctx.strokeStyle = "#ba9cff";
       ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.moveTo(slash.x - Math.cos(slash.a) * length * 0.58, slash.y - Math.sin(slash.a) * length * 0.58);
-      ctx.lineTo(slash.x + Math.cos(slash.a) * length * 0.42, slash.y + Math.sin(slash.a) * length * 0.42);
+      ctx.moveTo(
+        slash.x - Math.cos(slash.a) * length * 0.58,
+        slash.y - Math.sin(slash.a) * length * 0.58,
+      );
+      ctx.lineTo(
+        slash.x + Math.cos(slash.a) * length * 0.42,
+        slash.y + Math.sin(slash.a) * length * 0.42,
+      );
       ctx.stroke();
       ctx.globalAlpha = fade;
       ctx.strokeStyle = "#fff3dc";
@@ -3784,9 +4319,10 @@ export class Game {
     }
 
     if (this.phase !== "dying" && this.phase !== "dead" && this.hp > 0) this.drawPlayer();
-    if (this.isCoop) for (const [playerId, peer] of this.remoteRonins()) {
-      this.drawPeerPlayer(peer, playerId);
-    }
+    if (this.isCoop)
+      for (const [playerId, peer] of this.remoteRonins()) {
+        this.drawPeerPlayer(peer, playerId);
+      }
 
     // Particles
     for (const p of this.parts) {
@@ -3871,7 +4407,15 @@ export class Game {
     ctx.fill();
   }
 
-  private blit(spr: Sprite, x: number, y: number, flip: number, white: number, scaleY = 1, scaleX = 1) {
+  private blit(
+    spr: Sprite,
+    x: number,
+    y: number,
+    flip: number,
+    white: number,
+    scaleY = 1,
+    scaleX = 1,
+  ) {
     const ctx = this.ctx;
     const img = white ? spr.white : spr.canvas;
     const w = spr.w;
@@ -3888,19 +4432,28 @@ export class Game {
   }
 
   private drawSummon(s: Summon) {
-    const ctx = this.ctx; const color = s.kind === "revived" ? "#a56cff" : "#55c9ff";
-    ctx.save(); ctx.filter = s.kind === "revived" ? "hue-rotate(245deg) saturate(2) brightness(.72)" : "hue-rotate(165deg) saturate(2)";
-    this.blit(SPR[s.type], s.x, s.y + Math.sin(this.elapsed * 8 + s.x) * 1.2, 1, 0, 1, 1.07); ctx.restore();
-    ctx.globalAlpha = 0.6; ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(s.x, s.y + 2, 10 + Math.sin(this.elapsed * 7) * 1.5, 0, TAU); ctx.stroke(); ctx.globalAlpha = 1;
+    const ctx = this.ctx;
+    const color = s.kind === "revived" ? "#a56cff" : "#55c9ff";
+    ctx.save();
+    ctx.filter =
+      s.kind === "revived"
+        ? "hue-rotate(245deg) saturate(2) brightness(.72)"
+        : "hue-rotate(165deg) saturate(2)";
+    this.blit(SPR[s.type], s.x, s.y + Math.sin(this.elapsed * 8 + s.x) * 1.2, 1, 0, 1, 1.07);
+    ctx.restore();
+    ctx.globalAlpha = 0.6;
+    ctx.strokeStyle = color;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y + 2, 10 + Math.sin(this.elapsed * 7) * 1.5, 0, TAU);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
   }
 
   private drawEnemy(e: Enemy) {
     const ctx = this.ctx;
     const spr = e.type === "boss" ? SPR[e.bossType ?? "spitter"] : SPR[e.type];
     const bob =
-      e.type === "bat" || e.type === "wisp"
-        ? Math.sin(e.t * 12) * 2
-        : Math.sin(e.t * 9) * 0.8;
+      e.type === "bat" || e.type === "wisp" ? Math.sin(e.t * 12) * 2 : Math.sin(e.t * 9) * 0.8;
     if (e.spawnT > 0) {
       const p = 1 - e.spawnT / 0.28;
       ctx.globalAlpha = p;
@@ -3908,7 +4461,14 @@ export class Game {
       ctx.globalAlpha = 1;
       return;
     }
-    if ((e.type === "bat" || e.type === "ninja" || e.type === "hound" || e.type === "crawler" || e.type === "demon") && e.state === 1) {
+    if (
+      (e.type === "bat" ||
+        e.type === "ninja" ||
+        e.type === "hound" ||
+        e.type === "crawler" ||
+        e.type === "demon") &&
+      e.state === 1
+    ) {
       ctx.globalAlpha = 0.6;
       ctx.strokeStyle = "#ff5961";
       ctx.beginPath();
@@ -4060,8 +4620,17 @@ export class Game {
 
     if (!blink && this.hp > 0) {
       const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
-      this.blit(this.localPlayerSprite(), bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08);
-      if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) this.drawPsychicHands(this.aimAngle());
+      this.blit(
+        this.localPlayerSprite(),
+        bx,
+        by,
+        this.face,
+        0,
+        squash,
+        window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08,
+      );
+      if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0)
+        this.drawPsychicHands(this.aimAngle());
     }
 
     if (phase === 1 && this.trail.length > 4 && this.currentWeapon !== "bow" && this.currentWeapon !== "book") {
@@ -4071,9 +4640,14 @@ export class Game {
     }
 
     // the bow always tracks the aim; melee weapons use the swing timeline
-    const weaponAngle = this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff"
-      ? this.aimAngle()
-      : this.swingAngleNow();
+    const weaponAngle =
+      this.currentWeapon === "bow" ||
+      this.currentWeapon === "shield" ||
+      this.currentWeapon === "mine" ||
+      this.currentWeapon === "book" ||
+      this.currentWeapon === "staff"
+        ? this.aimAngle()
+        : this.swingAngleNow();
     this.drawWeapon(weaponAngle, this.bladeLen(), 1);
 
     // Bow: aim dots + charge bar while the string is being drawn
@@ -4084,7 +4658,12 @@ export class Game {
       ctx.globalAlpha = 0.35 + this.bowCharge * 0.45;
       for (let i = 1; i <= 10; i++) {
         const d = (i / 10) * reach;
-        ctx.fillRect(Math.round(this.px + Math.cos(a) * d) - 1, Math.round(this.py + Math.sin(a) * d) - 1, 2, 2);
+        ctx.fillRect(
+          Math.round(this.px + Math.cos(a) * d) - 1,
+          Math.round(this.py + Math.sin(a) * d) - 1,
+          2,
+          2,
+        );
       }
       ctx.globalAlpha = 1;
 
@@ -4107,7 +4686,6 @@ export class Game {
         ctx.fillRect(bx + bw, by - 2, 2, 2);
       }
     }
-
   }
 
   private drawPsychicHands(angle: number) {
@@ -4140,11 +4718,13 @@ export class Game {
     drawWeaponArt(ctx, this.currentWeapon, {
       len: L,
       // bow: rest nock (0.18) while idle, pulled back while charging,
-      // snapping forward while the release animation plays
+      // snapping forward while the release animation plays.
+      // bowReleaseDraw mantém o valor congelado no release, evitando o
+      // "arco solto" enquanto bowCharge já foi zerado em releaseBow().
       draw01:
         this.currentWeapon === "bow"
           ? this.bowReleasing > 0
-            ? this.bowCharge
+            ? this.bowReleaseDraw
             : 0.18 + this.bowCharge * 0.82
           : 0,
       glint: this.atkT > 0 ? this.glint : 0,
@@ -4156,7 +4736,15 @@ export class Game {
   }
 
   private pushTrail() {
-    if (this.atkT <= 0 || this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff") return;
+    if (
+      this.atkT <= 0 ||
+      this.currentWeapon === "bow" ||
+      this.currentWeapon === "shield" ||
+      this.currentWeapon === "mine" ||
+      this.currentWeapon === "book" ||
+      this.currentWeapon === "staff"
+    )
+      return;
     const a = this.swingAngleNow();
     const r = this.bladeLen();
     const last = this.trail[this.trail.length - 1];
@@ -4279,7 +4867,14 @@ export class Game {
         weapons: [...this.weapons],
         activeSlot: this.activeSlot,
         weaponLevels: JSON.parse(JSON.stringify(this.weaponLevels)) as WeaponLevels,
-        weaponAngle: this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff" ? this.aimAngle() : this.swingAngleNow(),
+        weaponAngle:
+          this.currentWeapon === "bow" ||
+          this.currentWeapon === "shield" ||
+          this.currentWeapon === "mine" ||
+          this.currentWeapon === "book" ||
+          this.currentWeapon === "staff"
+            ? this.aimAngle()
+            : this.swingAngleNow(),
         attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0,
         bowCharge: this.bowCharge,
         arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
@@ -4301,6 +4896,16 @@ export class Game {
           enemies,
           pickups,
           ronins: this.peerRonins,
+          shots: this.shots.map((s) => ({
+            x: s.x,
+            y: s.y,
+            vx: s.vx,
+            vy: s.vy,
+            life: s.life,
+            r: s.r,
+            dmg: s.dmg,
+            color: s.color,
+          })),
           paused: this.phase === "paused",
           hostRonin,
         },
@@ -4318,7 +4923,14 @@ export class Game {
         weapons: [...this.weapons],
         activeSlot: this.activeSlot,
         weaponLevels: JSON.parse(JSON.stringify(this.weaponLevels)) as WeaponLevels,
-        weaponAngle: this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff" ? this.aimAngle() : this.swingAngleNow(),
+        weaponAngle:
+          this.currentWeapon === "bow" ||
+          this.currentWeapon === "shield" ||
+          this.currentWeapon === "mine" ||
+          this.currentWeapon === "book" ||
+          this.currentWeapon === "staff"
+            ? this.aimAngle()
+            : this.swingAngleNow(),
         attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0,
         bowCharge: this.bowCharge,
         arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
@@ -4351,38 +4963,58 @@ export class Game {
       if (!playerId || playerId === this.localPlayerId) return;
       const existing = this.peerRonins[playerId];
       this.peerRonins[playerId] = existing ? Object.assign(existing, guestRonin) : guestRonin;
-      this.peerRonin = this.spectatorTargetId ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[playerId] : Object.values(this.peerRonins)[0] ?? null;
+      this.peerRonin = this.spectatorTargetId
+        ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[playerId]
+        : Object.values(this.peerRonins)[0] ?? null;
 
       if (this.isHost && hits && hits.length > 0) {
         for (const hit of hits) {
           const enemy = this.enemies.find((e) => e.id === hit.enemyId);
           if (enemy && enemy.hp > 0) {
-            const ang = hit.kx !== undefined && hit.ky !== undefined ? Math.atan2(hit.ky, hit.kx) : 0;
+            const ang =
+              hit.kx !== undefined && hit.ky !== undefined ? Math.atan2(hit.ky, hit.kx) : 0;
             this.damageEnemy(enemy, hit.dmg, ang);
           }
         }
       }
     } else if (packet.type === "HOST_SYNC" && !this.isHost) {
-      const { hostRonin, ronins, enemies, pickups, wave, waveTotal, waveLeft, paused } = packet.payload;
+      const { hostRonin, ronins, enemies, pickups, wave, waveTotal, waveLeft, paused, shots } =
+        packet.payload;
       const hostId = senderId || "host";
       const existingHost = this.peerRonins[hostId];
-      this.peerRonins[hostId] = existingHost ? Object.assign(existingHost, hostRonin) : hostRonin;
+      this.peerRonins[hostId] = existingHost
+        ? Object.assign(existingHost, hostRonin)
+        : hostRonin;
       for (const [playerId, ronin] of Object.entries(ronins ?? {})) {
         if (playerId === this.localPlayerId) continue;
         const existing = this.peerRonins[playerId];
         this.peerRonins[playerId] = existing ? Object.assign(existing, ronin) : ronin;
       }
-      this.peerRonin = this.spectatorTargetId ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[hostId] : Object.values(this.peerRonins)[0] ?? null;
+      this.peerRonin = this.spectatorTargetId
+        ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[hostId]
+        : Object.values(this.peerRonins)[0] ?? null;
 
       this.wave = wave;
       this.waveTotal = waveTotal;
       this.waveLeft = waveLeft;
-// Update pause state from host
-       if (paused) {
-         this.pause();
-       } else {
-         this.resume();
-       }
+
+      // Update pause state from host
+      if (paused) {
+        this.pause();
+      } else {
+        this.resume();
+      }
+
+      this.shots = (shots ?? []).map((s) => ({
+        x: s.x,
+        y: s.y,
+        vx: s.vx,
+        vy: s.vy,
+        life: s.life,
+        r: s.r,
+        dmg: s.dmg,
+        color: s.color,
+      }));
 
       const currentMap = new Map(this.enemies.map((e) => [e.id, e]));
       const nextList: Enemy[] = [];
@@ -4449,7 +5081,12 @@ export class Game {
               vx: 0,
               vy: 0,
               t: 0,
-              kind: sp.kind === "coin" ? "coin" : sp.kind === "heart" ? "heart" : ((sp.potion as PotionType) || "health"),
+              kind:
+                sp.kind === "coin"
+                  ? "coin"
+                  : sp.kind === "heart"
+                    ? "heart"
+                    : (sp.potion as PotionType) || "health",
               potion: sp.potion as PotionType,
               magnet: false,
               credited: sp.credited,
@@ -4469,7 +5106,10 @@ export class Game {
       this.burst(this.px, this.py, 6, "#ffd747", 75);
       Sfx.coin();
     } else if (packet.type === "REVIVE_TRIGGER") {
-      const forMe = packet.target === this.localPlayerId || (packet.target === "host" && this.isHost) || (packet.target === "guest" && !this.isHost);
+      const forMe =
+        packet.target === this.localPlayerId ||
+        (packet.target === "host" && this.isHost) ||
+        (packet.target === "guest" && !this.isHost);
       if (forMe && this.hp <= 0) {
         this.hp = this.maxHp;
         this.banner = "REAVIVADO NA VIRADA DA WAVE!";
@@ -4510,7 +5150,10 @@ export class Game {
       this.shopPeerDone = true;
       if (this.shopLocalDone) this.leaveShop();
     } else if (packet.type === "PLAYER_DAMAGE") {
-      const forMe = packet.target === this.localPlayerId || (packet.target === "host" && this.isHost) || (packet.target === "guest" && !this.isHost);
+      const forMe =
+        packet.target === this.localPlayerId ||
+        (packet.target === "host" && this.isHost) ||
+        (packet.target === "guest" && !this.isHost);
       if (forMe) this.hurtPlayer(packet.dmg, packet.nx, packet.ny);
     } else if (packet.type === "GAME_OVER") {
       this.beginDeath();
@@ -4519,9 +5162,10 @@ export class Game {
 
   public drawPeerPlayer(peer: PeerRoninState, playerId = "") {
     if (!this.isCoop) return;
+    if (peer.hp <= 0) return; // aliado morto não é renderizado
+
     const ctx = this.ctx;
     const px = Math.round(peer.px);
-if (peer.hp <= 0) return;
     const py = Math.round(peer.py);
 
     ctx.save();
@@ -4549,15 +5193,9 @@ if (peer.hp <= 0) return;
     ctx.fillRect(px - barW / 2, py - 12, barW * hpRatio, barH);
 
     // 3. Sprite do Personagem Aliado
-    const spriteName = peer.avatarId === "samurai" ? "player" : (peer.avatarId ?? "player");
+    const spriteName = peer.avatarId === "samurai" ? "player" : peer.avatarId ?? "player";
     const sprite = SPR[spriteName] || SPR.player;
     const face = peer.face || 1;
-
-    if (peer.hp <= 0) {
-      ctx.globalAlpha = 0.45;
-      ctx.fillStyle = "#ef4444";
-      ctx.fillText("[CAÍDO]", px, py + 16);
-    }
 
     this.blit(sprite, px, py, face, 0, 1);
 
@@ -4679,7 +5317,3 @@ function gibColor(t: EnemyType) {
 function prevent(e: Event) {
   e.preventDefault();
 }
-
-
-
-

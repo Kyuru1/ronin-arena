@@ -5,12 +5,13 @@ import { supabase } from "../lib/supabase";
 export interface CoopRoomPlayer { profile: PlayerProfile; ready: boolean; }
 export interface CoopRoomState { code: string; difficulty: Difficulty; started: boolean; hostId: string; players: Record<string, CoopRoomPlayer>; }
 export interface CoopArrowState { x: number; y: number; rot: number; }
+export interface CoopShotState { x: number; y: number; vx: number; vy: number; life: number; r: number; dmg: number; color?: string; }
 export interface PeerRoninState {
   px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; coins: number; score: number; kills: number; username?: string; avatarId?: string;
 }
 export interface CoopEnemyState { id: number; type: string; x: number; y: number; hp: number; maxHp: number; face: number; atkAngle: number; state: string; animTimer: number; }
 export interface CoopPickupState { id: number; kind: "coin" | "heart" | "potion"; potion?: string; x: number; y: number; credited: boolean; }
-export interface CoopHostSyncData { wave: number; waveTotal: number; waveLeft: number; enemies: CoopEnemyState[]; pickups: CoopPickupState[]; hostRonin: PeerRoninState; ronins?: Record<string, PeerRoninState>; splitCoinsEarned?: number; waveCompleted?: boolean; paused: boolean; }
+export interface CoopHostSyncData { wave: number; waveTotal: number; waveLeft: number; enemies: CoopEnemyState[]; pickups: CoopPickupState[]; hostRonin: PeerRoninState; ronins?: Record<string, PeerRoninState>; splitCoinsEarned?: number; waveCompleted?: boolean; paused: boolean; shots: CoopShotState[]; }
 export interface CoopGuestSyncData { playerId: string; guestRonin: PeerRoninState; hits: Array<{ enemyId: number; dmg: number; crit?: boolean; kx?: number; ky?: number }>; collectedPickupIds?: number[]; shopReady?: boolean; }
 export type GamePacket =
   | { type: "HOST_SYNC"; payload: CoopHostSyncData }
@@ -21,7 +22,8 @@ export type GamePacket =
   | { type: "SHOP_OPEN"; wave: number }
   | { type: "SHOP_CONTINUE"; wave: number; playerId?: string }
   | { type: "GAME_OVER" }
-  | { type: "PLAYER_DAMAGE"; target: string; dmg: number; nx: number; ny: number };
+  | { type: "PLAYER_DAMAGE"; target: string; dmg: number; nx: number; ny: number }
+  | { type: "SHOT_SYNC"; payload: CoopShotState[] };
 
 type WireMessage = { type: string; payload?: unknown };
 const MAX_PLAYERS = 4;
