@@ -8,7 +8,8 @@ import type {
   PeerRoninState,
   CoopEnemyState,
   CoopPickupState,
-  CoopShotState,
+  CoopParticleState,
+  CoopImpactState,
 } from "./coopNet";
 export type { Weapon } from "./audio";
 
@@ -426,6 +427,11 @@ export class Game {
   weaponLevels = createWeaponLevels();
   magicType: MagicType = "fire";
   magicCd = 0;
+  magicFxT = 0;
+  magicFxX = 0;
+  magicFxY = 0;
+  magicFxRadius = 0;
+  magicFxForm = 0;
 
   atkT = 0;
   atkCd = 0;
@@ -506,6 +512,9 @@ export class Game {
   shopPending = false;
   shopLocalDone = false;
   shopPeerDone = false;
+  public pausedByHost = false;
+  private coopPlayerIds = new Set<string>();
+  private shopReadyPlayerIds = new Set<string>();
   opts: GameOpts = {
     shake: 1,
     flash: 1,
@@ -580,6 +589,8 @@ export class Game {
   ) {
     this.localPlayerId = localId;
     this.localUsername = localUsername;
+    this.coopPlayerIds = new Set([localId, ...players.map(([id]) => id)].filter(Boolean));
+    this.shopReadyPlayerIds.clear();
     this.peerRonins = Object.fromEntries(
       players
         .filter(([id]) => id !== localId)
@@ -607,6 +618,12 @@ export class Game {
             coins: 0,
             score: 0,
             kills: 0,
+            magicType: "fire",
+            magicFxT: 0,
+            magicFxX: 0,
+            magicFxY: 0,
+            magicFxRadius: 0,
+            magicFxForm: 0,
             username: player.profile.username,
             avatarId: player.profile.avatarId,
           },
@@ -689,6 +706,7 @@ export class Game {
       this.shopPending = true;
       this.shopLocalDone = false;
       this.shopPeerDone = false;
+      this.shopReadyPlayerIds.clear();
       this.waveTotal = 0;
       this.waveSpawned = 0;
       this.waveLeft = 0;
@@ -718,6 +736,8 @@ export class Game {
     this.shopPending = false;
     this.shopLocalDone = false;
     this.shopPeerDone = false;
+    this.shopReadyPlayerIds.clear();
+    this.pausedByHost = false;
     this.dashT = 0;
     this.dashCd = 0;
     this.cameraX = clamp(this.px - this.W / 2, 0, Math.max(0, this.worldW - this.W));
@@ -1198,26 +1218,32 @@ export class Game {
 
   closeShop() {
     if (this.isCoop) {
-      // Em coop a so avanca quando os DOIS jogadores fecharem a loja.
       this.shopLocalDone = true;
-      this.onGamePacketOut?.({ type: "SHOP_CONTINUE", wave: this.wave });
-      if (!this.shopPeerDone) {
+      this.shopReadyPlayerIds.add(this.localPlayerId);
+      this.onGamePacketOut?.({ type: "SHOP_CONTINUE", wave: this.wave, playerId: this.localPlayerId });
+      if (!this.allCoopPlayersReadyForNextWave()) {
         this.phase = "playing";
         this.last = performance.now();
         this.iframe = Math.max(this.iframe, 0.8);
-        this.banner = "AGUARDANDO O PARCEIRO NA LOJA...";
+        this.banner = "AGUARDANDO TODOS NA LOJA...";
         this.bannerT = 2.5;
         this.pushStats(true);
-        return;
+        return true;
       }
     }
     this.leaveShop();
+    return true;
+  }
+
+  private allCoopPlayersReadyForNextWave() {
+    return this.coopPlayerIds.size > 0 && [...this.coopPlayerIds].every((id) => this.shopReadyPlayerIds.has(id));
   }
 
   private leaveShop() {
     this.shopPending = false;
     this.shopLocalDone = false;
     this.shopPeerDone = false;
+    this.shopReadyPlayerIds.clear();
     this.wave++;
     if ((this.wave - 1) % 3 === 0) this.clearDecals();
     this.phase = "playing";
@@ -1310,6 +1336,8 @@ export class Game {
     this.shopPending = false;
     this.shopLocalDone = false;
     this.shopPeerDone = false;
+    this.shopReadyPlayerIds.clear();
+    this.pausedByHost = false;
     this.banner = "";
     this.bannerT = 0;
     this.clearDecals();
@@ -1339,15 +1367,19 @@ export class Game {
     this.beginWave();
   }
 
-  pause() {
+  pause(fromHost = false) {
+    if (this.isCoop && !this.isHost && !fromHost) return;
     if (this.phase === "playing") {
       this.phase = "paused";
+      this.pausedByHost = fromHost;
       this.onPause();
     }
   }
-  resume() {
+  resume(fromHost = false) {
+    if (this.pausedByHost && !fromHost) return;
     if (this.phase === "paused") {
       this.phase = "playing";
+      this.pausedByHost = false;
       this.last = performance.now();
       this.onPause();
     }
@@ -1592,6 +1624,7 @@ export class Game {
       if (this.psychicZones[i].life <= 0) this.psychicZones.splice(i, 1);
     }
     this.glint = Math.max(0, this.glint - dt * 2.2);
+    this.magicFxT = Math.max(0, this.magicFxT - dt);
   }
 
   private aimAngle(): number {
@@ -2266,6 +2299,11 @@ export class Game {
     }
 
     const sourceX = this.px + Math.cos(angle) * 16;
+    this.magicFxT = 0.36;
+    this.magicFxX = sourceX;
+    this.magicFxY = this.py + Math.sin(angle) * 16;
+    this.magicFxRadius = range;
+    this.magicFxForm = 0;
     const sourceY = this.py + Math.sin(angle) * 16;
     this.spawnMagicSparks(sourceX, sourceY, angle, this.magicType, 24 + hits * 4);
     this.burst(sourceX, sourceY, 10 + hits * 2, color, 130);
@@ -2299,6 +2337,11 @@ export class Game {
       this.applyMagicHit(enemy, Math.atan2(enemy.y - y, enemy.x - x), levels);
     }
 
+    this.magicFxT = 0.6;
+    this.magicFxX = x;
+    this.magicFxY = y;
+    this.magicFxRadius = radius;
+    this.magicFxForm = 1;
     this.psychicZones.push({ x, y, r: radius, life: 0.6, maxLife: 0.6, type: this.magicType });
     if (this.psychicZones.length > 4) this.psychicZones.shift();
     this.spawnPsychicGroundFx(x, y, radius, this.magicType, hits);
@@ -3929,6 +3972,7 @@ export class Game {
   public coopPeerLeft() {
     if (!this.isCoop || this.phase === "dying" || this.phase === "dead" || this.phase === "menu")
       return;
+    if (this.spectatorTargetId && !this.peerRonins[this.spectatorTargetId]) this.spectatorTargetId = null;
     this.banner = "O PARCEIRO SAIU DA PARTIDA";
     this.bannerT = 2.5;
     this.beginDeath();
@@ -4843,6 +4887,7 @@ export class Game {
         atkAngle: Math.atan2(e.vy, e.vx) || 0,
         state: String(e.state),
         animTimer: e.t,
+        flash: e.flash,
       }));
 
       const pickups: CoopPickupState[] = this.pickups
@@ -4875,7 +4920,7 @@ export class Game {
           this.currentWeapon === "staff"
             ? this.aimAngle()
             : this.swingAngleNow(),
-        attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0,
+        attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0 || this.magicFxT > 0,
         bowCharge: this.bowCharge,
         arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
         atkPhase: this.atkPhase(),
@@ -4885,6 +4930,12 @@ export class Game {
         coins: this.coins,
         score: this.score,
         kills: this.kills,
+        magicType: this.magicType,
+        magicFxT: this.magicFxT,
+        magicFxX: this.magicFxX,
+        magicFxY: this.magicFxY,
+        magicFxRadius: this.magicFxRadius,
+        magicFxForm: this.magicFxForm,
       };
 
       this.onGamePacketOut?.({
@@ -4906,6 +4957,8 @@ export class Game {
             dmg: s.dmg,
             color: s.color,
           })),
+          particles: this.parts.slice(-180).map((p): CoopParticleState => ({ ...p })),
+          impacts: this.impacts.slice(-48).map((impact): CoopImpactState => ({ ...impact })),
           paused: this.phase === "paused",
           hostRonin,
         },
@@ -4931,7 +4984,7 @@ export class Game {
           this.currentWeapon === "staff"
             ? this.aimAngle()
             : this.swingAngleNow(),
-        attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0,
+        attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0 || this.magicFxT > 0,
         bowCharge: this.bowCharge,
         arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
         atkAngle: this.atkAngle,
@@ -4940,6 +4993,12 @@ export class Game {
         coins: this.coins,
         score: this.score,
         kills: this.kills,
+        magicType: this.magicType,
+        magicFxT: this.magicFxT,
+        magicFxX: this.magicFxX,
+        magicFxY: this.magicFxY,
+        magicFxRadius: this.magicFxRadius,
+        magicFxForm: this.magicFxForm,
       };
 
       const hits = this.pendingGuestHits.splice(0);
@@ -4978,7 +5037,7 @@ export class Game {
         }
       }
     } else if (packet.type === "HOST_SYNC" && !this.isHost) {
-      const { hostRonin, ronins, enemies, pickups, wave, waveTotal, waveLeft, paused, shots } =
+      const { hostRonin, ronins, enemies, pickups, wave, waveTotal, waveLeft, paused, shots, particles, impacts } =
         packet.payload;
       const hostId = senderId || "host";
       const existingHost = this.peerRonins[hostId];
@@ -5000,11 +5059,13 @@ export class Game {
 
       // Update pause state from host
       if (paused) {
-        this.pause();
+        this.pause(true);
       } else {
-        this.resume();
+        this.resume(true);
       }
 
+      this.parts = (particles ?? []).map((p) => ({ ...p }));
+      this.impacts = (impacts ?? []).map((impact) => ({ ...impact }));
       this.shots = (shots ?? []).map((s) => ({
         x: s.x,
         y: s.y,
@@ -5034,7 +5095,7 @@ export class Game {
             maxHp: syncE.maxHp,
             r: s.r,
             speed: s.speed,
-            flash: 0,
+            flash: syncE.flash,
             stun: 0,
             t: syncE.animTimer,
             cd: 1,
@@ -5060,6 +5121,8 @@ export class Game {
           existing.hp = syncE.hp;
           existing.face = syncE.face;
           existing.state = Number(syncE.state) || 0;
+          existing.t = syncE.animTimer;
+          existing.flash = syncE.flash;
         }
         nextList.push(existing);
       }
@@ -5144,11 +5207,14 @@ export class Game {
       this.shopPending = true;
       this.shopLocalDone = false;
       this.shopPeerDone = false;
+      this.shopReadyPlayerIds.clear();
       this.phase = "upgrade";
       this.onUpgrade({ wave: packet.wave });
     } else if (packet.type === "SHOP_CONTINUE") {
-      this.shopPeerDone = true;
-      if (this.shopLocalDone) this.leaveShop();
+      if (packet.wave !== this.wave || !packet.playerId) return;
+      this.shopReadyPlayerIds.add(packet.playerId);
+      this.shopPeerDone = this.shopReadyPlayerIds.size > 1;
+      if (this.shopLocalDone && this.allCoopPlayersReadyForNextWave()) this.leaveShop();
     } else if (packet.type === "PLAYER_DAMAGE") {
       const forMe =
         packet.target === this.localPlayerId ||
@@ -5215,15 +5281,55 @@ export class Game {
       ctx.fillStyle = peer.bowCharge >= 1 ? "#ff5361" : "#ffd44a";
       ctx.fillRect(px - 10, py - 22, Math.round(20 * peer.bowCharge), 3);
     }
-    // 4. Efeito de ataque do aliado
-    if (peer.attacking && peer.weapon !== "bow") {
-      ctx.strokeStyle = "#ffd0b1";
-      ctx.lineWidth = 1.5;
+    // 4. Efeitos de ataque do aliado (mesma leitura visual do jogador local).
+    if (peer.weapon === "book" && peer.magicFxT > 0) {
+      const color = peer.magicType === "fire" ? "#ff5a3d" : peer.magicType === "ice" ? "#86e7ff" : peer.magicType === "poison" ? "#8cdf55" : "#62a9ff";
+      const pulse = clamp(peer.magicFxT / (peer.magicFxForm > 0 ? 0.6 : 0.36), 0, 1);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      if (peer.magicFxForm > 0) {
+        const radius = Math.max(12, peer.magicFxRadius * (1.08 - pulse * 0.18));
+        ctx.globalAlpha = 0.25 + pulse * 0.55;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(peer.magicFxX, peer.magicFxY, radius, 0, TAU);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(peer.magicFxX, peer.magicFxY, radius * 0.62, 0, TAU);
+        ctx.stroke();
+        for (let i = 0; i < 12; i++) {
+          const angle = i * TAU / 12 + pulse * 0.7;
+          ctx.fillRect(Math.round(peer.magicFxX + Math.cos(angle) * radius * 0.82) - 1, Math.round(peer.magicFxY + Math.sin(angle) * radius * 0.82) - 1, 3, 3);
+        }
+      } else {
+        const range = Math.max(28, peer.magicFxRadius);
+        ctx.globalAlpha = 0.28 + pulse * 0.6;
+        ctx.lineWidth = 3;
+        for (let i = -3; i <= 3; i++) {
+          const angle = peer.weaponAngle + i * 0.11;
+          const start = 12 + Math.abs(i) * 2;
+          const reach = range * (0.76 + (3 - Math.abs(i)) * 0.07);
+          ctx.beginPath();
+          ctx.moveTo(px + Math.cos(angle) * start, py + Math.sin(angle) * start);
+          ctx.lineTo(px + Math.cos(angle) * reach, py + Math.sin(angle) * reach);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    } else if (peer.attacking && peer.weapon !== "bow") {
+      const heavy = peer.weapon === "hammer";
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = heavy ? "#ff9a66" : "#ffd0b1";
+      ctx.lineWidth = heavy ? 3 : 2;
+      ctx.globalAlpha = 0.55 + clamp(peer.atkPhase, 0, 1) * 0.4;
       ctx.beginPath();
-      ctx.arc(px, py, 14, peer.atkAngle - 0.5, peer.atkAngle + 0.5);
+      ctx.arc(px, py, heavy ? 25 : 18, peer.atkAngle - (heavy ? 0.85 : 0.65), peer.atkAngle + (heavy ? 0.85 : 0.65));
       ctx.stroke();
+      ctx.restore();
     }
-
     for (const arrow of peer.arrows ?? []) {
       ctx.save();
       ctx.translate(arrow.x, arrow.y);

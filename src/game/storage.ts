@@ -32,7 +32,7 @@ function normalizeDifficulty(value: unknown): Difficulty {
 }
 
 function normalizeAvatar(value: unknown): ScoreEntry["avatarId"] {
-  const avatars: AvatarId[] = ["samurai", "azureRonin", "violetRonin", "goldRonin", "jadeRonin", "shadowRonin", "bananaSamurai", "strawberryKnight", "orangeRonin", "snowRonin", "suitedHero", "dressHero"];
+  const avatars: AvatarId[] = ["samurai", "azureRonin", "violetRonin", "goldRonin", "jadeRonin", "shadowRonin", "bananaSamurai", "strawberryKnight", "orangeRonin", "snowRonin", "suitedHero", "dressHero", "crimsonSkeleton", "greenSlime", "sinisterShadow"];
   return avatars.includes(value as AvatarId) ? value as AvatarId : "samurai";
 }
 

@@ -56,6 +56,7 @@ export function PauseScreen({
   onOpts,
   onFullscreen,
   avatarId = "samurai",
+  waitingForHost = false,
 }: {
   onResume: () => void;
   onSave: () => void;
@@ -66,28 +67,45 @@ export function PauseScreen({
   onOpts: (options: Partial<UiOpts>) => void;
   onFullscreen: () => void;
   avatarId?: string;
+  waitingForHost?: boolean;
 }) {
   useMenuNavigation();
   const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#070305]/85 p-3">
-      <PxFrame title={t.paused} className="anim-pop my-auto w-full max-w-xs p-4 pt-6 sm:p-5 sm:pt-7">
+      <PxFrame title={waitingForHost ? "HOST PAUSOU O JOGO" : t.paused} className="anim-pop my-auto w-full max-w-xs p-4 pt-6 sm:p-5 sm:pt-7">
         <div className="flex flex-col items-center gap-3">
           <PixelSprite name={avatarId === "samurai" ? "player" : avatarId} scale={4} />
-          <div className="grid w-full grid-cols-2 gap-2">
-            <StatCell label={t.score} value={stats.score.toLocaleString()} gold />
-            <StatCell label={t.wave} value={stats.wave} />
-            <StatCell label={t.kills} value={stats.kills} />
-            <StatCell label={t.time} value={formatTime(stats.time)} />
-          </div>
-          <PxButton tone="menu" onClick={() => setSettingsOpen((open) => !open)} className="w-full py-2.5 text-[8px] sm:text-[9px]">{t.settings}</PxButton>
-          <PxButton tone="gold" onClick={onSave} className="w-full py-2.5 text-[8px] sm:text-[9px]">SALVAR RUN</PxButton>
-          <PxButton tone="red" onClick={onResume} className="w-full py-3 text-[10px] sm:text-[11px]">
-            ▶ {t.resume}
-          </PxButton>
-          <PxButton tone="dark" onClick={onQuit} className="w-full py-2.5 text-[8px] sm:text-[9px]">
-            {t.quit}
-          </PxButton>
+          {waitingForHost ? (
+            <>
+              <p className="px-inset w-full p-3 text-center font-pixel text-[7px] leading-4 text-[#ffd44a] sm:text-[8px]">
+                O anfitriao pausou a partida.
+              </p>
+              <PxButton tone="dark" disabled className="w-full py-3 text-[8px] sm:text-[9px]">
+                AGUARDANDO ANFITRIAO...
+              </PxButton>
+              <PxButton tone="red" onClick={onQuit} className="w-full py-3 text-[10px] sm:text-[11px]">
+                SAIR
+              </PxButton>
+            </>
+          ) : (
+            <>
+              <div className="grid w-full grid-cols-2 gap-2">
+                <StatCell label={t.score} value={stats.score.toLocaleString()} gold />
+                <StatCell label={t.wave} value={stats.wave} />
+                <StatCell label={t.kills} value={stats.kills} />
+                <StatCell label={t.time} value={formatTime(stats.time)} />
+              </div>
+              <PxButton tone="menu" onClick={() => setSettingsOpen((open) => !open)} className="w-full py-2.5 text-[8px] sm:text-[9px]">{t.settings}</PxButton>
+              <PxButton tone="gold" onClick={onSave} className="w-full py-2.5 text-[8px] sm:text-[9px]">SALVAR RUN</PxButton>
+              <PxButton tone="red" onClick={onResume} className="w-full py-3 text-[10px] sm:text-[11px]">
+                ▶ {t.resume}
+              </PxButton>
+              <PxButton tone="dark" onClick={onQuit} className="w-full py-2.5 text-[8px] sm:text-[9px]">
+                {t.quit}
+              </PxButton>
+            </>
+          )}
         </div>
       </PxFrame>
       {settingsOpen && <div className="absolute inset-0 z-10 flex items-center justify-center overflow-y-auto bg-[#070305]/70 p-3 sm:p-6">
@@ -121,6 +139,9 @@ export function GameOverScreen({
   onMenu,
   t,
   isCoop,
+  rematchWaiting,
+  rematchVotes = 0,
+  rematchTotal = 0,
 }: {
   stats: HudStats;
   scores: ScoreEntry[];
@@ -134,6 +155,9 @@ export function GameOverScreen({
   onMenu: () => void;
   t: Strings;
   isCoop?: boolean;
+  rematchWaiting?: boolean;
+  rematchVotes?: number;
+  rematchTotal?: number;
 }) {
   useMenuNavigation();
   const difficultyScores = scores.filter((score) => score.difficulty === stats.difficulty).slice(0, 6);
@@ -201,7 +225,14 @@ export function GameOverScreen({
                   ))}
                 </div>
               )}
-              {!isCoop && (
+              {isCoop ? (
+                <>
+                  <PxButton tone={rematchWaiting ? "dark" : "red"} disabled={rematchWaiting} onClick={onRestart} className="w-full py-3.5 text-[9px] sm:text-[10px]">
+                    {rematchWaiting ? `AGUARDANDO ALIADOS... ${rematchVotes}/${rematchTotal}` : "▶ TENTAR NOVAMENTE"}
+                  </PxButton>
+                  <div className="font-pixel text-center text-[6px] leading-4 text-[#91b9b5]">Todos precisam confirmar. A equipe voltará ao mesmo lobby e código.</div>
+                </>
+              ) : (
                 <PxButton tone="red" onClick={onRestart} className="w-full py-3.5 text-[11px] sm:text-[12px]">
                   ▶ {t.playAgain}
                 </PxButton>

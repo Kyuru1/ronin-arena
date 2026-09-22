@@ -1,17 +1,19 @@
-import type { Difficulty, Weapon, Perk, WeaponLevels } from "./engine";
+import type { Difficulty, Weapon, Perk, WeaponLevels, MagicType } from "./engine";
 import type { PlayerProfile } from "./auth";
 import { supabase } from "../lib/supabase";
 
 export interface CoopRoomPlayer { profile: PlayerProfile; ready: boolean; }
-export interface CoopRoomState { code: string; difficulty: Difficulty; started: boolean; hostId: string; players: Record<string, CoopRoomPlayer>; }
+export interface CoopRoomState { code: string; difficulty: Difficulty; started: boolean; hostId: string; players: Record<string, CoopRoomPlayer>; rematchVotes?: Record<string, boolean>; }
 export interface CoopArrowState { x: number; y: number; rot: number; }
 export interface CoopShotState { x: number; y: number; vx: number; vy: number; life: number; r: number; dmg: number; color?: string; }
+export interface CoopParticleState { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; drag: number; kind: 0 | 1 | 2 | 3; rot?: number; }
+export interface CoopImpactState { x: number; y: number; a: number; life: number; max: number; heavy: boolean; }
 export interface PeerRoninState {
-  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; coins: number; score: number; kills: number; username?: string; avatarId?: string;
+  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; coins: number; score: number; kills: number; magicType: MagicType; magicFxT: number; magicFxX: number; magicFxY: number; magicFxRadius: number; magicFxForm: number; username?: string; avatarId?: string;
 }
-export interface CoopEnemyState { id: number; type: string; x: number; y: number; hp: number; maxHp: number; face: number; atkAngle: number; state: string; animTimer: number; }
+export interface CoopEnemyState { id: number; type: string; x: number; y: number; hp: number; maxHp: number; face: number; atkAngle: number; state: string; animTimer: number; flash: number; }
 export interface CoopPickupState { id: number; kind: "coin" | "heart" | "potion"; potion?: string; x: number; y: number; credited: boolean; }
-export interface CoopHostSyncData { wave: number; waveTotal: number; waveLeft: number; enemies: CoopEnemyState[]; pickups: CoopPickupState[]; hostRonin: PeerRoninState; ronins?: Record<string, PeerRoninState>; splitCoinsEarned?: number; waveCompleted?: boolean; paused: boolean; shots: CoopShotState[]; }
+export interface CoopHostSyncData { wave: number; waveTotal: number; waveLeft: number; enemies: CoopEnemyState[]; pickups: CoopPickupState[]; hostRonin: PeerRoninState; ronins?: Record<string, PeerRoninState>; splitCoinsEarned?: number; waveCompleted?: boolean; paused: boolean; shots: CoopShotState[]; particles: CoopParticleState[]; impacts: CoopImpactState[]; }
 export interface CoopGuestSyncData { playerId: string; guestRonin: PeerRoninState; hits: Array<{ enemyId: number; dmg: number; crit?: boolean; kx?: number; ky?: number }>; collectedPickupIds?: number[]; shopReady?: boolean; }
 export type GamePacket =
   | { type: "HOST_SYNC"; payload: CoopHostSyncData }
@@ -41,6 +43,9 @@ export class CoopNetwork {
   public onGameStart?: (difficulty: Difficulty, seed: number) => void;
   public onGamePacket?: (packet: GamePacket, senderId: string) => void;
   public onPeerLeft?: (message: string) => void;
+  public onKicked?: (message: string) => void;
+  public onRematchUpdate?: (votes: Record<string, boolean>) => void;
+  public onRematchLobby?: () => void;
   public onError?: (message: string) => void;
   public onStatusChange?: (connected: boolean) => void;
 
@@ -85,8 +90,34 @@ export class CoopNetwork {
     if (!this.isHost() || !this.roomState) return;
     const players = Object.values(this.roomState.players);
     if (players.length < 2 || !players.every((player) => player.ready)) return;
-    const room = { ...this.roomState, started: true }; this.updateRoom(room);
+    const room = { ...this.roomState, started: true, rematchVotes: {} }; this.updateRoom(room);
     const seed = Math.floor(Math.random() * 2 ** 31); this.onGameStart?.(room.difficulty, seed); this.publish("GAME_STARTED", { difficulty: room.difficulty, seed });
+  }
+  kickPlayer(playerId: string) {
+    if (!this.isHost() || !this.roomState || playerId === this.roomState.hostId || !this.roomState.players[playerId]) return;
+    const players = { ...this.roomState.players }; delete players[playerId];
+    const rematchVotes = { ...(this.roomState.rematchVotes ?? {}) }; delete rematchVotes[playerId];
+    this.updateRoom({ ...this.roomState, players, rematchVotes });
+    this.publish("KICK_PLAYER", { playerId });
+  }
+  requestRematch() {
+    if (!this.roomState?.started || !this.playerId) return;
+    if (this.isHost()) this.applyRematchVote(this.playerId);
+    else this.publish("REMATCH_READY", { playerId: this.playerId });
+  }
+  private applyRematchVote(playerId: string) {
+    if (!this.isHost() || !this.roomState?.players[playerId]) return;
+    const votes = { ...(this.roomState.rematchVotes ?? {}), [playerId]: true };
+    const room = { ...this.roomState, rematchVotes: votes };
+    this.updateRoom(room);
+    this.onRematchUpdate?.(votes);
+    const playerIds = Object.keys(room.players);
+    if (!playerIds.length || !playerIds.every((id) => votes[id])) return;
+    const players = Object.fromEntries(Object.entries(room.players).map(([id, player]) => [id, { ...player, ready: id === room.hostId }]));
+    const lobbyRoom = { ...room, started: false, players, rematchVotes: {} };
+    this.updateRoom(lobbyRoom);
+    this.onRematchLobby?.();
+    this.publish("REMATCH_LOBBY", lobbyRoom);
   }
   sendPacket(packet: GamePacket) { if (this.playerId) this.publish("GAME_PACKET", { senderId: this.playerId, packet }); }
   leaveRoom() { if (this.playerId) this.publish("PLAYER_LEFT", this.playerId); this.disconnect(); }
@@ -94,7 +125,7 @@ export class CoopNetwork {
 
   private receive(message: WireMessage) {
     switch (message.type) {
-      case "HOST_READY": case "ROOM_UPDATE": { const room = message.payload as CoopRoomState; this.roomState = room; this.onRoomUpdate?.(room); break; }
+      case "HOST_READY": case "ROOM_UPDATE": { const room = message.payload as CoopRoomState; this.roomState = room; this.onRoomUpdate?.(room); this.onRematchUpdate?.(room.rematchVotes ?? {}); break; }
       case "JOIN_REQUEST": {
         if (!this.isHost() || !this.roomState) return;
         const profile = message.payload as PlayerProfile;
@@ -107,6 +138,20 @@ export class CoopNetwork {
         const update = message.payload as { playerId: string; ready: boolean };
         const player = this.roomState.players[update.playerId]; if (!player) return;
         this.updateRoom({ ...this.roomState, players: { ...this.roomState.players, [update.playerId]: { ...player, ready: update.ready } } }); break;
+      }
+      case "KICK_PLAYER": {
+        const targetId = String((message.payload as { playerId?: string } | undefined)?.playerId ?? "");
+        if (!targetId || targetId !== this.playerId) return;
+        const kickedMessage = "Você foi expulso da sala pelo anfitrião.";
+        this.disconnect(); this.onKicked?.(kickedMessage); break;
+      }
+      case "REMATCH_READY": {
+        const playerId = String((message.payload as { playerId?: string } | undefined)?.playerId ?? "");
+        this.applyRematchVote(playerId); break;
+      }
+      case "REMATCH_LOBBY": {
+        const room = message.payload as CoopRoomState;
+        this.roomState = room; this.onRoomUpdate?.(room); this.onRematchLobby?.(); break;
       }
       case "GAME_STARTED": { const payload = message.payload as { difficulty: Difficulty; seed: number }; this.onGameStart?.(payload.difficulty, payload.seed); break; }
       case "GAME_PACKET": { const payload = message.payload as { senderId: string; packet: GamePacket }; if (payload.senderId !== this.playerId) this.onGamePacket?.(payload.packet, payload.senderId); break; }

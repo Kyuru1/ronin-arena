@@ -115,6 +115,8 @@ export default function App() {
   const [inputMode, setInputMode] = useState<InputMode>("keyboardMouse");
   const [coopModalOpen, setCoopModalOpen] = useState(false);
   const [isCoopGame, setIsCoopGame] = useState(false);
+  const [rematchWaiting, setRematchWaiting] = useState(false);
+  const [rematchVotes, setRematchVotes] = useState(0);
 
 
   useEffect(() => {
@@ -198,6 +200,8 @@ export default function App() {
       setScoreSaving(false);
       setScoreError(null);
       setRank(-1);
+      setRematchWaiting(false);
+      setRematchVotes(0);
       setPhase("dead");
     };
     game.onUpgrade = (offer) => {
@@ -263,6 +267,24 @@ export default function App() {
     game.onGamePacketOut = (packet) => coopNet.sendPacket(packet);
     coopNet.onGamePacket = (packet, senderId) => gameRef.current?.applyPeerPacket(packet, senderId);
     coopNet.onPeerLeft = () => gameRef.current?.coopPeerLeft();
+    coopNet.onRematchUpdate = (votes) => {
+      setRematchVotes(Object.keys(votes).length);
+      setRematchWaiting(!!votes[coopNet.playerId ?? ""]);
+    };
+    coopNet.onRematchLobby = () => {
+      const currentGame = gameRef.current;
+      if (currentGame) {
+        currentGame.isCoop = false;
+        currentGame.peerRonin = null;
+        currentGame.reset();
+        currentGame.phase = "menu";
+      }
+      setIsCoopGame(false);
+      setRematchWaiting(false);
+      setRematchVotes(0);
+      setPhase("menu");
+      setCoopModalOpen(true);
+    };
     unlockAudio();
     setCoopModalOpen(false);
     launchRun();
@@ -325,6 +347,12 @@ export default function App() {
     setMenuClosing(false);
   }, [difficulty, isCoopGame]);
 
+  const requestCoopRematch = useCallback(() => {
+    if (!coopNet.roomState?.started) return;
+    setRematchWaiting(true);
+    coopNet.requestRematch();
+  }, []);
+
   const finishTutorial = useCallback((neverAgain: boolean) => {
     if (neverAgain) {
       try {
@@ -377,10 +405,10 @@ export default function App() {
     if (!g) return;
     if (g.phase === "playing") {
       g.pause();
-      setPhase("paused");
+      setPhase(gameRef.current?.phase === "paused" ? "paused" : "playing");
     } else if (g.phase === "paused") {
       g.resume();
-      setPhase("playing");
+      setPhase(gameRef.current?.phase === "paused" ? "paused" : "playing");
     }
   }, []);
 
@@ -388,7 +416,7 @@ export default function App() {
     const g = gameRef.current;
     if (g?.phase !== "playing") return;
     g.pause();
-    setPhase("paused");
+    setPhase(gameRef.current?.phase === "paused" ? "paused" : "playing");
   }, []);
 
   const toMenu = useCallback(() => {
@@ -494,9 +522,12 @@ export default function App() {
   }, []);
 
   const closeShop = useCallback(() => {
-    gameRef.current?.closeShop();
-    setUpgrade(null);
-    setPhase("playing");
+    const game = gameRef.current;
+    if (!game) return;
+    if (game.closeShop()) {
+      setUpgrade(null);
+      setPhase("playing");
+    }
   }, []);
 
   const applyOpts = useCallback((p: Partial<UiOpts>) => {
@@ -645,7 +676,7 @@ export default function App() {
 
         {phase === "input-select" && <InputModeScreen onSelect={chooseInputMode} />}
         {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} inputMode={inputMode} onBegin={finishTutorial} />}
-        {phase === "paused" && <PauseScreen stats={stats} avatarId={profile?.avatarId ?? "samurai"} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
+        {phase === "paused" && <PauseScreen stats={stats} avatarId={profile?.avatarId ?? "samurai"} waitingForHost={!!(gameRef.current?.isCoop && !gameRef.current.isHost && gameRef.current.pausedByHost)} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (
           <GameOverScreen
             stats={finalStats}
@@ -656,8 +687,11 @@ export default function App() {
             onSubmitName={() => void submitName()}
             scoreSaving={scoreSaving}
             scoreError={scoreError}
-            onRestart={restartRun}
+            onRestart={isCoopGame ? requestCoopRematch : restartRun}
             onMenu={toMenu}
+            rematchWaiting={rematchWaiting}
+            rematchVotes={rematchVotes}
+            rematchTotal={coopNet.roomState ? Object.keys(coopNet.roomState.players).length : 0}
             t={t}
             isCoop={isCoopGame}
           />

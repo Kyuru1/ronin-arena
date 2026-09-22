@@ -16,6 +16,9 @@ const AVATARS: Array<{ id: AvatarId; label: string; sprite: string }> = [
   { id: "snowRonin", label: "NEVE", sprite: "snowRonin" },
   { id: "suitedHero", label: "TERNO", sprite: "suitedHero" },
   { id: "dressHero", label: "VESTIDO", sprite: "dressHero" },
+  { id: "crimsonSkeleton", label: "ESQUELETO CARMESIM", sprite: "crimsonSkeleton" },
+  { id: "greenSlime", label: "SLIME VERDE", sprite: "greenSlime" },
+  { id: "sinisterShadow", label: "SOMBRA SINISTRA", sprite: "sinisterShadow" },
 ];
 
 export default function AccountPanel({ profile, onProfile }: { profile: PlayerProfile | null; onProfile: (value: PlayerProfile | null) => void }) {

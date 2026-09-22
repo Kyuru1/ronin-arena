@@ -18,11 +18,23 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
-    coopNet.onRoomUpdate = (next) => { setRoom(next); setBusy(false); setMessage(""); };
-    coopNet.onError = (error) => { setBusy(false); setMessage(error); };
-    coopNet.onGameStart = (nextDifficulty) => onStartCoop(coopNet.isHost(), nextDifficulty);
-    coopNet.onPeerLeft = (text) => { setMessage(text); if (!coopNet.roomState?.started) setRoom(coopNet.roomState); };
-    return () => { coopNet.onRoomUpdate = undefined; coopNet.onError = undefined; coopNet.onGameStart = undefined; coopNet.onPeerLeft = undefined; };
+    const handleRoomUpdate = (next: CoopRoomState) => { setRoom(next); setBusy(false); setMessage(""); };
+    const handleError = (error: string) => { setBusy(false); setMessage(error); };
+    const handleGameStart = (nextDifficulty: Difficulty) => onStartCoop(coopNet.isHost(), nextDifficulty);
+    const handlePeerLeft = (text: string) => { setMessage(text); if (!coopNet.roomState?.started) setRoom(coopNet.roomState); };
+    const handleKicked = (text: string) => { setRoom(null); setBusy(false); setMessage(text); };
+    coopNet.onRoomUpdate = handleRoomUpdate;
+    coopNet.onError = handleError;
+    coopNet.onGameStart = handleGameStart;
+    coopNet.onPeerLeft = handlePeerLeft;
+    coopNet.onKicked = handleKicked;
+    return () => {
+      if (coopNet.onRoomUpdate === handleRoomUpdate) coopNet.onRoomUpdate = undefined;
+      if (coopNet.onError === handleError) coopNet.onError = undefined;
+      if (coopNet.onGameStart === handleGameStart) coopNet.onGameStart = undefined;
+      if (coopNet.onPeerLeft === handlePeerLeft) coopNet.onPeerLeft = undefined;
+      if (coopNet.onKicked === handleKicked) coopNet.onKicked = undefined;
+    };
   }, [onStartCoop]);
 
   const create = async () => { setBusy(true); setMessage(""); try { await coopNet.createRoom(profile, difficulty); } catch (error) { setBusy(false); setMessage(error instanceof Error ? error.message : "Não foi possível criar a sala."); } };
@@ -36,7 +48,18 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
     const allReady = players.length >= 2 && players.every(([, player]) => player.ready);
     return <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center overflow-y-auto p-3 sm:p-6"><PxFrame title="SALA COOPERATIVA" className="anim-pop w-full max-w-xl p-4 sm:p-6"><div className="flex flex-col gap-4">
       <div className="px-inset flex items-center justify-between gap-3 p-3"><div><div className="font-pixel text-[6px] text-[#91b9b5]">CÓDIGO DE CONVITE</div><strong className="font-pixel text-[18px] text-[#ffd44a]">{room.code}</strong></div><PxButton tone="gold" onClick={() => void copy()} className="px-3 py-2 text-[7px]">{copied ? "COPIADO" : "COPIAR"}</PxButton></div>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[0, 1, 2, 3].map((slot) => { const entry = players[slot]; const player = entry?.[1]; const id = entry?.[0]; const isHostPlayer = id === room.hostId; return <div key={id ?? `empty-${slot}`} className="px-inset min-h-24 p-2 text-center">{player ? <><div className="mx-auto mb-1 w-fit"><PixelSprite name={spriteName(player.profile.avatarId)} scale={2} /></div><div className="truncate font-pixel text-[6px] text-[#ffe2c4]">{player.profile.username}</div><div className={`mt-2 font-pixel text-[5px] ${player.ready ? "text-[#86efac]" : "text-[#fda4af]"}`}>{isHostPlayer ? "ANFITRIÃO" : player.ready ? "PRONTO" : "AGUARDANDO"}</div></> : <div className="pt-8 font-pixel text-[6px] text-[#6c3a42]">VAGA LIVRE</div>}</div>; })}</div>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{[0, 1, 2, 3].map((slot) => {
+        const entry = players[slot];
+        const player = entry?.[1];
+        const id = entry?.[0];
+        const isHostPlayer = id === room.hostId;
+        return <div key={id ?? `empty-${slot}`} className="px-inset min-h-24 p-2 text-center">{player ? <>
+          <div className="mx-auto mb-1 w-fit"><PixelSprite name={spriteName(player.profile.avatarId)} scale={2} /></div>
+          <div className="truncate font-pixel text-[6px] text-[#ffe2c4]">{player.profile.username}</div>
+          <div className={`mt-2 font-pixel text-[5px] ${player.ready ? "text-[#86efac]" : "text-[#fda4af]"}`}>{isHostPlayer ? "ANFITRIÃO" : player.ready ? "PRONTO" : "AGUARDANDO"}</div>
+          {host && !isHostPlayer && id && <PxButton tone="red" onClick={() => coopNet.kickPlayer(id)} className="mt-2 w-full px-1 py-1.5 text-[5px]">EXPULSAR</PxButton>}
+        </> : <div className="pt-8 font-pixel text-[6px] text-[#6c3a42]">VAGA LIVRE</div>}</div>;
+      })}</div>
       {host && <div className="px-inset p-3"><PxHeading>DIFICULDADE</PxHeading><div className="mt-2 flex gap-2">{(["easy", "medium", "hard"] as const).map((value) => <PxChip key={value} on={room.difficulty === value} onClick={() => coopNet.setDifficulty(value)}>{value === "easy" ? "FÁCIL" : value === "medium" ? "MÉDIO" : "DIFÍCIL"}</PxChip>)}</div></div>}
       {message && <div className="font-pixel text-center text-[7px] leading-4 text-[#ef4444]">{message}</div>}
       {host ? <PxButton tone="gold" disabled={!allReady} onClick={() => coopNet.startGame()} className="w-full py-4 text-[9px]">{allReady ? "INICIAR PARTIDA" : "AGUARDANDO TODOS PRONTOS..."}</PxButton> : <PxButton tone={room.players[profile.id]?.ready ? "dark" : "gold"} onClick={() => coopNet.toggleReady()} className="w-full py-4 text-[9px]">{room.players[profile.id]?.ready ? "CANCELAR PRONTO" : "ESTOU PRONTO"}</PxButton>}

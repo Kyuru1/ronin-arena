@@ -1,10 +1,10 @@
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
-export type AvatarId = "samurai" | "azureRonin" | "violetRonin" | "goldRonin" | "jadeRonin" | "shadowRonin" | "bananaSamurai" | "strawberryKnight" | "orangeRonin" | "snowRonin" | "suitedHero" | "dressHero";
+export type AvatarId = "samurai" | "azureRonin" | "violetRonin" | "goldRonin" | "jadeRonin" | "shadowRonin" | "bananaSamurai" | "strawberryKnight" | "orangeRonin" | "snowRonin" | "suitedHero" | "dressHero" | "crimsonSkeleton" | "greenSlime" | "sinisterShadow";
 export interface PlayerProfile { id: string; username: string; avatarId: AvatarId; }
 
-const avatars: AvatarId[] = ["samurai", "azureRonin", "violetRonin", "goldRonin", "jadeRonin", "shadowRonin", "bananaSamurai", "strawberryKnight", "orangeRonin", "snowRonin", "suitedHero", "dressHero"];
+const avatars: AvatarId[] = ["samurai", "azureRonin", "violetRonin", "goldRonin", "jadeRonin", "shadowRonin", "bananaSamurai", "strawberryKnight", "orangeRonin", "snowRonin", "suitedHero", "dressHero", "crimsonSkeleton", "greenSlime", "sinisterShadow"];
 function safeAvatar(value: unknown): AvatarId {
   return avatars.includes(value as AvatarId) ? value as AvatarId : "samurai";
 }
