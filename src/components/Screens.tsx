@@ -116,6 +116,7 @@ export function GameOverScreen({
   onRestart,
   onMenu,
   t,
+  isCoop,
 }: {
   stats: HudStats;
   scores: ScoreEntry[];
@@ -126,6 +127,7 @@ export function GameOverScreen({
   onRestart: () => void;
   onMenu: () => void;
   t: Strings;
+  isCoop?: boolean;
 }) {
   useMenuNavigation();
   const difficultyScores = scores.filter((score) => score.difficulty === stats.difficulty).slice(0, 6);
@@ -133,11 +135,18 @@ export function GameOverScreen({
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#12040a]/88 p-3">
       <PxFrame
-        title={t.youDied}
+        title={isCoop ? "PARTIDA COOP ENCERRADA" : t.youDied}
         icon="icoSkull"
         className="anim-pop w-full max-w-sm p-4 pt-6 sm:p-5 sm:pt-7"
       >
         <div className="flex flex-col items-center gap-3">
+          {/* Banner Coop */}
+          {isCoop && (
+            <div className="px-inset w-full p-2.5 text-center font-pixel text-[7px] sm:text-[8px] text-[#ffd44a] bg-[#422006]/80 border border-[#b45309]/50">
+              MODO COOPERATIVO · RANKING DESATIVADO
+            </div>
+          )}
+
           {/* Score */}
           <div className="px-inset flex w-full flex-col items-center px-3 py-3">
             <span className="font-pixel text-[7px] text-[#a35662]">{t.finalScore}</span>
@@ -152,7 +161,7 @@ export function GameOverScreen({
             <StatCell label={t.time} value={formatTime(stats.time)} />
           </div>
 
-          {pendingScore ? (
+          {pendingScore && !isCoop ? (
             <div className="w-full">
               <PxHeading>{t.ranking}</PxHeading>
               <div className="px-inset mb-3 p-3 text-center font-pixel text-[8px] text-[#ffe2c4]">RECORDE DE: {defaultName}</div>
@@ -161,27 +170,30 @@ export function GameOverScreen({
               </PxButton>
               <PxButton tone="dark" onClick={onRestart} className="mt-2 w-full py-2.5 text-[8px]">▶ {t.playAgain}</PxButton>
               <PxButton tone="dark" onClick={onMenu} className="mt-2 w-full py-2.5 text-[8px]">← {t.menu}</PxButton>
-            </div>          ) : (
+            </div>
+          ) : (
             <>
-              {rank >= 0 && (
+              {!isCoop && rank >= 0 && (
                 <div className="font-pixel flex items-center gap-2 border-[3px] border-[#070305] bg-[#3a2200] px-3 py-1.5 text-[8px] text-[#ffd44a]">
                   <PixelSprite name="icoTrophy" scale={1} />#{rank + 1} · {t.ranking}
                 </div>
               )}
-              <div className="px-inset scrollbar-thin max-h-[22vh] w-full overflow-y-auto">
-                {difficultyScores.length === 0 ? <div className="px-3 py-4 text-center font-pixel text-[7px] text-[#a35662]">SEM RECORDES NESTA DIFICULDADE</div> : difficultyScores.map((s, i) => (
-                  <div
-                    key={`${s.userId ?? s.name}-${s.date}-${i}`}
-                    className={`font-pixel flex items-center gap-2 px-3 py-1.5 text-[7px] sm:text-[8px] ${
-                      i % 2 ? "bg-[#140609]" : "bg-[#0c0407]"
-                    } ${i === rank ? "text-[#ffd44a]" : "text-[#ffe2c4]"}`}
-                  >
-                    <span className="w-4">{i + 1}</span>
-                    <span className="grow truncate uppercase">{s.name}</span>
-                    <span>{s.score.toLocaleString()}</span>
-                  </div>
-                ))}
-              </div>
+              {!isCoop && (
+                <div className="px-inset scrollbar-thin max-h-[22vh] w-full overflow-y-auto">
+                  {difficultyScores.length === 0 ? <div className="px-3 py-4 text-center font-pixel text-[7px] text-[#a35662]">SEM RECORDES NESTA DIFICULDADE</div> : difficultyScores.map((s, i) => (
+                    <div
+                      key={`${s.userId ?? s.name}-${s.date}-${i}`}
+                      className={`font-pixel flex items-center gap-2 px-3 py-1.5 text-[7px] sm:text-[8px] ${
+                        i % 2 ? "bg-[#140609]" : "bg-[#0c0407]"
+                      } ${i === rank ? "text-[#ffd44a]" : "text-[#ffe2c4]"}`}
+                    >
+                      <span className="w-4">{i + 1}</span>
+                      <span className="grow truncate uppercase">{s.name}</span>
+                      <span>{s.score.toLocaleString()}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
               <PxButton tone="red" onClick={onRestart} className="w-full py-3.5 text-[11px] sm:text-[12px]">
                 ▶ {t.playAgain}
               </PxButton>

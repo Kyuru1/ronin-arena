@@ -29,7 +29,7 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }> ;
 }
 
-export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile, openAccount }: {
+export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile, openAccount, onOpenCoop }: {
   onStart: (difficulty?: Difficulty) => void;
   onPerk: (perk: Perk | null) => void;
 
@@ -42,9 +42,11 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   profile: PlayerProfile | null;
   onProfile: (profile: PlayerProfile | null) => void;
   openAccount: boolean;
+  onOpenCoop?: () => void;
 }) {
   useMenuNavigation();
   const [tab, setTab] = useState<MenuTab>("main");
+  const [accountNotice, setAccountNotice] = useState<string | null>(null);
   const [difficultyOpen, setDifficultyOpen] = useState(false);
   const [perkOpen, setPerkOpen] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
@@ -107,7 +109,16 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
           {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>CONTROLES</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">TECLADO · CLIQUE PARA REMAPEAR</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? "PRESSIONE" : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">CONTROLE</h3><div className="controls-list"><span>MOVER</span><strong>ANALOGICO ESQUERDO</strong><span>MIRAR</span><strong>ANALOGICO DIREITO</strong><span>ATACAR</span><strong>A ou RT</strong><span>DASH</span><strong>B ou RB</strong><span>TROCAR ARMA</span><strong>LB / RB ou DIRECIONAL</strong><span>PAUSAR</span><strong>MENU / START</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.</div></div>}
 
-          {tab === "account" && <AccountPanel profile={profile} onProfile={onProfile} />}
+          {tab === "account" && (
+            <div className="flex flex-col gap-3">
+              {accountNotice && (
+                <div className="px-inset p-3 text-center font-pixel text-[8px] text-[#ffd44a] bg-[#422006]/80 border border-[#b45309]">
+                  {accountNotice}
+                </div>
+              )}
+              <AccountPanel profile={profile} onProfile={onProfile} />
+            </div>
+          )}
 
           {tab === "ranking" && <div className="flex flex-col gap-2"><PxHeading>{t.ranking} · TOP 50</PxHeading><div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div><div className="px-inset"><div className="ranking-head"><span>#</span><span>{t.name}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div><div className="scrollbar-thin max-h-[75vh] overflow-y-auto">{scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0 ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div> : scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).map((score, index) => <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-four ${index < 3 ? "is-top" : ""}`}><span>{index + 1}</span><span className="flex min-w-0 items-center gap-2 overflow-hidden"><PixelSprite name={score.avatarId === "samurai" ? "player" : score.avatarId ?? "player"} scale={1} /><span className="min-w-0 truncate">{score.name}</span></span><span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span></div>)}</div></div></div>}
 
@@ -175,6 +186,21 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
         <main className="menu-actions flex w-full max-w-sm flex-col items-center gap-3 py-6">
           <button onClick={() => setDifficultyOpen(true)} className="menu-play group w-full">
             <span className="font-pixel text-[16px] sm:text-[22px]">▶ {t.play}</span>
+          </button>
+          <button
+            onClick={() => {
+              if (!profile) {
+                setAccountNotice("Faça login ou crie uma conta para jogar no modo cooperativo.");
+                setTab("account");
+              } else if (onOpenCoop) {
+                onOpenCoop();
+              }
+            }}
+            className="menu-play group w-full border-[#38bdf8] hover:border-[#7dd3fc] bg-gradient-to-r from-[#0c4a6e]/70 via-[#075985]/60 to-[#0c4a6e]/70 shadow-[0_0_15px_rgba(56,189,248,0.2)]"
+          >
+            <span className="font-pixel text-[13px] sm:text-[16px] text-[#7dd3fc] flex items-center justify-center gap-2">
+              👥 COOPERATIVO (LOCAL)
+            </span>
           </button>
         </main>
 

@@ -2,6 +2,8 @@ import { SPR, buildSprites, type Sprite } from "./sprites";
 import { Sfx, unlockAudio, setVolume, type Weapon } from "./audio";
 import { drawWeaponArt } from "./weaponArt";
 import { I18N, type Language } from "./i18n";
+import type { AvatarId } from "./auth";
+import type { GamePacket, PeerRoninState, CoopEnemyState, CoopPickupState } from "./coopNet";
 export type { Weapon } from "./audio";
 
 export type Phase = "menu" | "playing" | "paused" | "upgrade" | "dying" | "dead";
@@ -132,6 +134,7 @@ interface Summon {
 }
 
 interface Enemy {
+  id: number;
   type: EnemyType;
   bossType?: Exclude<EnemyType, "boss">;
   x: number;
@@ -238,6 +241,7 @@ interface ArenaProp {
 }
 
 interface Pickup {
+  id?: number;
   x: number;
   y: number;
   vx: number;
@@ -322,6 +326,17 @@ export class Game {
   private floor!: HTMLCanvasElement;
   private decal!: HTMLCanvasElement;
   private dctx!: CanvasRenderingContext2D;
+
+  // Multiplayer Coop
+  public isCoop = false;
+  public isHost = true;
+  public peerRonin: (PeerRoninState & { username?: string; avatarId?: AvatarId }) | null = null;
+  public onCoinSplit?: (amount: number) => void;
+  public onGamePacketOut?: (packet: GamePacket) => void;
+  public nextEnemyId = 1;
+  public nextPickupId = 1;
+  private netSyncTimer = 0;
+  private pendingGuestHits: Array<{ enemyId: number; dmg: number; crit?: boolean; kx?: number; ky?: number }> = [];
 
   // Player stats & inventory
   px = 0;
@@ -1249,10 +1264,20 @@ export class Game {
     this.updatePlayerProjectiles(dt);
     this.updateMines(dt);
     this.updatePickups(dt);
-    this.updateSpawns(dt);
+    if (!this.isCoop || this.isHost) {
+      this.updateSpawns(dt);
+    }
     this.updateParticles(dt);
     this.updateTexts(dt);
     this.updateFx(dt);
+
+    if (this.isCoop) {
+      this.netSyncTimer += realDt;
+      if (this.netSyncTimer >= 0.033) {
+        this.netSyncTimer = 0;
+        this.broadcastCoopSync();
+      }
+    }
   }
 
   private decayFx(dt: number) {
@@ -1346,6 +1371,12 @@ export class Game {
   }
 
   private updatePlayer(dt: number) {
+    if (this.hp <= 0) {
+      this.pvx = 0;
+      this.pvy = 0;
+      this.walkT = 0;
+      return;
+    }
     const k = this.keys;
     const bindings = this.opts.keyboardBindings;
     let mx = 0;
@@ -2167,6 +2198,16 @@ export class Game {
     e.hp -= dmg;
     e.flash = 0.14;
     e.stun = 0.16;
+
+    if (this.isCoop && !this.isHost) {
+      this.pendingGuestHits.push({
+        enemyId: e.id,
+        dmg,
+        crit: false,
+        kx: Math.cos(ang) * 40,
+        ky: Math.sin(ang) * 40,
+      });
+    }
     const tank = e.type === "brute" || e.type === "oni" || e.type === "shield" || e.type === "boss";
     const kb = this.swingData().kb * (tank ? 0.4 : 1);
     e.vx += Math.cos(ang) * kb;
@@ -2240,10 +2281,12 @@ export class Game {
     this.shake = Math.max(this.shake, big ? 8 : 4.5);
     Sfx.kill(this.combo);
 
-    // Three coins per kill make the first shop visit immediately useful.
+    // Three coins per kill make the first shop visit immediately useful (double in coop).
     if (!e.noDrop) {
-      for (let c = 0; c < 3; c++) {
+      const coinCount = this.isCoop ? 6 : 3;
+      for (let c = 0; c < coinCount; c++) {
         this.pickups.push({
+          id: this.nextPickupId++,
           x: e.x + rnd(-4, 4),
           y: e.y + rnd(-4, 4),
           vx: rnd(-50, 50),
@@ -2259,6 +2302,7 @@ export class Game {
     const r = Math.random();
     if (this.hp < this.maxHp && r < 0.08) {
       this.pickups.push({
+        id: this.nextPickupId++,
         x: e.x,
         y: e.y,
         vx: rnd(-30, 30),
@@ -2367,6 +2411,7 @@ export class Game {
     const bossType = type === "boss" ? this.chooseBossType() : undefined;
     const s = this.enemyStats(type);
     this.enemies.push({
+      id: this.nextEnemyId++,
       type,
       bossType,
       x,
@@ -2550,10 +2595,34 @@ export class Game {
       const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
       for (const p of this.pickups) {
         if (p.kind === "coin" && !p.credited) {
-          this.coins += coinValue;
-          p.credited = true;
+          if (this.isCoop) {
+            const split = Math.max(1, Math.floor((coinValue * 2) / 2));
+            this.coins += split;
+            p.credited = true;
+            this.onCoinSplit?.(split);
+            if (this.isHost) {
+              this.onGamePacketOut?.({
+                type: "COIN_DIVIDED",
+                amount: split,
+                totalGuestCoins: 0,
+                totalHostCoins: this.coins,
+              });
+            }
+          } else {
+            this.coins += coinValue;
+            p.credited = true;
+          }
         }
         p.magnet = true;
+      }
+      if (this.isCoop) {
+        if (this.hp <= 0) {
+          this.hp = Math.max(3, Math.floor(this.maxHp / 2));
+          this.phase = "playing";
+        }
+        if (this.peerRonin && this.peerRonin.hp <= 0) {
+          this.peerRonin.hp = Math.max(3, Math.floor((this.peerRonin.maxHp || 5) / 2));
+        }
       }
     }
     if (this.waveClearT >= 0) {
@@ -2606,8 +2675,19 @@ export class Game {
       e.spawnT = Math.max(0, e.spawnT - dt);
       e.scaleY += (1 - e.scaleY) * Math.min(1, dt * 12);
 
-      const dx = this.px - e.x;
-      const dy = this.py - e.y;
+      let targetX = this.px;
+      let targetY = this.py;
+      if (this.isCoop && this.peerRonin && this.peerRonin.hp > 0) {
+        const dLocal = Math.hypot(this.px - e.x, this.py - e.y);
+        const dPeer = Math.hypot(this.peerRonin.px - e.x, this.peerRonin.py - e.y);
+        if (this.hp <= 0 || dPeer < dLocal) {
+          targetX = this.peerRonin.px;
+          targetY = this.peerRonin.py;
+        }
+      }
+
+      const dx = targetX - e.x;
+      const dy = targetY - e.y;
       const dist = Math.hypot(dx, dy) || 1;
       const nx = dx / dist;
       const ny = dy / dist;
@@ -2967,7 +3047,7 @@ export class Game {
       if (prop.kind === "tree") Sfx.treeBreak();
       else Sfx.crateBreak();
       const potion: PotionType = pick(["health", "strength", "speed", "agility"]);
-      this.pickups.push({ x: prop.x, y: prop.y, vx: rnd(-20, 20), vy: rnd(-35, -10), t: 0, kind: potion, potion, magnet: false });
+      this.pickups.push({ id: this.nextPickupId++, x: prop.x, y: prop.y, vx: rnd(-20, 20), vy: rnd(-35, -10), t: 0, kind: potion, potion, magnet: false });
       this.burst(prop.x, prop.y, 12, potion === "health" ? "#ff4d6d" : potion === "strength" ? "#ff8a45" : potion === "speed" ? "#ffd44a" : "#8c8cff", 100);
     }
   }
@@ -2975,19 +3055,24 @@ export class Game {
     for (let i = this.pickups.length - 1; i >= 0; i--) {
       const p = this.pickups[i];
       p.t += dt;
-      const d = Math.hypot(this.px - p.x, this.py - p.y);
+      const dHost = Math.hypot(this.px - p.x, this.py - p.y);
+      const dPeer = this.isCoop && this.peerRonin ? Math.hypot(this.peerRonin.px - p.x, this.peerRonin.py - p.y) : 9999;
+      const targetX = dPeer < dHost ? this.peerRonin!.px : this.px;
+      const targetY = dPeer < dHost ? this.peerRonin!.py : this.py;
+      const d = Math.min(dHost, dPeer);
+
       if (d < 52 || p.magnet) {
         p.magnet = true;
         const s = p.kind === "coin" ? 480 : p.kind === "gem" ? 460 : 340;
-        p.vx += ((this.px - p.x) / (d || 1)) * s * dt * 3.5;
-        p.vy += ((this.py - p.y) / (d || 1)) * s * dt * 3.5;
+        p.vx += ((targetX - p.x) / (d || 1)) * s * dt * 3.5;
+        p.vy += ((targetY - p.y) / (d || 1)) * s * dt * 3.5;
       }
       p.x += p.vx * dt;
       p.y += p.vy * dt;
       p.vx -= p.vx * Math.min(1, dt * 3);
       p.vy -= p.vy * Math.min(1, dt * 3);
 
-      if (d < 10) {
+      if (d < 12) {
         this.pickups.splice(i, 1);
         if (p.kind === "heart") {
           this.hp = Math.min(this.maxHp, this.hp + 1);
@@ -2997,9 +3082,29 @@ export class Game {
           this.flashColor = "255,90,120";
           Sfx.heal();
         } else if (p.kind === "coin") {
-          const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
-          if (!p.credited) this.coins += coinValue;
-          this.addScore(5 * coinValue, p.x, p.y - 6, `+${coinValue}`, "#ffd747");
+          const coinBase = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
+          if (this.isCoop) {
+            // No modo coop ganham o dobro de moedas, e elas são divididas igualmente entre os 2
+            const doubleTotal = coinBase * 2;
+            const split = Math.max(1, Math.floor(doubleTotal / 2));
+            if (!p.credited) {
+              this.coins += split;
+              p.credited = true;
+              this.onCoinSplit?.(split);
+              if (this.isHost) {
+                this.onGamePacketOut?.({
+                  type: "COIN_DIVIDED",
+                  amount: split,
+                  totalGuestCoins: 0,
+                  totalHostCoins: this.coins,
+                });
+              }
+            }
+            this.addScore(5 * doubleTotal, p.x, p.y - 6, `+${split} 👥`, "#ffd747");
+          } else {
+            if (!p.credited) this.coins += coinBase;
+            this.addScore(5 * coinBase, p.x, p.y - 6, `+${coinBase}`, "#ffd747");
+          }
           this.burst(p.x, p.y, 6, "#ffd747", 75);
           Sfx.coin();
         } else {
@@ -3050,6 +3155,17 @@ export class Game {
   }
 
   private die() {
+    if (this.isCoop && this.peerRonin && this.peerRonin.hp > 0) {
+      this.hp = 0;
+      this.banner = "RONIN CAÍDO! O PARCEIRO DEVE SOBREVIVER";
+      this.bannerT = 3.0;
+      this.shake = 12;
+      this.flash = 0.5 * this.opts.flash;
+      this.flashColor = "255,100,100";
+      Sfx.death();
+      return;
+    }
+
     this.phase = "dying";
     this.deathT = 0;
     this.shake = 20;
@@ -3347,6 +3463,9 @@ export class Game {
     if (this.phase !== "dying" && this.phase !== "dead") {
       this.shadow(this.px + this.leanX * 0.4, this.py + 8, 7);
     }
+    if (this.isCoop && this.peerRonin) {
+      this.shadow(this.peerRonin.px, this.peerRonin.py + 8, 7);
+    }
 
     // Enemies sorted by Y
     const list = [...this.enemies].sort((a, b) => a.y - b.y);
@@ -3435,6 +3554,7 @@ export class Game {
     }
 
     if (this.phase !== "dying" && this.phase !== "dead") this.drawPlayer();
+    if (this.isCoop) this.drawPeerPlayer();
 
     // Particles
     for (const p of this.parts) {
@@ -3884,6 +4004,265 @@ export class Game {
       ctx.fillStyle = "rgba(0,0,0,0.08)";
       for (let y = 0; y < H; y += 3) ctx.fillRect(0, y, W, 1);
     }
+  }
+
+  /* ---------------------- MULTIPLAYER COOP SYNC ---------------------- */
+
+  public broadcastCoopSync() {
+    if (!this.isCoop) return;
+
+    if (this.isHost) {
+      const enemies: CoopEnemyState[] = this.enemies.map((e) => ({
+        id: e.id,
+        type: e.type,
+        x: e.x,
+        y: e.y,
+        hp: e.hp,
+        maxHp: e.maxHp,
+        face: e.face,
+        atkAngle: Math.atan2(e.vy, e.vx) || 0,
+        state: String(e.state),
+        animTimer: e.t,
+      }));
+
+      const pickups: CoopPickupState[] = this.pickups.map((p) => ({
+        id: p.id ?? 0,
+        kind: p.kind === "coin" ? "coin" : "potion",
+        potion: p.potion,
+        x: p.x,
+        y: p.y,
+        credited: !!p.credited,
+      }));
+
+      const hostRonin: PeerRoninState = {
+        px: this.px,
+        py: this.py,
+        face: this.face,
+        walk: this.walkT > 0,
+        hp: this.hp,
+        maxHp: this.maxHp,
+        weapon: this.currentWeapon,
+        atkPhase: this.atkPhase(),
+        atkAngle: this.atkAngle,
+        isDashing: this.dashT > 0,
+        perk: this.perk,
+        coins: this.coins,
+        score: this.score,
+        kills: this.kills,
+      };
+
+      this.onGamePacketOut?.({
+        type: "HOST_SYNC",
+        payload: {
+          wave: this.wave,
+          waveTotal: this.waveTotal,
+          waveLeft: this.waveLeft,
+          enemies,
+          pickups,
+          hostRonin,
+        },
+      });
+    } else {
+      const guestRonin: PeerRoninState = {
+        px: this.px,
+        py: this.py,
+        face: this.face,
+        walk: this.walkT > 0,
+        hp: this.hp,
+        maxHp: this.maxHp,
+        weapon: this.currentWeapon,
+        atkPhase: this.atkPhase(),
+        atkAngle: this.atkAngle,
+        isDashing: this.dashT > 0,
+        perk: this.perk,
+        coins: this.coins,
+        score: this.score,
+        kills: this.kills,
+      };
+
+      const hits = this.pendingGuestHits.splice(0);
+      this.onGamePacketOut?.({
+        type: "GUEST_SYNC",
+        payload: {
+          guestRonin,
+          hits,
+        },
+      });
+    }
+  }
+
+  public applyPeerPacket(packet: GamePacket) {
+    if (!this.isCoop) return;
+
+    if (packet.type === "GUEST_SYNC" && this.isHost) {
+      const { guestRonin, hits } = packet.payload;
+      if (this.peerRonin) {
+        Object.assign(this.peerRonin, guestRonin);
+      } else {
+        this.peerRonin = guestRonin;
+      }
+
+      if (hits && hits.length > 0) {
+        for (const hit of hits) {
+          const enemy = this.enemies.find((e) => e.id === hit.enemyId);
+          if (enemy && enemy.hp > 0) {
+            const ang = hit.kx !== undefined && hit.ky !== undefined ? Math.atan2(hit.ky, hit.kx) : 0;
+            this.damageEnemy(enemy, hit.dmg, ang);
+          }
+        }
+      }
+    } else if (packet.type === "HOST_SYNC" && !this.isHost) {
+      const { hostRonin, enemies, pickups, wave, waveTotal, waveLeft } = packet.payload;
+      if (this.peerRonin) {
+        Object.assign(this.peerRonin, hostRonin);
+      } else {
+        this.peerRonin = hostRonin;
+      }
+
+      this.wave = wave;
+      this.waveTotal = waveTotal;
+      this.waveLeft = waveLeft;
+
+      const currentMap = new Map(this.enemies.map((e) => [e.id, e]));
+      const nextList: Enemy[] = [];
+
+      for (const syncE of enemies) {
+        let existing = currentMap.get(syncE.id);
+        if (!existing) {
+          const s = this.enemyStats(syncE.type as EnemyType);
+          existing = {
+            id: syncE.id,
+            type: syncE.type as EnemyType,
+            x: syncE.x,
+            y: syncE.y,
+            vx: 0,
+            vy: 0,
+            hp: syncE.hp,
+            maxHp: syncE.maxHp,
+            r: s.r,
+            speed: s.speed,
+            flash: 0,
+            stun: 0,
+            t: syncE.animTimer,
+            cd: 1,
+            state: Number(syncE.state) || 0,
+            touchCd: 0,
+            face: syncE.face,
+            spawnT: 0,
+            score: s.score,
+            dmg: s.dmg,
+            scaleY: 1,
+            baseSpeed: s.speed,
+            fireT: 0,
+            fireTick: 0,
+            poisonT: 0,
+            poisonTick: 0,
+            freezeT: 0,
+            freezeImmune: 0,
+            slowT: 0,
+          };
+        } else {
+          existing.x += (syncE.x - existing.x) * 0.45;
+          existing.y += (syncE.y - existing.y) * 0.45;
+          existing.hp = syncE.hp;
+          existing.face = syncE.face;
+          existing.state = Number(syncE.state) || 0;
+        }
+        nextList.push(existing);
+      }
+      this.enemies = nextList;
+
+      if (pickups && pickups.length > 0) {
+        const pickupMap = new Map(this.pickups.map((p) => [p.id, p]));
+        const nextPickups: Pickup[] = [];
+        for (const sp of pickups) {
+          let existing = pickupMap.get(sp.id);
+          if (!existing) {
+            existing = {
+              id: sp.id,
+              x: sp.x,
+              y: sp.y,
+              vx: 0,
+              vy: 0,
+              t: 0,
+              kind: sp.kind === "coin" ? "coin" : ((sp.potion as PotionType) || "health"),
+              potion: sp.potion as PotionType,
+              magnet: false,
+              credited: sp.credited,
+            };
+          } else {
+            existing.x += (sp.x - existing.x) * 0.5;
+            existing.y += (sp.y - existing.y) * 0.5;
+            existing.credited = sp.credited;
+          }
+          if (existing) {
+            nextPickups.push(existing);
+          }
+        }
+        this.pickups = nextPickups;
+      }
+    } else if (packet.type === "COIN_DIVIDED") {
+      this.coins += packet.amount;
+      this.addScore(10 * packet.amount, this.px, this.py - 6, `+${packet.amount} 👥`, "#ffd747");
+      this.burst(this.px, this.py, 6, "#ffd747", 75);
+      Sfx.coin();
+    }
+  }
+
+  public drawPeerPlayer() {
+    if (!this.peerRonin || !this.isCoop) return;
+    const ctx = this.ctx;
+    const peer = this.peerRonin;
+    const px = Math.round(peer.px);
+    const py = Math.round(peer.py);
+
+    ctx.save();
+
+    // 1. Tag de Nome do Ronin Aliado
+    ctx.font = '6px "Press Start 2P", monospace';
+    ctx.textAlign = "center";
+    const roleTag = this.isHost ? "P2" : "P1 (HOST)";
+    const displayName = `[${roleTag}] ${peer.username || "RONIN"}`;
+    const textW = ctx.measureText(displayName).width;
+
+    ctx.fillStyle = "rgba(7, 3, 5, 0.75)";
+    ctx.fillRect(px - textW / 2 - 3, py - 22, textW + 6, 8);
+
+    ctx.fillStyle = peer.hp > 0 ? "#86efac" : "#ef4444";
+    ctx.fillText(displayName, px, py - 16);
+
+    // 2. Mini Barra de Vida
+    const barW = 20;
+    const barH = 2.5;
+    const hpRatio = clamp(peer.hp / (peer.maxHp || 5), 0, 1);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
+    ctx.fillRect(px - barW / 2, py - 12, barW, barH);
+    ctx.fillStyle = hpRatio > 0.3 ? "#22c55e" : "#ef4444";
+    ctx.fillRect(px - barW / 2, py - 12, barW * hpRatio, barH);
+
+    // 3. Sprite do Personagem Aliado
+    const spriteName = peer.avatarId === "samurai" ? "player" : (peer.avatarId ?? "player");
+    const sprite = SPR[spriteName] || SPR.player;
+    const face = peer.face || 1;
+
+    if (peer.hp <= 0) {
+      ctx.globalAlpha = 0.45;
+      ctx.fillStyle = "#ef4444";
+      ctx.fillText("[CAÍDO]", px, py + 16);
+    }
+
+    this.blit(sprite, px, py, face, 1, 1);
+
+    // 4. Efeito de ataque do aliado
+    if (peer.atkPhase > 0) {
+      ctx.strokeStyle = "#ffd0b1";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(px, py, 14, peer.atkAngle - 0.5, peer.atkAngle + 0.5);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 }
 
