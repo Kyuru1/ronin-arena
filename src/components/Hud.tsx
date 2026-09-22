@@ -100,3 +100,4 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPoti
     </div>
   );
 }
+

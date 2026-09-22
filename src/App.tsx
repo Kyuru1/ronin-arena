@@ -620,7 +620,7 @@ export default function App() {
 
         {phase === "input-select" && <InputModeScreen onSelect={chooseInputMode} />}
         {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} inputMode={inputMode} onBegin={finishTutorial} />}
-        {phase === "paused" && <PauseScreen stats={stats} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
+        {phase === "paused" && <PauseScreen stats={stats} avatarId={profile?.avatarId ?? "samurai"} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (
           <GameOverScreen
             stats={finalStats}
@@ -655,6 +655,7 @@ export default function App() {
     </div>
   );
 }
+
 
 
 

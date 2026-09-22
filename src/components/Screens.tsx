@@ -55,6 +55,7 @@ export function PauseScreen({
   opts,
   onOpts,
   onFullscreen,
+  avatarId = "samurai",
 }: {
   onResume: () => void;
   onSave: () => void;
@@ -64,6 +65,7 @@ export function PauseScreen({
   opts: UiOpts;
   onOpts: (options: Partial<UiOpts>) => void;
   onFullscreen: () => void;
+  avatarId?: string;
 }) {
   useMenuNavigation();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -71,7 +73,7 @@ export function PauseScreen({
     <div className="absolute inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#070305]/85 p-3">
       <PxFrame title={t.paused} className="anim-pop my-auto w-full max-w-xs p-4 pt-6 sm:p-5 sm:pt-7">
         <div className="flex flex-col items-center gap-3">
-          <PixelSprite name="player" scale={4} />
+          <PixelSprite name={avatarId === "samurai" ? "player" : avatarId} scale={4} />
           <div className="grid w-full grid-cols-2 gap-2">
             <StatCell label={t.score} value={stats.score.toLocaleString()} gold />
             <StatCell label={t.wave} value={stats.wave} />
@@ -209,3 +211,4 @@ export function GameOverScreen({
     </div>
   );
 }
+
