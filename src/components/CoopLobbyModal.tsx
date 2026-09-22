@@ -12,8 +12,6 @@ interface CoopLobbyModalProps {
 }
 
 export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLobbyModalProps) {
-  const defaultHost = typeof window !== "undefined" ? `${window.location.hostname || "localhost"}:3001` : "localhost:3001";
-  const [serverHost, setServerHost] = useState(defaultHost);
   const [tab, setTab] = useState<"lobby" | "create" | "join">("lobby");
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [selectedDifficulty, setSelectedDifficulty] = useState<Difficulty>("medium");
@@ -22,32 +20,35 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
   const [errorMsg, setErrorMsg] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // Setup callbacks on mount
+  // Setup callbacks on mount. A limpeza so remove o handler se ainda for o
+  // mesmo (o App pode substituir onPeerLeft ao entrar em partida).
   useEffect(() => {
-    coopNet.onRoomUpdate = (state) => {
+    const roomUpdate = (state: CoopRoomState) => {
       setRoomState(state);
       setLoading(false);
     };
-
-    coopNet.onGameStart = (difficulty) => {
-      onStartCoop(coopNet.role === "host", difficulty);
+    const gameStart = (startDifficulty: Difficulty) => {
+      onStartCoop(coopNet.role === "host", startDifficulty);
     };
-
-    coopNet.onError = (err) => {
+    const netError = (err: string) => {
       setErrorMsg(err);
       setLoading(false);
     };
-
-    coopNet.onPeerLeft = (msg) => {
+    const peerLeft = (msg: string) => {
       setErrorMsg(msg);
       setLoading(false);
     };
 
+    coopNet.onRoomUpdate = roomUpdate;
+    coopNet.onGameStart = gameStart;
+    coopNet.onError = netError;
+    coopNet.onPeerLeft = peerLeft;
+
     return () => {
-      coopNet.onRoomUpdate = undefined;
-      coopNet.onGameStart = undefined;
-      coopNet.onError = undefined;
-      coopNet.onPeerLeft = undefined;
+      if (coopNet.onRoomUpdate === roomUpdate) coopNet.onRoomUpdate = undefined;
+      if (coopNet.onGameStart === gameStart) coopNet.onGameStart = undefined;
+      if (coopNet.onError === netError) coopNet.onError = undefined;
+      if (coopNet.onPeerLeft === peerLeft) coopNet.onPeerLeft = undefined;
     };
   }, [onStartCoop]);
 
@@ -56,14 +57,14 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
     try {
       setLoading(true);
       setErrorMsg("");
-      await coopNet.connect(serverHost);
+      await coopNet.connect();
       return true;
     } catch {
-      setErrorMsg(`Não foi possível conectar ao servidor em ${serverHost}. Certifique-se de que o backend local está rodando (porta 3001).`);
+      setErrorMsg("Não foi possível conectar ao servidor cooperativo. Tente novamente em instantes.");
       setLoading(false);
       return false;
     }
-  }, [serverHost]);
+  }, []);
 
   const handleCreateRoom = async () => {
     const ok = await ensureConnection();
@@ -260,7 +261,7 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
   // Lobby Menu (Create / Join tabs)
   return (
     <div className="px-backdrop absolute inset-0 z-30 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
-      <PxFrame title="MODO COOPERATIVO (LOCALHOST)" className="anim-pop w-full max-w-lg p-4 sm:p-6">
+      <PxFrame title="MODO COOPERATIVO" className="anim-pop w-full max-w-lg p-4 sm:p-6">
         <div className="flex flex-col gap-4">
           {/* User authenticated badge */}
           <div className="px-inset flex items-center justify-between p-3 bg-[#190913]">
@@ -297,7 +298,7 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
           {tab === "create" && (
             <div className="flex flex-col gap-3">
               <div className="font-pixel text-[7px] text-[#91b9b5] leading-4">
-                Crie um lobby hospedado no seu computador local. Um código de convite será gerado para seu parceiro entrar.
+                Crie uma sala cooperativa e chame um amigo. Um código de convite aparece na sua tela — quem tiver o código entra na hora.
               </div>
 
               <div className="px-inset p-3">
@@ -315,26 +316,13 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
                 </div>
               </div>
 
-              <div className="px-inset p-3">
-                <label className="font-pixel text-[6px] text-[#a9c3be] block mb-1">
-                  ENDEREÇO DO SERVIDOR (LOCALHOST):
-                </label>
-                <input
-                  type="text"
-                  value={serverHost}
-                  onChange={(e) => setServerHost(e.target.value)}
-                  placeholder="localhost:3001"
-                  className="px-input font-pixel text-[8px] w-full"
-                />
-              </div>
-
               <PxButton
                 tone="gold"
                 disabled={loading}
                 onClick={handleCreateRoom}
                 className="w-full py-4 text-[9px]"
               >
-                {loading ? "CONECTANDO AO LOCALHOST..." : "CRIAR SALA NO LOCALHOST"}
+                {loading ? "CRIANDO SALA..." : "CRIAR SALA"}
               </PxButton>
             </div>
           )}
@@ -343,7 +331,7 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
           {tab === "join" && (
             <div className="flex flex-col gap-3">
               <div className="font-pixel text-[7px] text-[#91b9b5] leading-4">
-                Insira o código de convite fornecido pelo anfitrião da sala.
+                Insira o código de convite fornecido pelo anfitrião da sala. Qualquer pessoa com o código pode entrar.
               </div>
 
               <div className="px-inset p-3">
@@ -360,29 +348,13 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
                 />
               </div>
 
-              <div className="px-inset p-3">
-                <label className="font-pixel text-[6px] text-[#a9c3be] block mb-1">
-                  ENDEREÇO DO HOST (LOCALHOST OU IP):
-                </label>
-                <input
-                  type="text"
-                  value={serverHost}
-                  onChange={(e) => setServerHost(e.target.value)}
-                  placeholder="localhost:3001"
-                  className="px-input font-pixel text-[8px] w-full"
-                />
-                <div className="font-pixel text-[5px] text-[#71827e] mt-1">
-                  * Use localhost:3001 se estiverem no mesmo computador, ou o IP local do Host se estiverem na mesma rede.
-                </div>
-              </div>
-
               <PxButton
                 tone="gold"
                 disabled={loading}
                 onClick={handleJoinRoom}
                 className="w-full py-4 text-[9px]"
               >
-                {loading ? "CONECTANDO..." : "ENTRAR NO LOBBY"}
+                {loading ? "ENTRANDO..." : "ENTRAR NA SALA"}
               </PxButton>
             </div>
           )}

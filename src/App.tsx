@@ -174,7 +174,9 @@ export default function App() {
       setPhase("dead");
     };
     game.onUpgrade = (offer) => {
-      try { localStorage.setItem(RUN_KEY, JSON.stringify(game.saveRun(true))); } catch { /* ignore storage errors */ }
+      if (!game.isCoop) {
+        try { localStorage.setItem(RUN_KEY, JSON.stringify(game.saveRun(true))); } catch { /* ignore storage errors */ }
+      }
       setUpgrade(offer);
       setPhase("upgrade");
     };
@@ -256,6 +258,11 @@ export default function App() {
       gameRef.current?.applyPeerPacket(packet);
     };
 
+    // Persistente durante a partida: desconexão do parceiro encerra a run.
+    coopNet.onPeerLeft = () => {
+      gameRef.current?.coopPeerLeft();
+    };
+
     unlockAudio();
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore */ }
     setCoopModalOpen(false);
@@ -297,6 +304,20 @@ export default function App() {
   const restartRun = useCallback(() => {
     const game = gameRef.current;
     if (!game) return;
+    if (game.isCoop || isCoopGame) {
+      // Em coop não existe "jogar de novo" solo: volta ao menu.
+      coopNet.leaveRoom();
+      coopNet.onPeerLeft = undefined;
+      game.isCoop = false;
+      game.peerRonin = null;
+      setIsCoopGame(false);
+      game.reset();
+      game.phase = "menu";
+      setPhase("menu");
+      setStats(emptyStats);
+      setUpgrade(null);
+      return;
+    }
     game.setDifficulty(difficulty);
     game.setPerk(selectedPerk.current);
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
@@ -305,7 +326,7 @@ export default function App() {
     setPendingScore(false);
     setPhase("playing");
     setMenuClosing(false);
-  }, [difficulty]);
+  }, [difficulty, isCoopGame]);
 
   const finishTutorial = useCallback((neverAgain: boolean) => {
     if (neverAgain) {
@@ -378,6 +399,7 @@ export default function App() {
     if (!g) return;
     if (g.isCoop) {
       coopNet.leaveRoom();
+      coopNet.onPeerLeft = undefined;
       g.isCoop = false;
       g.peerRonin = null;
       setIsCoopGame(false);
@@ -547,7 +569,11 @@ export default function App() {
     const onVisibilityChange = () => {
       if (document.hidden) pauseFromFocusLoss();
     };
-    const onPageHide = () => pauseFromFocusLoss();
+    const onPageHide = () => {
+      // Em coop, sair da sala na hora deixa o parceiro ser notificado.
+      if (gameRef.current?.isCoop) coopNet.leaveRoom();
+      pauseFromFocusLoss();
+    };
     window.addEventListener("blur", pauseFromFocusLoss);
     window.addEventListener("pagehide", onPageHide);
     document.addEventListener("visibilitychange", onVisibilityChange);

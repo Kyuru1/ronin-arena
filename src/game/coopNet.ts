@@ -46,7 +46,7 @@ export interface CoopEnemyState {
 
 export interface CoopPickupState {
   id: number;
-  kind: "coin" | "potion";
+  kind: "coin" | "heart" | "potion";
   potion?: string;
   x: number;
   y: number;
@@ -76,7 +76,10 @@ export type GamePacket =
   | { type: "GUEST_SYNC"; payload: CoopGuestSyncData }
   | { type: "COIN_DIVIDED"; amount: number; totalGuestCoins: number; totalHostCoins: number }
   | { type: "REVIVE_TRIGGER"; target: "host" | "guest" }
-  | { type: "SHOP_CONTINUE"; wave: number };
+  | { type: "PICKUP_EFFECT"; kind: "heart" | "potion"; potion?: string; target: "host" | "guest" }
+  | { type: "SHOP_OPEN"; wave: number }
+  | { type: "SHOP_CONTINUE"; wave: number }
+  | { type: "GAME_OVER" };
 
 export class CoopNetwork {
   private ws: WebSocket | null = null;
@@ -95,7 +98,25 @@ export class CoopNetwork {
     return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
 
-  public connect(serverHost = "localhost:3001"): Promise<void> {
+  /**
+   * URL do servidor coop: VITE_COOP_SERVER_URL (producao — servidor hospedado,
+   * qualquer jogador entra pelo codigo de convite) ou, na falta, /coop-ws no
+   * mesmo host da pagina (dev/proxy). Nao ha entrada manual de endereco.
+   */
+  private resolveServerUrl(): string {
+    const raw = String((import.meta.env.VITE_COOP_SERVER_URL ?? "")).trim().replace(/\/+$/, "");
+    if (raw) {
+      if (/^wss?:\/\//i.test(raw)) return raw;
+      if (/^https:\/\//i.test(raw)) return `wss://${raw.slice(8)}`;
+      if (/^http:\/\//i.test(raw)) return `ws://${raw.slice(7)}`;
+      const secure = window.location.protocol === "https:";
+      return `${secure ? "wss:" : "ws:"}//${raw}`;
+    }
+    const loc = window.location;
+    return `${loc.protocol === "https:" ? "wss:" : "ws:"}//${loc.host}/coop-ws`;
+  }
+
+  public connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
         if (this.ws) {
@@ -103,18 +124,7 @@ export class CoopNetwork {
           this.ws = null;
         }
 
-        let wsUrl: string;
-        const cleanHost = serverHost.trim().replace(/^https?:\/\//, "").replace(/^wss?:\/\//, "");
-
-        if (cleanHost.includes(":")) {
-          const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-          wsUrl = `${protocol}//${cleanHost}`;
-        } else {
-          // If no port, default to 3001
-          const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-          wsUrl = `${protocol}//${cleanHost || "localhost"}:3001`;
-        }
-
+        const wsUrl = this.resolveServerUrl();
         const socket = new WebSocket(wsUrl);
         this.ws = socket;
 
@@ -133,7 +143,7 @@ export class CoopNetwork {
 
         socket.onerror = (e) => {
           clearTimeout(timeout);
-          this.onError?.("Não foi possível conectar ao servidor local.");
+          this.onError?.("Não foi possível conectar ao servidor cooperativo.");
           reject(e);
         };
 
@@ -176,7 +186,7 @@ export class CoopNetwork {
           this.onGamePacket?.(msg.data);
           break;
         case "PEER_LEFT":
-          this.onPeerLeft?.(msg.message);
+          this.onPeerLeft?.(msg.message ?? "O parceiro saiu da sala.");
           break;
         case "ERROR":
           this.onError?.(msg.message);

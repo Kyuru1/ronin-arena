@@ -85,3 +85,13 @@
 - Bosses possuem muito mais vida, tamanho maior e barra de vida propria.
 - Bosses velozes, como morcegos e ninjas, podem atravessar a arena com um dash muito mais longo.
 - Bosses de projeteis disparam rajadas maiores, e o boss golem combina projeteis com uma onda de choque.
+
+## Patch Notes 12 - Cooperativo por Codigo
+
+- Novo modo cooperativo para 2 jogadores, sem localhost: crie uma sala e convide pelo codigo KYU na tela.
+- Qualquer pessoa com o codigo de convite entra na sala, de qualquer lugar.
+- Moedas em coop valem 2x e sao divididas igualmente: cada moeda coletada credita o valor para os dois jogadores.
+- A loja entre waves agora e sincronizada: a proxima wave so comeca quando os dois jogadores fecharem a loja.
+- Se os dois ronins cairem, a partida acaba para os dois; se um parceiro desconectar no meio da run, ela termina na hora.
+- Caixas e arvores continuam drops pessoais; moedas e coracoes sao do grupo, coletados pelo jogador mais proximo.
+- Ranking permanece desativado no cooperativo.

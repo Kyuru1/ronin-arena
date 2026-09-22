@@ -199,7 +199,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
             className="menu-play group w-full border-[#38bdf8] hover:border-[#7dd3fc] bg-gradient-to-r from-[#0c4a6e]/70 via-[#075985]/60 to-[#0c4a6e]/70 shadow-[0_0_15px_rgba(56,189,248,0.2)]"
           >
             <span className="font-pixel text-[13px] sm:text-[16px] text-[#7dd3fc] flex items-center justify-center gap-2">
-              👥 COOPERATIVO (LOCAL)
+                👥 COOPERATIVO
             </span>
           </button>
         </main>
