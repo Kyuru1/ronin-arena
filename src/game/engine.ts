@@ -80,6 +80,8 @@ export interface HudStats {
   dashSpeedMult: number;
   mineTutorial: boolean;
   potionTutorial: boolean;
+  isSpectating: boolean;
+  spectatedName: string | null;
   activePotion: PotionType | null;
   activePotions: Array<{ type: Exclude<PotionType, "health">; time: number }>;
   potionTime: number;
@@ -332,9 +334,10 @@ export class Game {
   // Multiplayer Coop
   public isCoop = false;
   public isHost = true;
-  public peerRonin: (PeerRoninState & { username?: string; avatarId?: AvatarId }) | null = null;
-  public peerRonins: Record<string, PeerRoninState & { username?: string; avatarId?: AvatarId }> = {};
+  public peerRonin: PeerRoninState | null = null;
+  public peerRonins: Record<string, PeerRoninState> = {};
   public localPlayerId = "";
+  public spectatorTargetId: string | null = null;
   public localUsername = "RONIN";
   public playerAvatar: AvatarId = "samurai";
   public onCoinSplit?: (amount: number) => void;
@@ -498,11 +501,58 @@ export class Game {
   setPlayerAvatar(avatarId: AvatarId) { this.playerAvatar = avatarId; }
   setCoopPlayers(localId: string, localUsername: string, players: Array<[string, { profile: { username: string; avatarId: AvatarId } }]>) {
     this.localPlayerId = localId; this.localUsername = localUsername;
-    this.peerRonins = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id, player], index) => [id, { px: this.worldW / 2 + (index - 1) * 28, py: this.worldH / 2, face: -1, walk: false, hp: 5, maxHp: 5, weapon: "katana", atkPhase: 0, atkAngle: 0, isDashing: false, perk: null, coins: 0, score: 0, kills: 0, username: player.profile.username, avatarId: player.profile.avatarId }]));
+    this.peerRonins = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id, player], index) => [id, {
+      px: this.worldW / 2 + (index - 1) * 28,
+      py: this.worldH / 2,
+      face: -1,
+      walk: false,
+      hp: 5,
+      maxHp: 5,
+      weapon: "katana",
+      weapons: ["katana"],
+      activeSlot: 0,
+      weaponLevels: createWeaponLevels(),
+      atkPhase: 2,
+      atkAngle: 0,
+      weaponAngle: 0,
+      attacking: false,
+      bowCharge: 0,
+      arrows: [],
+      isDashing: false,
+      perk: null,
+      coins: 0,
+      score: 0,
+      kills: 0,
+      username: player.profile.username,
+      avatarId: player.profile.avatarId,
+    }]));
     this.peerRonin = Object.values(this.peerRonins)[0] ?? null;
+    this.spectatorTargetId = null;
   }
   private remoteRonins() { return Object.entries(this.peerRonins); }
   private localPlayerSprite() { return SPR[this.playerAvatar === "samurai" ? "player" : this.playerAvatar] || SPR.player; }
+
+  private aliveRemoteRonins() {
+    return this.remoteRonins().filter(([, peer]) => peer.hp > 0);
+  }
+
+  private spectatedRonin() {
+    const alive = this.aliveRemoteRonins();
+    if (!alive.length) { this.spectatorTargetId = null; return null; }
+    let selected = alive.find(([id]) => id === this.spectatorTargetId);
+    if (!selected) { selected = alive[0]; this.spectatorTargetId = selected[0]; }
+    return selected;
+  }
+
+  public spectateNext(direction: -1 | 1 = 1) {
+    if (!this.isCoop || this.hp > 0) return;
+    const alive = this.aliveRemoteRonins();
+    if (!alive.length) return;
+    const index = Math.max(0, alive.findIndex(([id]) => id === this.spectatorTargetId));
+    this.spectatorTargetId = alive[(index + direction + alive.length) % alive.length][0];
+    this.peerRonin = this.peerRonins[this.spectatorTargetId];
+    this.pushStats(true);
+  }
 
   setPerk(perk: Perk | null) {
     this.perk = perk;
@@ -790,6 +840,11 @@ export class Game {
     if (this.phase !== "playing") return;
 
     const bindings = this.opts.keyboardBindings;
+    if (this.isCoop && this.hp <= 0) {
+      if (k === bindings.prev || k === "arrowleft") this.spectateNext(-1);
+      if (k === bindings.next || k === "arrowright") this.spectateNext(1);
+      return;
+    }
     if (k === bindings.attack) {
       this.keyboardAttackHeld = true;
       this.attackHeld = true;
@@ -1185,9 +1240,10 @@ export class Game {
   }
   stats(): HudStats {
     this.enforceStatLimits();
+    const spectated = this.isCoop && this.hp <= 0 ? this.spectatedRonin()?.[1] ?? null : null;
     return {
-      hp: this.hp,
-      maxHp: this.maxHp,
+      hp: spectated?.hp ?? this.hp,
+      maxHp: spectated?.maxHp ?? this.maxHp,
       score: Math.floor(this.score),
       coins: this.coins,
       wave: this.wave,
@@ -1200,8 +1256,8 @@ export class Game {
       dashMax: this.dashMax,
       chain: this.atkChain,
       chainP: clamp(this.atkChainT / 0.85, 0, 1),
-      weapons: this.weapons,
-      activeSlot: this.activeSlot,
+      weapons: spectated?.weapons ?? this.weapons,
+      activeSlot: spectated?.activeSlot ?? this.activeSlot,
       waveTotal: this.waveTotal,
       waveLeft: this.waveLeft,
       speedBonus: this.speedBonus,
@@ -1209,13 +1265,15 @@ export class Game {
       mineTutorial: this.mineTutorialT > 0,
       potionTutorial: this.potionTutorialT > 0,
       activePotion: this.strengthT > 0 ? "strength" : this.speedT > 0 ? "speed" : this.agilityT > 0 ? "agility" : null,
+      isSpectating: !!spectated,
+      spectatedName: spectated?.username ?? null,
       activePotions: ([
         ["strength", this.strengthT],
         ["speed", this.speedT],
         ["agility", this.agilityT],
       ] as const).filter(([, time]) => time > 0).map(([type, time]) => ({ type, time })),
       potionTime: Math.max(this.strengthT, this.speedT, this.agilityT),
-      weaponLevels: this.weaponLevels,
+      weaponLevels: spectated?.weaponLevels ?? this.weaponLevels,
       magicType: this.magicType,
       difficulty: this.difficulty,
       perk: this.perk,
@@ -1225,7 +1283,7 @@ export class Game {
   private pushStats(force = false) {
     this.waveLeft = Math.max(0, this.waveTotal - this.waveSpawned) + this.marks.length + this.enemies.length;
     const s = this.stats();
-    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.activePotions)}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}`;
+    const key = `${s.hp}|${s.score}|${s.coins}|${s.wave}|${s.combo}|${s.kills}|${s.dashReady}|${Math.ceil(s.dashCd * 10)}|${s.activeSlot}|${s.weapons.join(",")}|${Math.floor(s.time)}|${s.waveLeft}|${s.maxHp}|${s.speedBonus}|${s.dashSpeedMult}|${s.dashMax}|${s.mineTutorial}|${JSON.stringify(s.activePotions)}|${JSON.stringify(s.weaponLevels)}|${s.magicType}|${s.difficulty}|${s.isSpectating}|${s.spectatedName}`;
     if (force || key !== this.lastStats) {
       this.lastStats = key;
       this.onStats(s);
@@ -1295,7 +1353,7 @@ export class Game {
     }
 
     // Em coop, se os dois ronins cairem a partida acabou para os dois.
-    if (this.isCoop && this.hp <= 0 && this.peerRonin && this.peerRonin.hp <= 0) {
+    if (this.isCoop && this.hp <= 0 && this.aliveRemoteRonins().length === 0) {
       this.onGamePacketOut?.({ type: "GAME_OVER" });
       this.beginDeath();
       return;
@@ -1412,6 +1470,9 @@ export class Game {
   /* ----------------------------- player ----------------------------- */
 
   private updateCamera(dt: number) {
+    const spectated = this.isCoop && this.hp <= 0 ? this.spectatedRonin()?.[1] ?? null : null;
+    const focusX = spectated?.px ?? this.px;
+    const focusY = spectated?.py ?? this.py;
     const cameraDeadZone = 16 * 1.5;
     const marginX = this.W / 2 - cameraDeadZone;
     const marginY = this.H / 2 - cameraDeadZone;
@@ -1421,10 +1482,10 @@ export class Game {
     const bottom = this.cameraY + this.H - marginY;
     let targetX = this.cameraX;
     let targetY = this.cameraY;
-    if (this.px < left) targetX = this.px - marginX;
-    else if (this.px > right) targetX = this.px - this.W + marginX;
-    if (this.py < top) targetY = this.py - marginY;
-    else if (this.py > bottom) targetY = this.py - this.H + marginY;
+    if (focusX < left) targetX = focusX - marginX;
+    else if (focusX > right) targetX = focusX - this.W + marginX;
+    if (focusY < top) targetY = focusY - marginY;
+    else if (focusY > bottom) targetY = focusY - this.H + marginY;
     targetX = clamp(targetX, 0, Math.max(0, this.worldW - this.W));
     targetY = clamp(targetY, 0, Math.max(0, this.worldH - this.H));
     const follow = Math.min(1, dt * 5.5);
@@ -1668,8 +1729,10 @@ export class Game {
     const justPressed = (index: number) => pressed(index) && !this.gamepadButtons[index];
     this.attackHeld = this.keyboardAttackHeld || this.pointerAttackHeld || pressed(0) || pressed(7);
     if (justPressed(1) || justPressed(2)) this.dashQueued = true;
-    if (justPressed(4) || justPressed(14)) this.prevWeapon();
-    if (justPressed(5) || justPressed(15)) this.nextWeapon();
+    if (justPressed(4) || justPressed(14)) {
+      if (this.hp <= 0 && this.isCoop) this.spectateNext(-1); else this.prevWeapon();
+    }
+    if (justPressed(5) || justPressed(15)) { if (this.hp <= 0 && this.isCoop) this.spectateNext(1); else this.nextWeapon(); }
     if (justPressed(9)) this.onPause();
     this.gamepadButtons = pad.buttons.map((button) => button.pressed);
   }
@@ -2686,13 +2749,16 @@ export class Game {
       }
       if (this.isCoop) {
         if (this.hp <= 0) {
-          this.hp = Math.max(3, Math.floor(this.maxHp / 2));
+          this.hp = this.maxHp;
           this.phase = "playing";
+          this.spectatorTargetId = null;
         }
-        if (this.peerRonin && this.peerRonin.hp <= 0) {
-          this.peerRonin.hp = Math.max(3, Math.floor((this.peerRonin.maxHp || 5) / 2));
-          this.onGamePacketOut?.({ type: "REVIVE_TRIGGER", target: "guest" });
+        for (const [playerId, peer] of this.remoteRonins()) {
+          if (peer.hp > 0) continue;
+          peer.hp = peer.maxHp || 5;
+          this.onGamePacketOut?.({ type: "REVIVE_TRIGGER", target: playerId });
         }
+        this.peerRonin = Object.values(this.peerRonins)[0] ?? null;
       }
     }
     if (this.waveClearT >= 0) {
@@ -2714,9 +2780,14 @@ export class Game {
   private explodeBombMinion(e: Enemy) {
     const radius = 42;
     const damage = this.wave <= 10 ? 2 : 5;
-    const dx = this.px - e.x;
-    const dy = this.py - e.y;
-    const distance = Math.hypot(dx, dy);
+    if (this.hp > 0) {
+      const dx = this.px - e.x; const dy = this.py - e.y; const distance = Math.hypot(dx, dy);
+      if (distance <= radius) this.hurtPlayer(damage, dx / (distance || 1), dy / (distance || 1));
+    }
+    for (const [playerId, peer] of this.remoteRonins()) {
+      const dx = peer.px - e.x; const dy = peer.py - e.y; const distance = Math.hypot(dx, dy);
+      if (peer.hp > 0 && distance <= radius) this.hurtCoopTarget(playerId, damage, dx / (distance || 1), dy / (distance || 1));
+    }
     const index = this.enemies.indexOf(e);
     if (index >= 0) this.enemies.splice(index, 1);
     this.shockwaves.push({ x: e.x, y: e.y, r: 5, maxR: radius, life: 0.38, maxLife: 0.38, color: "#ff7b38" });
@@ -2725,7 +2796,6 @@ export class Game {
     this.bloodDecal(e.x, e.y + 3, 8, "#e85b32");
     this.shake = Math.max(this.shake, 9);
     Sfx.bombExplode();
-    if (distance <= radius) this.hurtPlayer(damage, dx / (distance || 1), dy / (distance || 1));
   }
 
   private ramCrash(e: Enemy) {
@@ -3058,7 +3128,7 @@ export class Game {
         });
       }
       const d = Math.hypot(s.x - this.px, s.y - this.py);
-      if (d < 9) {
+      if (this.hp > 0 && d < 9) {
         this.shots.splice(i, 1);
         if (this.shieldFacing(s.x, s.y)) {
           this.burst(s.x, s.y, 8, "#ffd0a2", 100);
@@ -3068,6 +3138,17 @@ export class Game {
         this.hurtPlayer(s.dmg, (this.px - s.x) / (d || 1), (this.py - s.y) / (d || 1));
         continue;
       }
+      let hitPeer = false;
+      for (const [playerId, peer] of this.remoteRonins()) {
+        if (peer.hp <= 0) continue;
+        const peerDistance = Math.hypot(s.x - peer.px, s.y - peer.py);
+        if (peerDistance >= 9) continue;
+        this.shots.splice(i, 1);
+        this.hurtCoopTarget(playerId, s.dmg, (peer.px - s.x) / (peerDistance || 1), (peer.py - s.y) / (peerDistance || 1));
+        hitPeer = true;
+        break;
+      }
+      if (hitPeer) continue;
       if (s.life <= 0 || s.x < 8 || s.y < 8 || s.x > this.worldW - 8 || s.y > this.worldH - 8) {
         this.burst(s.x, s.y, 4, "#ff8a68", 60);
         this.shots.splice(i, 1);
@@ -3238,7 +3319,7 @@ export class Game {
       this.coins += coinValue;
       if (this.isCoop) {
         this.onCoinSplit?.(coinValue);
-        if (this.isHost) {
+        if (this.isHost || p.local) {
           this.onGamePacketOut?.({
             type: "COIN_DIVIDED",
             amount: coinValue,
@@ -3278,8 +3359,9 @@ export class Game {
   }
 
   private die() {
-    if (this.isCoop && this.peerRonin && this.peerRonin.hp > 0) {
+    if (this.isCoop && this.aliveRemoteRonins().length > 0) {
       this.hp = 0;
+      this.spectatedRonin();
       this.banner = "RONIN CAÍDO! O PARCEIRO DEVE SOBREVIVER";
       this.bannerT = 3.0;
       this.shake = 12;
@@ -3610,8 +3692,8 @@ export class Game {
     if (this.phase !== "dying" && this.phase !== "dead") {
       this.shadow(this.px + this.leanX * 0.4, this.py + 8, 7);
     }
-    if (this.isCoop && this.peerRonin) {
-      this.shadow(this.peerRonin.px, this.peerRonin.py + 8, 7);
+    if (this.isCoop) for (const [, peer] of this.remoteRonins()) {
+      if (peer.hp > 0) this.shadow(peer.px, peer.py + 8, 7);
     }
 
     // Enemies sorted by Y
@@ -3700,8 +3782,10 @@ export class Game {
       ctx.globalAlpha = 1;
     }
 
-    if (this.phase !== "dying" && this.phase !== "dead") this.drawPlayer();
-    if (this.isCoop) this.drawPeerPlayer();
+    if (this.phase !== "dying" && this.phase !== "dead" && this.hp > 0) this.drawPlayer();
+    if (this.isCoop) for (const [playerId, peer] of this.remoteRonins()) {
+      this.drawPeerPlayer(peer, playerId);
+    }
 
     // Particles
     for (const p of this.parts) {
@@ -3973,7 +4057,7 @@ export class Game {
       ctx.restore();
     }
 
-    if (!blink && !(this.isCoop && this.hp <= 0 && this.peerRonin && this.peerRonin.hp > 0)) {
+    if (!blink && this.hp > 0) {
       const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
       this.blit(this.localPlayerSprite(), bx, by, this.face, 0, squash, window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08);
       if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) this.drawPsychicHands(this.aimAngle());
@@ -4191,6 +4275,13 @@ export class Game {
         hp: this.hp,
         maxHp: this.maxHp,
         weapon: this.currentWeapon,
+        weapons: [...this.weapons],
+        activeSlot: this.activeSlot,
+        weaponLevels: JSON.parse(JSON.stringify(this.weaponLevels)) as WeaponLevels,
+        weaponAngle: this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff" ? this.aimAngle() : this.swingAngleNow(),
+        attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0,
+        bowCharge: this.bowCharge,
+        arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
         atkPhase: this.atkPhase(),
         atkAngle: this.atkAngle,
         isDashing: this.dashT > 0,
@@ -4208,6 +4299,8 @@ export class Game {
           waveLeft: this.waveLeft,
           enemies,
           pickups,
+          ronins: this.peerRonins,
+          paused: this.phase === "paused",
           hostRonin,
         },
       });
@@ -4221,6 +4314,13 @@ export class Game {
         maxHp: this.maxHp,
         weapon: this.currentWeapon,
         atkPhase: this.atkPhase(),
+        weapons: [...this.weapons],
+        activeSlot: this.activeSlot,
+        weaponLevels: JSON.parse(JSON.stringify(this.weaponLevels)) as WeaponLevels,
+        weaponAngle: this.currentWeapon === "bow" || this.currentWeapon === "shield" || this.currentWeapon === "mine" || this.currentWeapon === "book" || this.currentWeapon === "staff" ? this.aimAngle() : this.swingAngleNow(),
+        attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0,
+        bowCharge: this.bowCharge,
+        arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
         atkAngle: this.atkAngle,
         isDashing: this.dashT > 0,
         perk: this.perk,
@@ -4235,23 +4335,24 @@ export class Game {
         payload: {
           guestRonin,
           hits,
+          playerId: this.localPlayerId,
         },
       });
     }
   }
 
-  public applyPeerPacket(packet: GamePacket) {
+  public applyPeerPacket(packet: GamePacket, senderId = "") {
     if (!this.isCoop) return;
 
-    if (packet.type === "GUEST_SYNC" && this.isHost) {
+    if (packet.type === "GUEST_SYNC") {
       const { guestRonin, hits } = packet.payload;
-      if (this.peerRonin) {
-        Object.assign(this.peerRonin, guestRonin);
-      } else {
-        this.peerRonin = guestRonin;
-      }
+      const playerId = senderId || packet.payload.playerId;
+      if (!playerId || playerId === this.localPlayerId) return;
+      const existing = this.peerRonins[playerId];
+      this.peerRonins[playerId] = existing ? Object.assign(existing, guestRonin) : guestRonin;
+      this.peerRonin = this.spectatorTargetId ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[playerId] : Object.values(this.peerRonins)[0] ?? null;
 
-      if (hits && hits.length > 0) {
+      if (this.isHost && hits && hits.length > 0) {
         for (const hit of hits) {
           const enemy = this.enemies.find((e) => e.id === hit.enemyId);
           if (enemy && enemy.hp > 0) {
@@ -4261,12 +4362,16 @@ export class Game {
         }
       }
     } else if (packet.type === "HOST_SYNC" && !this.isHost) {
-      const { hostRonin, enemies, pickups, wave, waveTotal, waveLeft, paused } = packet.payload;
-      if (this.peerRonin) {
-        Object.assign(this.peerRonin, hostRonin);
-      } else {
-        this.peerRonin = hostRonin;
+      const { hostRonin, ronins, enemies, pickups, wave, waveTotal, waveLeft, paused } = packet.payload;
+      const hostId = senderId || "host";
+      const existingHost = this.peerRonins[hostId];
+      this.peerRonins[hostId] = existingHost ? Object.assign(existingHost, hostRonin) : hostRonin;
+      for (const [playerId, ronin] of Object.entries(ronins ?? {})) {
+        if (playerId === this.localPlayerId) continue;
+        const existing = this.peerRonins[playerId];
+        this.peerRonins[playerId] = existing ? Object.assign(existing, ronin) : ronin;
       }
+      this.peerRonin = this.spectatorTargetId ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[hostId] : Object.values(this.peerRonins)[0] ?? null;
 
       this.wave = wave;
       this.waveTotal = waveTotal;
@@ -4363,11 +4468,12 @@ export class Game {
       this.burst(this.px, this.py, 6, "#ffd747", 75);
       Sfx.coin();
     } else if (packet.type === "REVIVE_TRIGGER") {
-      const forMe = (packet.target === "host") === this.isHost;
+      const forMe = packet.target === this.localPlayerId || (packet.target === "host" && this.isHost) || (packet.target === "guest" && !this.isHost);
       if (forMe && this.hp <= 0) {
-        this.hp = Math.max(3, Math.floor(this.maxHp / 2));
+        this.hp = this.maxHp;
         this.banner = "REAVIVADO NA VIRADA DA WAVE!";
         this.bannerT = 2.5;
+        this.spectatorTargetId = null;
         this.pushStats(true);
       }
     } else if (packet.type === "PICKUP_EFFECT") {
@@ -4403,17 +4509,16 @@ export class Game {
       this.shopPeerDone = true;
       if (this.shopLocalDone) this.leaveShop();
     } else if (packet.type === "PLAYER_DAMAGE") {
-      const forMe = (packet.target === "host") === this.isHost;
+      const forMe = packet.target === this.localPlayerId || (packet.target === "host" && this.isHost) || (packet.target === "guest" && !this.isHost);
       if (forMe) this.hurtPlayer(packet.dmg, packet.nx, packet.ny);
     } else if (packet.type === "GAME_OVER") {
       this.beginDeath();
     }
   }
 
-  public drawPeerPlayer() {
-    if (!this.peerRonin || !this.isCoop) return;
+  public drawPeerPlayer(peer: PeerRoninState, playerId = "") {
+    if (!this.isCoop) return;
     const ctx = this.ctx;
-    const peer = this.peerRonin;
     const px = Math.round(peer.px);
 if (peer.hp <= 0) return;
     const py = Math.round(peer.py);
@@ -4423,7 +4528,7 @@ if (peer.hp <= 0) return;
     // 1. Tag de Nome do Ronin Aliado
     ctx.font = '6px "Press Start 2P", monospace';
     ctx.textAlign = "center";
-    const roleTag = this.isHost ? "P2" : "P1 (HOST)";
+    const roleTag = playerId === this.spectatorTargetId ? "ESPECTANDO" : "ALIADO";
     const displayName = `[${roleTag}] ${peer.username || "RONIN"}`;
     const textW = ctx.measureText(displayName).width;
 
@@ -4455,23 +4560,24 @@ if (peer.hp <= 0) return;
 
     this.blit(sprite, px, py, face, 0, 1);
 
-// 3.5. Weapon do aliado
-     if (peer.hp > 0) {
-       ctx.save();
-       ctx.translate(px, py);
-       ctx.rotate(peer.atkAngle);
-       const weaponLen = 16; // default blade length
-       drawWeaponArt(ctx, peer.weapon, {
-         len: weaponLen,
-         draw01: 0,
-         glint: 0,
-         glintP: 0,
-         form: 0
-       });
-       ctx.restore();
-     }
+    // 3.5. Arma e carga do arco do aliado
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.rotate(peer.weaponAngle ?? peer.atkAngle);
+    drawWeaponArt(ctx, peer.weapon, {
+      len: peer.weapon === "hammer" ? 30 : peer.weapon === "bow" ? 24 : 18,
+      draw01: peer.weapon === "bow" ? peer.bowCharge : 0,
+      glint: peer.attacking ? 1 : 0,
+      glintP: peer.atkPhase === 1 ? 0.7 : 0,
+      form: peer.weaponLevels?.[peer.weapon]?.form ?? 0,
+    });
+    ctx.restore();
+    if (peer.weapon === "bow" && peer.bowCharge > 0.02) {
+      ctx.fillStyle = peer.bowCharge >= 1 ? "#ff5361" : "#ffd44a";
+      ctx.fillRect(px - 10, py - 22, Math.round(20 * peer.bowCharge), 3);
+    }
     // 4. Efeito de ataque do aliado
-    if (peer.atkPhase > 0) {
+    if (peer.attacking && peer.weapon !== "bow") {
       ctx.strokeStyle = "#ffd0b1";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
@@ -4479,6 +4585,18 @@ if (peer.hp <= 0) return;
       ctx.stroke();
     }
 
+    for (const arrow of peer.arrows ?? []) {
+      ctx.save();
+      ctx.translate(arrow.x, arrow.y);
+      ctx.rotate(arrow.rot);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(-6, -1, 12, 2);
+      ctx.fillStyle = "#d9343f";
+      ctx.fillRect(4, -2, 4, 4);
+      ctx.fillStyle = "#8a242d";
+      ctx.fillRect(-8, -2, 3, 4);
+      ctx.restore();
+    }
     ctx.restore();
   }
 }

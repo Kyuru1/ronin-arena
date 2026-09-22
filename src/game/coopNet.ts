@@ -1,10 +1,13 @@
-import type { Difficulty, Weapon, Perk } from "./engine";
+import type { Difficulty, Weapon, Perk, WeaponLevels } from "./engine";
 import type { PlayerProfile } from "./auth";
 import { supabase } from "../lib/supabase";
 
 export interface CoopRoomPlayer { profile: PlayerProfile; ready: boolean; }
 export interface CoopRoomState { code: string; difficulty: Difficulty; started: boolean; hostId: string; players: Record<string, CoopRoomPlayer>; }
-export interface PeerRoninState { px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; atkPhase: number; atkAngle: number; isDashing: boolean; perk: Perk | null; coins: number; score: number; kills: number; username?: string; avatarId?: string; }
+export interface CoopArrowState { x: number; y: number; rot: number; }
+export interface PeerRoninState {
+  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; coins: number; score: number; kills: number; username?: string; avatarId?: string;
+}
 export interface CoopEnemyState { id: number; type: string; x: number; y: number; hp: number; maxHp: number; face: number; atkAngle: number; state: string; animTimer: number; }
 export interface CoopPickupState { id: number; kind: "coin" | "heart" | "potion"; potion?: string; x: number; y: number; credited: boolean; }
 export interface CoopHostSyncData { wave: number; waveTotal: number; waveLeft: number; enemies: CoopEnemyState[]; pickups: CoopPickupState[]; hostRonin: PeerRoninState; ronins?: Record<string, PeerRoninState>; splitCoinsEarned?: number; waveCompleted?: boolean; paused: boolean; }

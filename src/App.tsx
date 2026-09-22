@@ -55,6 +55,8 @@ const emptyStats: HudStats = {
   magicType: "fire",
   difficulty: "medium",
   perk: null,
+  isSpectating: false,
+  spectatedName: null,
 };
 
 const OPT_KEY = "ronin.options.v2";
@@ -101,6 +103,8 @@ export default function App() {
   const [scores, setScores] = useState<ScoreEntry[]>([]);
   const [rank, setRank] = useState(-1);
   const [pendingScore, setPendingScore] = useState(false);
+  const [scoreSaving, setScoreSaving] = useState(false);
+  const [scoreError, setScoreError] = useState<string | null>(null);
   const [upgrade, setUpgrade] = useState<UpgradeOffer | null>(null);
   const [muted, setMutedState] = useState(false);
   const [opts, setOpts] = useState<UiOpts>(defaultOpts);
@@ -120,17 +124,25 @@ export default function App() {
   useEffect(() => {
     const client = supabase;
     if (!client) return;
-    const syncProfile = async () => {
-      const { data: { user } } = await client.auth.getUser();
-      if (!user) { setProfile(null); return; }
-      try { setProfile(await loadProfile(user)); } catch { setProfile(null); }
+    let disposed = false;
+    const syncProfile = async (user: { id: string; user_metadata: Record<string, unknown> } | null) => {
+      if (!user) { if (!disposed) setProfile(null); return; }
+      const optimistic: PlayerProfile = {
+        id: user.id,
+        username: String(user.user_metadata.username ?? "RONIN").trim().toUpperCase().slice(0, 12) || "RONIN",
+        avatarId: (user.user_metadata.avatar_id ?? "samurai") as PlayerProfile["avatarId"],
+      };
+      if (!disposed) setProfile(optimistic);
+      try {
+        const loaded = await loadProfile(user as Parameters<typeof loadProfile>[0]);
+        if (!disposed) setProfile(loaded);
+      } catch { /* keep cached metadata available while the profile query recovers */ }
     };
-    void syncProfile();
+    void client.auth.getSession().then(({ data: { session } }) => syncProfile(session?.user ?? null));
     const { data: { subscription } } = client.auth.onAuthStateChange((_event, session) => {
-      if (!session?.user) { setProfile(null); return; }
-      void loadProfile(session.user).then(setProfile).catch(() => setProfile(null));
+      void syncProfile(session?.user ?? null);
     });
-    return () => subscription.unsubscribe();
+    return () => { disposed = true; subscription.unsubscribe(); };
   }, []);
   useEffect(() => {
     const playButtonSound = (event: MouseEvent) => {
@@ -183,6 +195,8 @@ export default function App() {
       setSavedRun(null);
       setFinalStats(s);
       setPendingScore(s.score > 0 && !game.isCoop);
+      setScoreSaving(false);
+      setScoreError(null);
       setRank(-1);
       setPhase("dead");
     };
@@ -226,6 +240,8 @@ export default function App() {
     game.startGame();
     setRank(-1);
     setPendingScore(false);
+    setScoreSaving(false);
+    setScoreError(null);
     setPhase("playing");
     setMenuClosing(false);
   }, []);
@@ -238,19 +254,12 @@ export default function App() {
     const game = gameRef.current;
     if (!game) return;
     const roomPlayers = coopNet.roomPlayers();
-    const partner = roomPlayers.find(([id]) => id !== profileRef.current?.id)?.[1].profile;
     setIsCoopGame(true);
     game.isCoop = true;
     game.isHost = isHost;
     game.setDifficulty(coopDifficulty);
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
     game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
-    game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
-    game.peerRonin = {
-      px: game.worldW / 2 + (isHost ? 25 : -25), py: game.worldH / 2, face: isHost ? -1 : 1, walk: false,
-      hp: 5, maxHp: 5, weapon: "katana", atkPhase: 0, atkAngle: 0, isDashing: false, perk: null,
-      coins: 0, score: 0, kills: 0, username: partner?.username ?? "RONIN", avatarId: partner?.avatarId ?? "samurai",
-    };
     game.onGamePacketOut = (packet) => coopNet.sendPacket(packet);
     coopNet.onGamePacket = (packet, senderId) => gameRef.current?.applyPeerPacket(packet, senderId);
     coopNet.onPeerLeft = () => gameRef.current?.coopPeerLeft();
@@ -306,12 +315,12 @@ export default function App() {
     game.setDifficulty(difficulty);
     game.setPerk(selectedPerk.current);
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
-    game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
-    game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
     game.startGame();
     setRank(-1);
     setPendingScore(false);
+    setScoreSaving(false);
+    setScoreError(null);
     setPhase("playing");
     setMenuClosing(false);
   }, [difficulty, isCoopGame]);
@@ -396,20 +405,28 @@ export default function App() {
     setPhase("menu");
     setStats(emptyStats);
     setUpgrade(null);
+    setPendingScore(false);
+    setScoreError(null);
     void loadRemoteScores().then(setScores);
   }, [isCoopGame]);
 
   const submitName = useCallback(async (profileOverride?: PlayerProfile) => {
+    if (scoreSaving) return;
     let activeProfile = profileOverride ?? profileRef.current;
     if (!activeProfile && supabase) {
-      const { data: authData } = await supabase.auth.getUser();
-      if (authData.user) {
-        activeProfile = await loadProfile(authData.user);
-        setProfile(activeProfile);
+      const { data: authData } = await supabase.auth.getSession();
+      if (authData.session?.user) {
+        try {
+          activeProfile = await loadProfile(authData.session.user);
+          setProfile(activeProfile);
+        } catch {
+          setScoreError("Sua conta ainda está carregando. Tente salvar novamente em alguns segundos.");
+          return;
+        }
       }
     }
     if (!activeProfile) {
-      setPhase("menu");
+      setScoreError("Entre em uma conta para salvar esta pontuação no ranking.");
       return;
     }
     const entry: ScoreEntry = {
@@ -423,17 +440,19 @@ export default function App() {
       date: Date.now(),
       userId: activeProfile.id,
     };
+    setScoreSaving(true);
+    setScoreError(null);
     try {
       const { list, rank: r } = await saveRemoteScore(entry);
       setScores(list);
       setRank(r);
       setPendingScore(false);
-      setPhase("dead");
-    } catch {
-      setPhase("dead");
+    } catch (error) {
+      setScoreError(error instanceof Error ? error.message : "Não foi possível salvar no ranking. Tente novamente.");
+    } finally {
+      setScoreSaving(false);
     }
-  }, [finalStats]);
-
+  }, [finalStats, scoreSaving]);
   useEffect(() => {
     if (!pendingScore || !profile || phase !== "menu") return;
     void submitName(profile);
@@ -584,6 +603,7 @@ export default function App() {
             onPause={togglePause}
             onSelectSlot={selectSlot}
             onDash={() => gameRef.current?.touchDash()}
+            onSpectate={(direction) => gameRef.current?.spectateNext(direction)}
             onPotionDismiss={dismissPotionTutorial}
             hudScale={opts.hudScale}
             language={opts.language}
@@ -634,6 +654,8 @@ export default function App() {
             pendingScore={pendingScore}
             defaultName={profile?.username ?? lastName}
             onSubmitName={() => void submitName()}
+            scoreSaving={scoreSaving}
+            scoreError={scoreError}
             onRestart={restartRun}
             onMenu={toMenu}
             t={t}
@@ -660,7 +682,4 @@ export default function App() {
     </div>
   );
 }
-
-
-
 

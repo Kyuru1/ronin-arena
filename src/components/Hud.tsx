@@ -10,10 +10,11 @@ function Heart({ filled }: { filled: boolean }) {
   return <svg viewBox="0 0 7 6" className="h-3 w-4 sm:h-4 sm:w-5" shapeRendering="crispEdges"><g fill={filled ? "#ff4353" : "#2a0e13"}><rect x="1" y="0" width="2" height="1" /><rect x="4" y="0" width="2" height="1" /><rect x="0" y="1" width="7" height="2" /><rect x="1" y="3" width="5" height="1" /><rect x="2" y="4" width="3" height="1" /><rect x="3" y="5" width="1" height="1" /></g>{filled && <rect x="1" y="1" width="1" height="1" fill="#ffd2b5" />}</svg>;
 }
 
-export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPotionDismiss, hudScale, language, t }: {
+export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onSpectate, onPotionDismiss, hudScale, language, t }: {
   stats: HudStats;
   best: number;
   onPause: () => void;
+  onSpectate: (direction: -1 | 1) => void;
   onMute: () => void;
   onSelectSlot: (slot: number) => void;
   onDash: () => void;
@@ -69,6 +70,12 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onPoti
           <div className="flex items-center justify-end gap-2"><span className="font-pixel text-[6px] text-[#b78c91]">{t.best} {best.toLocaleString()}</span><span className="combat-kills font-pixel">KO {stats.kills}</span></div>
           <div className="pointer-events-auto mt-1 flex justify-end gap-1"><button onClick={onPause} className="hud-icon" aria-label={t.pause}>II</button></div>
         </section>
+      {stats.isSpectating && <div className="pointer-events-auto absolute left-1/2 top-20 flex -translate-x-1/2 items-center gap-3 border-2 border-[#070305] bg-[#160b12]/95 px-3 py-2 font-pixel text-[7px] text-[#ffd44a]">
+        <button onClick={() => onSpectate(-1)} aria-label="Jogador anterior">◀</button>
+        <span>ESPECTANDO {stats.spectatedName ?? "ALIADO"}</span>
+        <button onClick={() => onSpectate(1)} aria-label="Próximo jogador">▶</button>
+      </div>}
+
       </div>
 
       {stats.combo > 1 && <div key={stats.combo} className="combat-combo anim-pop absolute left-1/2 top-24 -translate-x-1/2"><strong className="font-pixel text-shadow-pix">COMBO x{comboMult.toFixed(1)}</strong><span className="font-pixel">{stats.combo} {t.kills}</span><div className="combat-combo-track"><i style={{ width: `${stats.comboP * 100}%` }} /></div></div>}

@@ -115,6 +115,8 @@ export function GameOverScreen({
   pendingScore,
   defaultName,
   onSubmitName,
+  scoreSaving,
+  scoreError,
   onRestart,
   onMenu,
   t,
@@ -126,6 +128,8 @@ export function GameOverScreen({
   pendingScore: boolean;
   defaultName: string;
   onSubmitName: () => void;
+  scoreSaving?: boolean;
+  scoreError?: string | null;
   onRestart: () => void;
   onMenu: () => void;
   t: Strings;
@@ -167,8 +171,9 @@ export function GameOverScreen({
             <div className="w-full">
               <PxHeading>{t.ranking}</PxHeading>
               <div className="px-inset mb-3 p-3 text-center font-pixel text-[8px] text-[#ffe2c4]">RECORDE DE: {defaultName}</div>
-              <PxButton tone="gold" onClick={onSubmitName} className="w-full py-3 text-[9px] sm:text-[10px]">
-                {t.save}
+              {scoreError && <div className="mb-2 border border-[#a35662] bg-[#2a0d14] p-2 text-center font-pixel text-[7px] leading-4 text-[#ffb3ad]">{scoreError}</div>}
+              <PxButton tone="gold" onClick={onSubmitName} disabled={scoreSaving} className="w-full py-3 text-[9px] sm:text-[10px]">
+                {scoreSaving ? "SALVANDO..." : t.save}
               </PxButton>
               <PxButton tone="dark" onClick={onRestart} className="mt-2 w-full py-2.5 text-[8px]">▶ {t.playAgain}</PxButton>
               <PxButton tone="dark" onClick={onMenu} className="mt-2 w-full py-2.5 text-[8px]">← {t.menu}</PxButton>

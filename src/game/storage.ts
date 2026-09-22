@@ -156,9 +156,9 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
 export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreEntry[]; rank: number }> {
   if (!supabase) return { list: await loadRemoteScores(), rank: -1 };
 
-  const { data: authData } = await supabase.auth.getUser();
-  const user = authData.user;
-  if (!user) return { list: await loadRemoteScores(), rank: -1 };
+  const { data: authData } = await supabase.auth.getSession();
+  const userId = entry.userId ?? authData.session?.user?.id;
+  if (!userId) return { list: await loadRemoteScores(), rank: -1 };
 
   const normalizedName = String(entry.name ?? "RONIN").replace(/\s+/g, " ").trim().slice(0, 12) || "RONIN";
   const normalizedAvatar = normalizeAvatar(entry.avatarId);
@@ -177,7 +177,7 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
 
   const list = await loadRemoteScores();
   const sameDifficulty = list.filter((item) => item.difficulty === entry.difficulty);
-  return { list, rank: sameDifficulty.findIndex((item) => item.userId === user.id) };
+  return { list, rank: sameDifficulty.findIndex((item) => item.userId === userId) };
 }
 export function formatTime(sec: number) {
   const m = Math.floor(sec / 60);

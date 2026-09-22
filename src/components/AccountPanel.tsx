@@ -34,7 +34,7 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
     if (busy) return;
     setBusy(true);
     try {
-      if (register) { await signUp(email, password, username, avatarId); setMessage("Confira seu e-mail para confirmar a conta."); }
+      if (register) { await signUp(email, password, username, avatarId); setMessage("Confirme seu e-mail: abra a mensagem enviada pelo Supabase e clique no link de confirmação."); }
       else await signIn(email, password);
     } catch (error) { setMessage(authErrorMessage(error)); }
     finally { setBusy(false); }
