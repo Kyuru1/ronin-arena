@@ -1,6 +1,26 @@
 import { supabase } from "../lib/supabase";
-import type { Difficulty } from "./engine";
+import type { Difficulty, MagicType, Perk, Weapon, WeaponLevels } from "./engine";
 import type { AvatarId } from "./auth";
+import { isPerk } from "./perks";
+import { isRaceId, type RaceId } from "./races";
+
+export interface RankingRunDetails {
+  hp?: number;
+  maxHp?: number;
+  baseDamage?: number;
+  damageMultiplier?: number;
+  effectiveDamage?: number;
+  moveSpeed?: number;
+  attackSpeedMultiplier?: number;
+  dashCooldown?: number;
+  dashSpeedMult?: number;
+  activeSlot?: number;
+  weaponLevels?: WeaponLevels;
+  activePotions?: Array<{ type: string; time: number }>;
+  magicType?: MagicType;
+  perkBuffT?: number;
+  perkEchoReady?: boolean;
+}
 
 export interface ScoreEntry {
   name: string;
@@ -12,6 +32,12 @@ export interface ScoreEntry {
   difficulty: Difficulty;
   date: number;
   userId?: string;
+  raceId?: RaceId;
+  perk?: Perk | null;
+  weapons?: Weapon[];
+  coins?: number;
+  gameMode?: "solo" | "coop";
+  details?: RankingRunDetails;
 }
 
 export const MAX = 50;
@@ -31,6 +57,8 @@ function normalizeDifficulty(value: unknown): Difficulty {
   return "medium";
 }
 
+const WEAPONS: Weapon[] = ["katana", "bow", "hammer", "shield", "mine", "book", "staff"];
+
 function normalizeAvatar(value: unknown): ScoreEntry["avatarId"] {
   const avatars: AvatarId[] = ["samurai", "azureRonin", "violetRonin", "goldRonin", "jadeRonin", "shadowRonin", "bananaSamurai", "strawberryKnight", "orangeRonin", "snowRonin", "suitedHero", "dressHero", "crimsonSkeleton", "greenSlime", "sinisterShadow"];
   return avatars.includes(value as AvatarId) ? value as AvatarId : "samurai";
@@ -48,6 +76,12 @@ export function normalizeScores(entries: unknown): ScoreEntry[] {
     .map((entry) => {
       const storedName = typeof entry.player_name === "string" ? entry.player_name.trim() : typeof entry.name === "string" ? entry.name.trim() : "";
       const legacyProfileName = typeof entry.profile_username === "string" ? entry.profile_username.trim() : "";
+      const rawDetails = typeof entry.run_details === "object" && entry.run_details !== null
+        ? entry.run_details as Record<string, unknown>
+        : typeof entry.details === "object" && entry.details !== null
+          ? entry.details as Record<string, unknown>
+          : {};
+      const rawWeapons = Array.isArray(entry.weapons) ? entry.weapons : [];
       return {
       name: storedName || legacyProfileName || "RONIN",
       avatarId: normalizeAvatar(entry.avatar_id ?? entry.avatarId),
@@ -58,6 +92,12 @@ export function normalizeScores(entries: unknown): ScoreEntry[] {
       difficulty: normalizeDifficulty(entry.difficulty),
       date: Number.isFinite(Number(entry.date)) ? Number(entry.date) : typeof entry.created_at === "string" ? Date.parse(entry.created_at) : Date.now(),
       userId: typeof entry.user_id === "string" ? entry.user_id : undefined,
+      raceId: isRaceId(entry.race_id ?? entry.raceId) ? (entry.race_id ?? entry.raceId) as RaceId : undefined,
+      perk: entry.perk_id === null || entry.perk === null ? null : isPerk(entry.perk_id ?? entry.perk) ? (entry.perk_id ?? entry.perk) as Perk : undefined,
+      weapons: rawWeapons.filter((weapon): weapon is Weapon => WEAPONS.includes(weapon as Weapon)),
+      coins: Number.isFinite(Number(entry.coins)) ? Number(entry.coins) : undefined,
+      gameMode: entry.game_mode === "coop" || entry.gameMode === "coop" ? "coop" : entry.game_mode === "solo" || entry.gameMode === "solo" ? "solo" : undefined,
+      details: rawDetails as RankingRunDetails,
       };
     });
 
@@ -111,7 +151,7 @@ export async function loadRemoteScores(): Promise<ScoreEntry[]> {
   if (supabase) {
     const rankingQuery = supabase
       .from("top_50_ranking")
-      .select("user_id, player_name, avatar_id, difficulty, score, wave, kills, survival_time_seconds, created_at, placement")
+      .select("user_id, player_name, avatar_id, difficulty, score, wave, kills, survival_time_seconds, created_at, placement, race_id, perk_id, weapons, coins, game_mode, run_details")
       .order("score", { ascending: false })
       .order("wave", { ascending: false })
       .order("kills", { ascending: false })
@@ -163,7 +203,7 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
   const normalizedName = String(entry.name ?? "RONIN").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/[^A-Z0-9 _-]/g, "").replace(/\s+/g, " ").trim().slice(0, 12) || "RONIN";
   const normalizedAvatar = normalizeAvatar(entry.avatarId);
 
-  const payload = {
+  const legacyPayload = {
     p_difficulty: difficultyToDb(entry.difficulty),
     p_score: Math.max(0, Math.floor(entry.score)),
     p_wave: Math.max(1, Math.floor(entry.wave)),
@@ -172,13 +212,27 @@ export async function saveRemoteScore(entry: ScoreEntry): Promise<{ list: ScoreE
     p_player_name: normalizedName,
     p_avatar_id: normalizedAvatar,
   };
-  let { error: rpcError } = await supabase.rpc("submit_ranking", payload);
+  const payload = {
+    ...legacyPayload,
+    p_race_id: entry.raceId ?? null,
+    p_perk_id: entry.perk ?? null,
+    p_weapons: entry.weapons ?? [],
+    p_coins: Math.max(0, Math.floor(entry.coins ?? 0)),
+    p_game_mode: entry.gameMode ?? "solo",
+    p_run_details: entry.details ?? {},
+  };
+  let usedLegacyRpc = false;
+  let { error: rpcError } = await supabase.rpc("submit_ranking_details", payload);
+  if (rpcError && /function.*submit_ranking_details|could not find.*function|PGRST202/i.test(String(rpcError.message ?? rpcError))) {
+    usedLegacyRpc = true;
+    ({ error: rpcError } = await supabase.rpc("submit_ranking", legacyPayload));
+  }
   if (rpcError && /jwt|token|authentication|auth/i.test(String(rpcError.message ?? rpcError))) {
     const { error: refreshError } = await supabase.auth.refreshSession();
-    if (!refreshError) ({ error: rpcError } = await supabase.rpc("submit_ranking", payload));
+    if (!refreshError) ({ error: rpcError } = usedLegacyRpc ? await supabase.rpc("submit_ranking", legacyPayload) : await supabase.rpc("submit_ranking_details", payload));
   }
   if (rpcError && /invalid avatar|avatar_id/i.test(String(rpcError.message ?? rpcError)) && normalizedAvatar !== "samurai") {
-    ({ error: rpcError } = await supabase.rpc("submit_ranking", { ...payload, p_avatar_id: "samurai" }));
+    ({ error: rpcError } = usedLegacyRpc ? await supabase.rpc("submit_ranking", { ...legacyPayload, p_avatar_id: "samurai" }) : await supabase.rpc("submit_ranking_details", { ...payload, p_avatar_id: "samurai" }));
   }
   if (rpcError) throw rpcError;
   const list = await loadRemoteScores();

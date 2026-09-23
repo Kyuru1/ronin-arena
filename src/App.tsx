@@ -35,6 +35,7 @@ const emptyStats: HudStats = {
   chain: 0,
   chainP: 0,
   weapons: ["katana"],
+  weaponsUsed: ["katana"],
   activeSlot: 0,
   waveTotal: 0,
   waveLeft: 0,
@@ -60,6 +61,17 @@ const emptyStats: HudStats = {
   raceId: "ronin",
   raceAbilityT: 0,
   raceAbilityCd: 0,
+  avatarId: "samurai",
+  gameMode: "solo",
+  baseDamage: 2,
+  damageMultiplier: 1.1,
+  effectiveDamage: 2.2,
+  moveSpeed: 113.4,
+  attackSpeedMultiplier: 1,
+  effectiveDashCooldown: 6,
+  maxWeaponSlots: 4,
+  perkBuffT: 0,
+  perkEchoReady: false,
   isSpectating: false,
   spectatedName: null,
 };
@@ -504,6 +516,28 @@ export default function App() {
       difficulty: finalStats.difficulty,
       date: Date.now(),
       userId: activeProfile.id,
+      raceId: finalStats.raceId,
+      perk: finalStats.perk,
+      weapons: finalStats.weaponsUsed,
+      coins: finalStats.coins,
+      gameMode: finalStats.gameMode,
+      details: {
+        hp: finalStats.hp,
+        maxHp: finalStats.maxHp,
+        baseDamage: finalStats.baseDamage,
+        damageMultiplier: finalStats.damageMultiplier,
+        effectiveDamage: finalStats.effectiveDamage,
+        moveSpeed: finalStats.moveSpeed,
+        attackSpeedMultiplier: finalStats.attackSpeedMultiplier,
+        dashCooldown: finalStats.effectiveDashCooldown,
+        dashSpeedMult: finalStats.dashSpeedMult,
+        activeSlot: finalStats.activeSlot,
+        weaponLevels: finalStats.weaponLevels,
+        activePotions: finalStats.activePotions,
+        magicType: finalStats.magicType,
+        perkBuffT: finalStats.perkBuffT,
+        perkEchoReady: finalStats.perkEchoReady,
+      },
     };
     setScoreSaving(true);
     setScoreError(null);
@@ -678,6 +712,7 @@ export default function App() {
             hudScale={opts.hudScale}
             language={opts.language}
             t={t}
+            abilityBinding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO · Y / TRIÂNGULO" : opts.keyboardBindings.specialAbility.toUpperCase() + " · Y / TRIÂNGULO"}
           />
         )}
         {raceReveal && <RaceReveal raceId={raceReveal} binding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO" : opts.keyboardBindings.specialAbility.toUpperCase()} onContinue={() => dismissRaceReveal(false)} onHideForever={() => dismissRaceReveal(true)} />}
@@ -750,6 +785,7 @@ export default function App() {
             onCloseShop={closeShop}
             language={opts.language}
             t={t}
+            abilityBinding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO · Y / TRIÂNGULO" : opts.keyboardBindings.specialAbility.toUpperCase() + " · Y / TRIÂNGULO"}
           />
         )}
       </div>

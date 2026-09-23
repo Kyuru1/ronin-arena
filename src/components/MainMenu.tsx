@@ -7,6 +7,9 @@ import type { PlayerProfile } from "../game/auth";
 import PixelSprite from "./PixelSprite";
 import { PxButton, PxChip, PxFrame, PxHeading, PxRow } from "./PixelUi";
 import { useMenuNavigation } from "./useMenuNavigation";
+import CharacterDetails from "./CharacterDetails";
+import { PERKS } from "../game/perks";
+import { formatTime } from "../game/storage";
 
 export interface UiOpts {
   sound: boolean;
@@ -51,6 +54,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [rankingDifficulty, setRankingDifficulty] = useState<Difficulty>("medium");
   const [capturing, setCapturing] = useState<KeyboardAction | null>(null);
+  const [selectedRanking, setSelectedRanking] = useState<ScoreEntry | null>(null);
   const bindingLabels: Array<[KeyboardAction, string]> = [["up", "MOVER CIMA"], ["down", "MOVER BAIXO"], ["left", "MOVER ESQUERDA"], ["right", "MOVER DIREITA"], ["attack", "ATACAR"], ["dash", "DASH"], ["specialAbility", "HABILIDADE ESPECIAL"], ["prev", "ARMA ANTERIOR"], ["next", "PROXIMA ARMA"]];
   useEffect(() => {
     if (!capturing) return;
@@ -119,7 +123,50 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
             </div>
           )}
 
-          {tab === "ranking" && <div className="flex flex-col gap-2"><PxHeading>{t.ranking} · TOP 50</PxHeading><div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div><div className="px-inset"><div className="ranking-head"><span>#</span><span>{t.name}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div><div className="scrollbar-thin max-h-[75vh] overflow-y-auto">{scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0 ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div> : scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).map((score, index) => <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-four ${index < 3 ? "is-top" : ""}`}><span>{index + 1}</span><span className="flex min-w-0 items-center gap-2 overflow-hidden"><PixelSprite name={score.avatarId === "samurai" ? "player" : score.avatarId ?? "player"} scale={1} /><span className="min-w-0 truncate">{score.name}</span></span><span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span></div>)}</div></div></div>}
+          {tab === "ranking" && <div className="flex flex-col gap-2">
+            <PxHeading>{t.ranking} · TOP 50</PxHeading>
+            <div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div>
+            <div className="px-inset">
+              <div className="ranking-head ranking-row-detailed"><span>#</span><span>{t.name}</span><span>{opts.language === "pt" ? "DETALHES" : "DETAILS"}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div>
+              <div className="scrollbar-thin max-h-[75vh] overflow-y-auto">
+                {scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0
+                  ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div>
+                  : scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).map((score, index) =>
+                    <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-detailed ${index < 3 ? "is-top" : ""}`}>
+                      <span>{index + 1}</span>
+                      <span className="flex min-w-0 items-center gap-2 overflow-hidden"><PixelSprite name={score.avatarId === "samurai" ? "player" : score.avatarId ?? "player"} scale={1} /><span className="min-w-0 truncate">{score.name}</span></span>
+                      <button className="ranking-details-button" onClick={() => setSelectedRanking(score)}>{opts.language === "pt" ? "DETALHES" : "DETAILS"}</button>
+                      <span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span>
+                    </div>)}
+              </div>
+            </div>
+          </div>}
+          {selectedRanking && <div className="ranking-modal-backdrop" role="dialog" aria-modal="true" aria-label={`Detalhes da run de ${selectedRanking.name}`} onMouseDown={(event) => { if (event.currentTarget === event.target) setSelectedRanking(null); }}>
+            <PxFrame title={`RUN DE ${selectedRanking.name}`} className="ranking-modal anim-pop">
+              <div className="ranking-modal-summary">
+                <strong>{selectedRanking.name}</strong>
+                <span>SCORE {selectedRanking.score.toLocaleString()}</span>
+                <span>WAVE {selectedRanking.wave}</span>
+                <span>{selectedRanking.kills} ABATES</span>
+                <span>{selectedRanking.coins ?? "—"} MOEDAS</span>
+                <span>{formatTime(selectedRanking.time)}</span>
+              </div>
+              <CharacterDetails data={{
+                ...selectedRanking.details,
+                avatarId: selectedRanking.avatarId,
+                raceId: selectedRanking.raceId,
+                perk: selectedRanking.perk,
+                weapons: selectedRanking.weapons,
+                gameMode: selectedRanking.gameMode,
+                coins: selectedRanking.coins,
+                wave: selectedRanking.wave,
+                kills: selectedRanking.kills,
+                score: selectedRanking.score,
+                time: selectedRanking.time,
+              }} abilityBinding="F · Y / TRIANGLE" language={opts.language} />
+              <PxButton tone="dark" onClick={() => setSelectedRanking(null)} className="mt-3 w-full py-3 text-[8px]">{opts.language === "pt" ? "FECHAR" : "CLOSE"}</PxButton>
+            </PxFrame>
+          </div>}
 
           <PxButton tone="dark" onClick={() => setTab("main")} className="mt-4 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
         </PxFrame>
@@ -128,23 +175,13 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   }
 
   if (playStep === "perk") {
-    const perks: { id: Perk; title: string; desc: string }[] = [
-      { id: "bladeMonk", title: "Monge da Lâmina Única", desc: "Usa somente a katana e não pode comprar ou equipar outras armas. A katana recebe muito mais dano, cadência e recarga." },
-      { id: "bloodContract", title: "Contrato de Sangue", desc: "Abaixo de 30% da vida, você causa mais dano e ataca mais rápido. Ficar ferido fica muito perigoso." },
-      { id: "bottomlessPocket", title: "Bolso Sem Fundo", desc: "Permite carregar até 6 armas ou equipamentos, mas reduz sua velocidade de movimento." },
-      { id: "predatorInstinct", title: "Instinto Predador", desc: "Cada abate dá velocidade e cadência por pouco tempo. Abates seguidos renovam o efeito." },
-      { id: "sharpGlass", title: "Vidro Afiado", desc: "Aumenta bastante o dano dos ataques, mas você começa com menos vida máxima." },
-      { id: "kyuEcho", title: "Eco de Kyu", desc: "A cada alguns segundos, seu próximo ataque causa dano extra como um eco em linha reta." },
-      { id: "cursedArsenal", title: "Arsenal Amaldiçoado", desc: "Todas as armas causam mais dano, mas a maldição reduz sua velocidade de movimento." },
-      { id: "lastBullet", title: "Última Bala", desc: "O disparo totalmente carregado causa dano enorme. Ideal para arco e pistola automática." },
-    ];
-    const available = difficulty === "hard" ? perks.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : perks;
+    const available = difficulty === "hard" ? PERKS.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : PERKS;
     return (
       <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
-        <PxFrame title="ESCOLHA SEU PERK" className="anim-pop w-full max-w-5xl p-4 sm:p-6 lg:p-8">
-          <div className="mb-4 text-center font-pixel text-[8px] leading-5 text-[#91b9b5] sm:text-[9px]">Escolha uma vantagem para esta partida.</div>
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">{available.map((perk) => <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPlayStep(null); onStart(difficulty); }} className="min-h-28 flex-col items-start gap-3 p-4 text-left sm:min-h-32 sm:p-5"><strong className="font-pixel text-[9px] leading-5 text-[#ffd44a] sm:text-[10px]">{perk.title}</strong><span className="font-pixel text-[7px] leading-5 text-[#a9c3be] sm:text-[8px] sm:leading-6">{perk.desc}</span></PxButton>)}</div>
-          <PxButton tone="dark" onClick={() => setPlayStep("difficulty")} className="mt-4 w-full py-4 text-[9px] sm:text-[10px]">VOLTAR</PxButton>
+        <PxFrame title={opts.language === "pt" ? "ESCOLHA SEU PERK" : "CHOOSE YOUR PERK"} className="anim-pop w-full max-w-5xl p-4 sm:p-6 lg:p-8">
+          <div className="mb-4 text-center font-pixel text-[8px] leading-5 text-[#91b9b5] sm:text-[9px]">{opts.language === "pt" ? "Escolha uma vantagem para esta partida." : "Choose one advantage for this run."}</div>
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">{available.map((perk) => <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPlayStep(null); onStart(difficulty); }} className="min-h-28 flex-col items-start gap-3 p-4 text-left sm:min-h-32 sm:p-5"><strong className="font-pixel text-[9px] leading-5 text-[#ffd44a] sm:text-[10px]">{perk.name}</strong><span className="font-pixel text-[7px] leading-5 text-[#a9c3be] sm:text-[8px] sm:leading-6">{perk.description}</span></PxButton>)}</div>
+          <PxButton tone="dark" onClick={() => setPlayStep("difficulty")} className="mt-4 w-full py-4 text-[9px] sm:text-[10px]">{opts.language === "pt" ? "VOLTAR" : "BACK"}</PxButton>
         </PxFrame>
       </div>
     );

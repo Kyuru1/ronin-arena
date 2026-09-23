@@ -4,6 +4,7 @@ import { drawWeaponArt } from "./weaponArt";
 import { I18N, type Language } from "./i18n";
 import type { AvatarId } from "./auth";
 import { RACE_CONFIG, isRaceId, rollRace, type RaceId } from "./races";
+import type { Perk } from "./perks";
 import type {
   GamePacket,
   PeerRoninState,
@@ -19,15 +20,7 @@ export type PowerUp = "speed" | "heart" | "dashCd" | "dashDist";
 export type WeaponUpgrade = "damage" | "speed" | "range" | "form";
 export type MagicType = "fire" | "ice" | "poison" | "water";
 export type Difficulty = "easy" | "medium" | "hard";
-export type Perk =
-  | "bladeMonk"
-  | "bloodContract"
-  | "bottomlessPocket"
-  | "predatorInstinct"
-  | "sharpGlass"
-  | "kyuEcho"
-  | "cursedArsenal"
-  | "lastBullet";
+export type { Perk } from "./perks";
 export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
 export const DIFFICULTY_RULES = {
@@ -58,7 +51,7 @@ export function isPowerUpAtLimit(
   const base = DIFFICULTY_RULES[difficulty].limits;
   const race = RACE_CONFIG[stats.raceId ?? "ronin"];
   const limits = {
-    maxHp: base.maxHp * race.modifiers.maxHp * race.modifiers.attributeLimit,
+    maxHp: Math.max(1, Math.floor(base.maxHp * race.modifiers.maxHp * race.modifiers.attributeLimit)),
     speed: base.speed * race.modifiers.attributeLimit,
     dashMax: base.dashMax / race.modifiers.attributeLimit,
     dashSpeedMult: base.dashSpeedMult * race.modifiers.attributeLimit,
@@ -96,6 +89,7 @@ export interface HudStats {
   chain: number;
   chainP: number;
   weapons: Weapon[];
+  weaponsUsed: Weapon[];
   activeSlot: number;
   waveTotal: number;
   waveLeft: number;
@@ -115,6 +109,17 @@ export interface HudStats {
   raceId: RaceId;
   raceAbilityT: number;
   raceAbilityCd: number;
+  avatarId: AvatarId;
+  gameMode: "solo" | "coop";
+  baseDamage: number;
+  damageMultiplier: number;
+  effectiveDamage: number;
+  moveSpeed: number;
+  attackSpeedMultiplier: number;
+  effectiveDashCooldown: number;
+  maxWeaponSlots: number;
+  perkBuffT: number;
+  perkEchoReady: boolean;
 }
 
 export interface GameOpts {
@@ -328,6 +333,7 @@ interface LandMine {
   y: number;
   armT: number;
   life: number;
+  attackBonus: number;
 }
 
 const TAU = Math.PI * 2;
@@ -433,12 +439,15 @@ export class Game {
   perk: Perk | null = null;
   perkBuffT = 0;
   perkEchoT = 0;
+  perkAttackBonus = 1;
+  lastBulletShots = 0;
   raceId: RaceId = "ronin";
   raceAbilityT = 0;
   raceAbilityCd = 0;
 
   // Weapons in slots (up to 4)
   weapons: Weapon[] = ["katana"];
+  weaponsUsed: Weapon[] = ["katana"];
   activeSlot = 0;
   weaponLevels = createWeaponLevels();
   magicType: MagicType = "fire";
@@ -745,9 +754,12 @@ export class Game {
     this.dashMax = s.dashMax;
     this.dashSpeedMult = s.dashSpeedMult;
     this.weapons = [...s.weapons];
+    this.weaponsUsed = [...new Set(s.weaponsUsed?.length ? s.weaponsUsed : s.weapons)];
     this.activeSlot = Math.min(s.activeSlot, this.weapons.length - 1);
     this.weaponLevels = JSON.parse(JSON.stringify(s.weaponLevels)) as WeaponLevels;
     this.magicType = s.magicType;
+    this.perkBuffT = Math.max(0, Number(s.perkBuffT) || 0);
+    this.perkEchoT = s.perkEchoReady ? 6 : 0;
     this.resetTransientState();
     this.enforceStatLimits();
     if (saved.atShop) {
@@ -1191,6 +1203,7 @@ export class Game {
     if (this.weapons.length >= maxWeapons) return false;
     this.coins -= cost;
     this.weapons.push(weapon);
+    if (!this.weaponsUsed.includes(weapon)) this.weaponsUsed.push(weapon);
     this.activeSlot = this.weapons.length - 1;
     if (weapon === "mine") this.mineTutorialT = 6;
     Sfx.buy();
@@ -1239,17 +1252,15 @@ export class Game {
 
   buyPowerUp(power: PowerUp, cost: number): boolean {
     if (this.coins < cost) return false;
-    const atLimit =
-      power === "dashDist" && this.perk === "bladeMonk"
-        ? this.dashSpeedMult >= this.limits().dashSpeedMult
-        : isPowerUpAtLimit(this, power, this.difficulty);
+    const atLimit = isPowerUpAtLimit(this, power, this.difficulty);
     if (atLimit) return false;
     this.coins -= cost;
     if (power === "speed") {
       this.speedBonus = Math.min(this.limits().speed - 108, this.speedBonus + 18);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].speedBoost, "#ffae57");
     } else if (power === "heart") {
-      this.maxHp = Math.min(this.limits().maxHp, this.maxHp + 1);
+      const maxHpLimit = Math.floor(this.limits().maxHp);
+      this.maxHp = Math.min(maxHpLimit, Math.floor(this.maxHp) + 1);
       this.hp = Math.min(this.maxHp, this.hp + 2);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].healthBoost, "#ff4f58");
     } else if (power === "dashCd") {
@@ -1274,7 +1285,7 @@ export class Game {
     }
 
     const limits = this.limits();
-    this.maxHp = Math.min(this.maxHp, limits.maxHp);
+    this.maxHp = Math.min(Math.floor(this.maxHp), limits.maxHp);
     this.speedBonus = Math.min(this.speedBonus, limits.speed - 108);
     this.dashMax = Math.max(this.dashMax, limits.dashMax);
     this.dashSpeedMult = Math.min(this.dashSpeedMult, limits.dashSpeedMult);
@@ -1363,10 +1374,13 @@ export class Game {
     this.raceAbilityCd = 0;
     this.applyRaceStartingStats();
     this.weapons = ["katana"];
+    this.weaponsUsed = ["katana"];
     this.activeSlot = 0;
     this.weaponLevels = createWeaponLevels();
     this.perkBuffT = 0;
     this.perkEchoT = 0;
+    this.perkAttackBonus = 1;
+    this.lastBulletShots = 0;
     this.magicType = "fire";
     this.magicCd = 0;
     this.keyboardAimAngle = 0;
@@ -1477,23 +1491,23 @@ export class Game {
     const race = RACE_CONFIG[this.raceId];
     const limitMultiplier = race.modifiers.attributeLimit;
     const limits = {
-      maxHp: Math.max(1, base.maxHp * race.modifiers.maxHp * limitMultiplier),
+      maxHp: Math.max(1, Math.floor(base.maxHp * race.modifiers.maxHp * limitMultiplier)),
       speed: base.speed * limitMultiplier,
       dashMax: base.dashMax / limitMultiplier,
       dashSpeedMult: base.dashSpeedMult * limitMultiplier,
     };
-    return this.perk === "bladeMonk" ? { ...limits, dashSpeedMult: limits.dashSpeedMult * 1.5 } : limits;
+    return limits;
   }
 
   private applyRaceStartingStats() {
     const race = RACE_CONFIG[this.raceId];
     const baseMaxHp = this.perk === "sharpGlass" ? 3 : 5;
-    this.maxHp = Math.max(1, baseMaxHp * race.modifiers.maxHp);
+    this.maxHp = Math.max(1, Math.floor(baseMaxHp * race.modifiers.maxHp));
     this.hp = this.maxHp;
     if (race.modifiers.initialProgress <= 0) return;
     const progress = race.modifiers.initialProgress;
     const limits = this.limits();
-    this.maxHp = this.maxHp + (limits.maxHp - this.maxHp) * progress;
+    this.maxHp = Math.floor(this.maxHp + (limits.maxHp - this.maxHp) * progress);
     this.hp = this.maxHp;
     this.speedBonus = Math.round((limits.speed - 108) * progress);
     this.dashMax = 6 + (limits.dashMax - 6) * progress;
@@ -1502,12 +1516,66 @@ export class Game {
 
   private enforceStatLimits() {
     const limits = this.limits();
-    this.maxHp = Math.min(this.maxHp, limits.maxHp);
+    this.maxHp = Math.min(Math.floor(this.maxHp), limits.maxHp);
     this.speedBonus = Math.min(this.speedBonus, limits.speed - 108);
     this.dashMax = Math.max(this.dashMax, limits.dashMax);
     this.dashSpeedMult = Math.min(this.dashSpeedMult, limits.dashSpeedMult);
     this.hp = clamp(this.hp, 0, this.maxHp);
   }
+  private perkDamageMultiplier(): number {
+    if (this.perk === "bladeMonk" && this.currentWeapon === "katana") return 1.85;
+    if (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3) return 1.75;
+    if (this.perk === "sharpGlass") return 1.35;
+    if (this.perk === "cursedArsenal") return 1.2;
+    return 1;
+  }
+
+  private attackSpeedMultiplier(): number {
+    let multiplier = this.raceAttackSpeedMultiplier();
+    if (this.perk === "bladeMonk" && this.currentWeapon === "katana") multiplier *= 1.35;
+    if (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3) multiplier *= 1.35;
+    if (this.perk === "predatorInstinct" && this.perkBuffT > 0) multiplier *= 1.4;
+    return multiplier;
+  }
+
+  private currentMoveSpeed(): number {
+    return (
+      (108 +
+        this.speedBonus -
+        (this.perk === "bottomlessPocket" ? 12 : 0) -
+        (this.perk === "cursedArsenal" ? 8 : 0) +
+        (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0)) *
+      (this.speedT > 0 ? 1.45 : 1) *
+      this.raceMoveSpeedMultiplier()
+    );
+  }
+
+  private perkDashCooldownMultiplier(): number {
+    return this.perk === "bladeMonk" ? 0.8 : 1;
+  }
+
+  private currentBaseDamage(): number {
+    const levels = this.weaponLevels[this.currentWeapon];
+    if (this.currentWeapon === "bow") return 6 + levels.damage;
+    if (this.currentWeapon === "mine") return 6 + levels.damage * 2;
+    if (this.currentWeapon === "book") {
+      return this.magicType === "fire" ? 4 + levels.damage * 2 : this.magicType === "water" ? 2 + levels.damage : 1 + levels.damage;
+    }
+    if (this.currentWeapon === "staff") return (levels.form > 0 ? 4 : 2) + levels.damage;
+    const base = WEAPON_CONFIG[this.currentWeapon] ?? WEAPON_CONFIG.katana;
+    return base.dmg + levels.damage * (this.currentWeapon === "hammer" ? 2 : 1) +
+      (this.currentWeapon === "hammer" && levels.form > 0 ? 5 : 0) +
+      (this.currentWeapon === "katana" && levels.form > 0 ? 2 : 0);
+  }
+
+  private consumeAttackBonus(): number {
+    if (this.perk !== "kyuEcho" || this.perkEchoT < 6) return 1;
+    this.perkEchoT = 0;
+    this.glint = 1;
+    this.burst(this.px, this.py, 14, "#69d7ff", 120);
+    return 1.65;
+  }
+
   stats(): HudStats {
     this.enforceStatLimits();
     const spectated = this.isCoop && this.hp <= 0 ? this.spectatedRonin()?.[1] ?? null : null;
@@ -1527,6 +1595,7 @@ export class Game {
       chain: this.atkChain,
       chainP: clamp(this.atkChainT / 0.85, 0, 1),
       weapons: spectated?.weapons ?? this.weapons,
+      weaponsUsed: this.weaponsUsed,
       activeSlot: spectated?.activeSlot ?? this.activeSlot,
       waveTotal: this.waveTotal,
       waveLeft: this.waveLeft,
@@ -1561,6 +1630,17 @@ export class Game {
       raceId: isRaceId(spectated?.raceId) ? spectated.raceId : this.raceId,
       raceAbilityT: spectated?.raceAbilityT ?? this.raceAbilityT,
       raceAbilityCd: spectated?.raceAbilityCd ?? this.raceAbilityCd,
+      avatarId: this.playerAvatar,
+      gameMode: this.isCoop ? "coop" : "solo",
+      baseDamage: this.currentBaseDamage(),
+      damageMultiplier: this.perkDamageMultiplier() * (this.strengthT > 0 ? 1.5 : 1) * this.raceDamageMultiplier(),
+      effectiveDamage: this.currentBaseDamage() * this.perkDamageMultiplier() * (this.strengthT > 0 ? 1.5 : 1) * this.raceDamageMultiplier(),
+      moveSpeed: this.currentMoveSpeed(),
+      attackSpeedMultiplier: (1 + this.weaponLevels[this.currentWeapon].speed * 0.14) * this.attackSpeedMultiplier(),
+      effectiveDashCooldown: this.dashMax * (this.agilityT > 0 ? 0.5 : 1) * this.raceDashCooldownMultiplier() * this.perkDashCooldownMultiplier(),
+      maxWeaponSlots: this.perk === "bladeMonk" ? 1 : this.perk === "bottomlessPocket" ? 6 : 4,
+      perkBuffT: this.perkBuffT,
+      perkEchoReady: this.perk === "kyuEcho" && this.perkEchoT >= 6,
     };
   }
 
@@ -1652,6 +1732,8 @@ export class Game {
     this.strengthT = Math.max(0, this.strengthT - dt);
     this.speedT = Math.max(0, this.speedT - dt);
     this.agilityT = Math.max(0, this.agilityT - dt);
+    this.perkBuffT = Math.max(0, this.perkBuffT - dt);
+    if (this.perk === "kyuEcho") this.perkEchoT = Math.min(6, this.perkEchoT + dt);
     this.iframe = Math.max(0, this.iframe - dt);
     this.raceAbilityT = Math.max(0, this.raceAbilityT - dt);
     this.raceAbilityCd = Math.max(0, this.raceAbilityCd - dt);
@@ -1831,14 +1913,7 @@ export class Game {
     if (this.opts.inputMode === "keyboard" && ml > 0.01)
       this.keyboardAimAngle = Math.atan2(my, mx);
 
-    const SPEED =
-      (108 +
-        this.speedBonus -
-        (this.perk === "bottomlessPocket" ? 12 : 0) -
-        (this.perk === "cursedArsenal" ? 8 : 0) +
-        (this.perk === "predatorInstinct" && this.perkBuffT > 0 ? 28 : 0)) *
-      (this.speedT > 0 ? 1.45 : 1) *
-      this.raceMoveSpeedMultiplier();
+    const SPEED = this.currentMoveSpeed();
 
     if (this.dashT > 0) {
       this.dashT -= dt;
@@ -1927,7 +2002,7 @@ export class Game {
         this.dashT = 0.17;
         this.dashHitSet.clear();
         this.dashSlashes.length = 0;
-        this.dashCd = this.dashMax * (this.agilityT > 0 ? 0.5 : 1) * this.raceDashCooldownMultiplier();
+        this.dashCd = this.dashMax * (this.agilityT > 0 ? 0.5 : 1) * this.raceDashCooldownMultiplier() * this.perkDashCooldownMultiplier();
         this.iframe = Math.max(this.iframe, 0.26);
         this.shake = Math.max(this.shake, 3);
         Sfx.dash();
@@ -2054,6 +2129,7 @@ export class Game {
     void dt;
     if (!wantAttack || this.atkCd > 0 || this.dashT > 0 || this.summons.length >= 6) return;
     const a = this.aimAngle();
+    const attackBonus = this.consumeAttackBonus();
     const evolved = this.weaponLevels.staff.form > 0;
     const area = evolved ? 92 + this.weaponLevels.staff.range * 10 : 62 + this.weaponLevels.staff.range * 7;
     const color = evolved ? "#9f63ff" : "#4db9ff";
@@ -2061,11 +2137,11 @@ export class Game {
     this.burst(this.px + Math.cos(a) * 28, this.py + Math.sin(a) * 28, evolved ? 28 : 20, color, evolved ? 150 : 110);
     for (const enemy of this.enemies.slice()) {
       if (Math.hypot(enemy.x - this.px, enemy.y - this.py) <= area) {
-        this.damageEnemy(enemy, (evolved ? 4 : 2) + this.weaponLevels.staff.damage, a);
+        this.damageEnemy(enemy, ((evolved ? 4 : 2) + this.weaponLevels.staff.damage) * attackBonus, a);
         if (enemy.hp <= 0) this.killEnemy(enemy, a);
       }
     }
-    this.atkCd = 0.62 / ((1 + this.weaponLevels.staff.speed * 0.12) * this.raceAttackSpeedMultiplier());
+    this.atkCd = 0.62 / ((1 + this.weaponLevels.staff.speed * 0.12) * this.attackSpeedMultiplier());
     this.atkAngle = a;
     this.glint = 1;
     Sfx.swing("staff");
@@ -2138,13 +2214,14 @@ export class Game {
 
   private startAttack() {
     let a = this.aimAngle();
+    this.perkAttackBonus = this.consumeAttackBonus();
     if (this.currentWeapon === "shield") {
       this.atkAngle = a;
       this.atkWind = 0;
       this.atkDur = 0.22;
       this.atkT = this.atkDur;
       this.atkRec = 0.08;
-      this.atkCd = 0.38 / ((1 + this.weaponLevels.shield.speed * 0.14) * this.raceAttackSpeedMultiplier());
+      this.atkCd = 0.38 / ((1 + this.weaponLevels.shield.speed * 0.14) * this.attackSpeedMultiplier());
       this.hitSet.clear();
       Sfx.shieldBash();
       return;
@@ -2183,7 +2260,7 @@ export class Game {
     const weapon = this.currentWeapon;
     const base = WEAPON_CONFIG[weapon] ?? WEAPON_CONFIG.katana;
     const levels = this.weaponLevels[weapon];
-    const speed = (1 + levels.speed * 0.14) * this.raceAttackSpeedMultiplier();
+    const speed = (1 + levels.speed * 0.14) * this.attackSpeedMultiplier();
     const evolvedHammer = weapon === "hammer" && levels.form > 0;
     const evolvedKatana = weapon === "katana" && levels.form > 0;
     return {
@@ -2203,11 +2280,7 @@ export class Game {
           levels.damage * (weapon === "hammer" ? 2 : 1) +
           (evolvedHammer ? 5 : 0) +
           (evolvedKatana ? 2 : 0)) *
-        (this.perk === "bladeMonk" ? 1.85 : 1) *
-        (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) *
-        (this.perk === "sharpGlass" ? 1.35 : 1) *
-        (this.perk === "cursedArsenal" ? 1.2 : 1) *
-        (this.perk === "kyuEcho" && this.perkEchoT >= 6 ? 1.65 : 1),
+        this.perkAttackBonus,
       kb: base.kb + levels.range * 25 + (evolvedHammer ? 180 : 0) + (evolvedKatana ? 80 : 0),
     };
   }
@@ -2278,7 +2351,7 @@ export class Game {
   private updateBow(want: boolean, dt: number) {
     const levels = this.weaponLevels.bow;
     const automatic = levels.form > 0;
-    const speed = (1 + levels.speed * 0.14) * this.raceAttackSpeedMultiplier();
+    const speed = (1 + levels.speed * 0.14) * this.attackSpeedMultiplier();
 
     if (automatic) {
       this.bowHolding = want;
@@ -2332,6 +2405,17 @@ export class Game {
   private releaseBow(automatic = false) {
     const levels = this.weaponLevels.bow;
     const charge = automatic ? 0.55 : this.bowCharge;
+    const echoBonus = this.consumeAttackBonus();
+    let lastBulletBonus = 1;
+    if (this.perk === "lastBullet") {
+      if (automatic) {
+        this.lastBulletShots = (this.lastBulletShots + 1) % 6;
+        if (this.lastBulletShots === 0) lastBulletBonus = 2;
+      } else if (charge >= 0.99) {
+        lastBulletBonus = 2;
+      }
+    }
+    if (echoBonus > 1 || lastBulletBonus > 1) this.burst(this.px, this.py, 16, lastBulletBonus > 1 ? "#ffcf5a" : "#69d7ff", 145);
     // Guarda o valor do desenho antes de zerar, para a animação do release
     // não exibir o arco "solto" durante o snap-back.
     this.bowReleaseDraw = charge;
@@ -2340,9 +2424,8 @@ export class Game {
     const sp = automatic ? 680 : 300 + charge * 300;
     const dmg =
       (automatic ? 2 + levels.damage : 2 + Math.round(charge * 4) + levels.damage) *
-      (this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3 ? 1.75 : 1) *
-      (this.perk === "sharpGlass" ? 1.35 : 1) *
-      (this.perk === "cursedArsenal" ? 1.2 : 1);
+      echoBonus *
+      lastBulletBonus;
     const pierce = automatic ? 1 : 1 + Math.round(charge * 3);
     this.bowReleasing = automatic ? 0.03 : 0.14;
     this.arrows.push({
@@ -2371,14 +2454,14 @@ export class Game {
   private updateMagic(want: boolean, dt: number) {
     this.magicCd = Math.max(0, this.magicCd - dt);
     if (!want || this.magicCd > 0 || this.dashT > 0) return;
-    const speed = (1 + this.weaponLevels.book.speed * 0.14) * this.raceAttackSpeedMultiplier();
+    const speed = (1 + this.weaponLevels.book.speed * 0.14) * this.attackSpeedMultiplier();
     this.magicCd = 0.72 / speed;
-    this.castMagic();
+    this.castMagic(this.consumeAttackBonus());
   }
 
-  private castMagic() {
+  private castMagic(attackBonus: number) {
     if (this.weaponLevels.book.form > 0) {
-      this.castPsychicMagic();
+      this.castPsychicMagic(attackBonus);
       return;
     }
     const levels = this.weaponLevels.book;
@@ -2400,7 +2483,7 @@ export class Game {
       const enemyAngle = Math.atan2(dy, dx);
       if (distance > range + enemy.r || Math.abs(angDiff(enemyAngle, angle)) > 0.72) continue;
       hits++;
-      this.applyMagicHit(enemy, enemyAngle, levels);
+      this.applyMagicHit(enemy, enemyAngle, levels, attackBonus);
     }
 
     const sourceX = this.px + Math.cos(angle) * 16;
@@ -2416,7 +2499,7 @@ export class Game {
     Sfx.swing("book");
   }
 
-  private castPsychicMagic() {
+  private castPsychicMagic(attackBonus: number) {
     const levels = this.weaponLevels.book;
     const angle = this.aimAngle();
     const reach = 64 + levels.range * 9;
@@ -2439,7 +2522,7 @@ export class Game {
       const distance = Math.hypot(dx, dy);
       if (distance > radius + enemy.r) continue;
       hits++;
-      this.applyMagicHit(enemy, Math.atan2(enemy.y - y, enemy.x - x), levels);
+      this.applyMagicHit(enemy, Math.atan2(enemy.y - y, enemy.x - x), levels, attackBonus);
     }
 
     this.magicFxT = 0.6;
@@ -2454,14 +2537,14 @@ export class Game {
     Sfx.swing("book");
   }
 
-  private applyMagicHit(enemy: Enemy, enemyAngle: number, levels: WeaponLevels["book"]): void {
+  private applyMagicHit(enemy: Enemy, enemyAngle: number, levels: WeaponLevels["book"], attackBonus: number): void {
     const direct =
       this.magicType === "fire"
         ? 4 + levels.damage * 2
         : this.magicType === "water"
           ? 2 + levels.damage
           : 1 + levels.damage;
-    const killed = this.damageEnemy(enemy, direct, enemyAngle);
+    const killed = this.damageEnemy(enemy, direct * attackBonus, enemyAngle);
     if (killed) return;
     if (this.magicType === "fire") {
       enemy.fireT = Math.max(enemy.fireT, 3);
@@ -2572,10 +2655,7 @@ export class Game {
   }
   private cutDuringDash() {
     const angle = Math.atan2(this.dashDy, this.dashDx);
-    const damage =
-      (4 + this.weaponLevels.katana.damage * 2) *
-      (this.perk === "sharpGlass" ? 1.35 : 1) *
-      (this.perk === "cursedArsenal" ? 1.2 : 1);
+    const damage = 4 + this.weaponLevels.katana.damage * 2;
     for (const enemy of this.enemies.slice()) {
       if (this.dashHitSet.has(enemy)) continue;
       if (Math.hypot(enemy.x - this.px, enemy.y - this.py) > enemy.r + 17) continue;
@@ -2634,7 +2714,7 @@ export class Game {
         life: 1.4,
         pierce: 1,
         rot: this.atkAngle,
-        dmg: 4 + this.weaponLevels.shield.damage * 2,
+        dmg: (4 + this.weaponLevels.shield.damage * 2) * this.perkAttackBonus,
         hitSet: new Set(),
       });
       this.impacts.push({ x: s.x, y: s.y, a: ang, life: 0.22, max: 0.22, heavy: false });
@@ -2667,6 +2747,7 @@ export class Game {
       y: clamp(this.py + Math.sin(a) * 15, 12, this.worldH - 12),
       armT: 0.45,
       life: 24,
+      attackBonus: this.consumeAttackBonus(),
     });
     this.atkCd = this.swingData().cd;
     Sfx.swing("mine");
@@ -2692,7 +2773,7 @@ export class Game {
       for (const enemy of this.enemies.slice()) {
         const d = Math.hypot(enemy.x - mine.x, enemy.y - mine.y);
         if (d <= mineRange + enemy.r)
-          this.damageEnemy(enemy, mineDamage, Math.atan2(enemy.y - mine.y, enemy.x - mine.x));
+          this.damageEnemy(enemy, mineDamage * mine.attackBonus, Math.atan2(enemy.y - mine.y, enemy.x - mine.x));
       }
     }
   }
@@ -2785,7 +2866,7 @@ export class Game {
   }
 
   private playerDamage(dmg: number): number {
-    return dmg * (this.strengthT > 0 ? 1.5 : 1) * this.raceDamageMultiplier();
+    return dmg * this.perkDamageMultiplier() * (this.strengthT > 0 ? 1.5 : 1) * this.raceDamageMultiplier();
   }
 
   private shieldFacing(x: number, y: number): boolean {
@@ -4710,6 +4791,25 @@ export class Game {
     const ctx = this.ctx;
     const phase = this.atkPhase();
     this.pushTrail();
+
+    const perkAura =
+      this.perk === "kyuEcho" && this.perkEchoT >= 6
+        ? "#69d7ff"
+        : this.perk === "predatorInstinct" && this.perkBuffT > 0
+          ? "#ff914d"
+          : this.perk === "bloodContract" && this.hp / Math.max(1, this.maxHp) < 0.3
+            ? "#ff354d"
+            : null;
+    if (perkAura) {
+      ctx.save();
+      ctx.globalAlpha = 0.28 + Math.sin(performance.now() / 80) * 0.1;
+      ctx.strokeStyle = perkAura;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.px, this.py, 16 + Math.sin(performance.now() / 130), 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
 
     if (this.raceAbilityT > 0) {
       const race = RACE_CONFIG[this.raceId];

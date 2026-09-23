@@ -758,3 +758,56 @@ input,
 }
 @keyframes potion-in { from { opacity:0; transform:translateX(-8px) scale(.92); } to { opacity:1; transform:translateX(0) scale(1); } }
 
+
+/* Detailed character sheet shared by the wave shop and ranking run modal. */
+.character-details { border: 3px solid #070305; background: linear-gradient(180deg,#170b10,#0b080b); padding: 12px; box-shadow: inset 0 0 0 1px #54202a, 0 0 18px rgba(150,24,42,.18); color: #ead8ca; }
+.character-details-grid { display: grid; grid-template-columns: minmax(150px,.65fr) minmax(0,1.8fr); gap: 12px; }
+.character-portrait { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border: 2px solid #481923; background: radial-gradient(circle at 50% 35%,#421621,#13090d 67%); padding: 12px; text-align: center; }
+.character-portrait > strong { max-width: 100%; overflow: hidden; color: #ffd44a; font-family: "Press Start 2P",monospace; font-size: 7px; text-overflow: ellipsis; text-transform: uppercase; }
+.character-portrait > span { color: #b46975; font-family: "Press Start 2P",monospace; font-size: 6px; }
+.character-portrait-glow { display: flex; min-height: 92px; min-width: 92px; align-items: center; justify-content: center; border: 3px solid; background: rgba(4,2,4,.7); box-shadow: 0 0 16px currentColor; image-rendering: pixelated; }
+.character-current-weapon { display: flex; width: 100%; align-items: center; justify-content: center; gap: 6px; border-top: 2px solid #54202a; padding-top: 8px; color: #ffe2c4; font-family: "Press Start 2P",monospace; font-size: 6px; }
+.character-stats-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); align-content: start; gap: 7px; }
+.character-stat { display: flex; min-height: 42px; align-items: center; justify-content: space-between; gap: 8px; border: 2px solid #32131a; background: #160d12; padding: 8px; font-family: "Press Start 2P",monospace; }
+.character-stat span { color: #9d6570; font-size: 6px; line-height: 1.5; }
+.character-stat strong { text-align: right; font-size: 7px; line-height: 1.45; }
+.character-arsenal { margin-top: 10px; border: 2px solid #54202a; background: #11090d; padding: 9px; }
+.character-arsenal > strong,.character-effects > strong { display: block; margin-bottom: 7px; color: #ffd44a; font-family: "Press Start 2P",monospace; font-size: 7px; }
+.character-arsenal > div { display: flex; flex-wrap: wrap; gap: 6px; }
+.character-arsenal span { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 3px 6px; border: 2px solid #38151d; background: #1c1015; padding: 5px 7px; color: #cbb6a9; font-family: "Press Start 2P",monospace; font-size: 6px; }
+.character-arsenal span.is-active { border-color: #ffd44a; color: #ffd44a; }
+.character-arsenal small { grid-column: 2; color: #82515b; font-size: 5px; }
+.character-arsenal em { color: #82515b; font-family: "Press Start 2P",monospace; font-size: 6px; font-style: normal; line-height: 1.7; }
+.character-effects { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; border: 2px solid #6b3420; background: #211007; padding: 8px; }
+.character-effects > strong { width: 100%; }
+.character-effects span { border: 1px solid #9e5b2e; background: #3a1909; padding: 5px; color: #ffd08a; font-family: "Press Start 2P",monospace; font-size: 6px; }
+.character-lore-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin-top: 10px; }
+.character-lore-grid article { border: 2px solid; background: #140b10; padding: 10px; }
+.character-lore-grid article > strong,.character-ability strong { color: #ffd44a; font-family: "Press Start 2P",monospace; font-size: 7px; line-height: 1.6; }
+.character-lore-grid p { margin-top: 7px; color: #c6aaa5; font-family: "Press Start 2P",monospace; font-size: 6px; line-height: 1.85; }
+.character-ability { grid-column: 1/-1; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.character-ability kbd { flex: none; border: 2px solid #ffd44a; background: #32120e; padding: 9px; color: #ffd44a; box-shadow: inset 0 -3px #160705; font-family: "Press Start 2P",monospace; font-size: 6px; white-space: nowrap; }
+.ranking-row-detailed { grid-template-columns: 28px minmax(80px,1fr) 62px 45px 72px 45px; }
+.ranking-details-button { border: 2px solid #7f2934; background: #2b1017; padding: 5px 3px; color: #ff8c86; font-family: "Press Start 2P",monospace; font-size: 5px; }
+.ranking-details-button:hover,.ranking-details-button:focus-visible { border-color: #ffd44a; color: #ffd44a; outline: none; }
+.ranking-modal-backdrop { position: fixed; inset: 0; z-index: 80; display: flex; align-items: center; justify-content: center; overflow-y: auto; background: rgba(4,1,3,.9); padding: 14px; backdrop-filter: blur(3px); }
+.ranking-modal { width: min(940px,100%); max-height: 94dvh; overflow-y: auto; padding: 38px 16px 16px; }
+.ranking-modal-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.ranking-modal-summary > * { border: 2px solid #4c1b24; background: #190c11; padding: 7px; color: #d9bdb2; font-family: "Press Start 2P",monospace; font-size: 6px; }
+.ranking-modal-summary strong { color: #ffd44a; }
+
+@media (max-width: 700px) {
+  .character-details { padding: 7px; }
+  .character-details-grid { grid-template-columns: 1fr; }
+  .character-portrait { display: grid; grid-template-columns: auto 1fr; min-height: 112px; text-align: left; }
+  .character-portrait-glow { grid-row: 1/4; min-height: 82px; min-width: 82px; }
+  .character-current-weapon { justify-content: flex-start; }
+  .character-stats-grid { grid-template-columns: 1fr; }
+  .character-stat { min-height: 36px; padding: 7px; }
+  .character-lore-grid { grid-template-columns: 1fr; }
+  .character-ability { grid-column: auto; align-items: flex-start; flex-direction: column; }
+  .ranking-row-detailed { grid-template-columns: 22px minmax(70px,1fr) 58px 36px 62px; }
+  .ranking-row-detailed > :last-child { display: none; }
+  .ranking-modal-backdrop { align-items: flex-start; padding: 7px; }
+  .ranking-modal { max-height: 98dvh; padding: 34px 8px 8px; }
+}
