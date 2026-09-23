@@ -168,13 +168,44 @@ export function buildSprites() {
 
   // Skins inspiradas nas referencias enviadas: mesma escala/colisao dos demais jogadores.
   SPR.crimsonSkeleton = makeSprite([
-    "...rrrrrr...", "..rrrrrrrr..", ".rrddddddrr.", ".rrdrrrrdrr.", ".rrde..edrr.", ".rrddddddrr.", "...rr..rr...", "..rrrrrrrr..", "...rr..rr...", "..rr....rr..", ".dd......dd."
+    "...rrrrrr...",
+    "..rrrrrrrr..",
+    ".rrddddddrr.",
+    ".rrdrrrrdrr.",
+    ".rrde..edrr.",
+    ".rrddddddrr.",
+    "...rr..rr...",
+    "..rrrrrrrr..",
+    "...rr..rr...",
+    "..rr....rr..",
+    ".dd......dd."
+
   ], { r: "#e4545e", d: "#4b171f", e: "#09070b" });
   SPR.greenSlime = makeSprite([
-    "...gggggg...", "..gggggggg..", ".ggllllllgg.", ".ggle..elgg.", ".ggll..llgg.", ".gggggggggg.", "..gggggggg..", "...dddddd...", "..gggggggg..", "...gg..gg...", "..dd....dd.."
+    "...gggggg...",
+    "..gggggggg..",
+    ".ggllllllgg.",
+    ".ggle..elgg.",
+    ".ggll..llgg.",
+    ".gggggggggg.",
+    "..gggggggg..",
+    "...dddddd...",
+    "..gggggggg..", 
+    "...gg..gg...", 
+    "..dd....dd.."
   ], { g: "#12dd39", l: "#78ff8d", e: "#07130a", d: "#064d1b" });
   SPR.sinisterShadow = makeSprite([
-    "....kkkk....", "...kkkkkk...", "..kkddddkk..", "..kke..ekk..", "...kkkkkk...", "...ssssss...", "..ssssssss..", "...ss..ss...", "..sss..sss..", "..dd....dd..", ".dd......dd."
+    "....kkkk....",
+    "...kkkkkk...", 
+    "..kkddddkk..", 
+    "..kke..ekk..", 
+    "...kkkkkk...", 
+    "...ssssss...", 
+    "..ssssssss..", 
+    "...ss..ss...", 
+    "..sss..sss..", 
+    "..dd....dd..", 
+    ".dd......dd."
   ], { k: "#08090c", d: "#292b31", e: "#ff79b7", s: "#17191e" });
   SPR.grunt = makeSprite(
     [
