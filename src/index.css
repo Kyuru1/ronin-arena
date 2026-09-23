@@ -811,3 +811,16 @@ input,
   .ranking-modal-backdrop { align-items: flex-start; padding: 7px; }
   .ranking-modal { max-height: 98dvh; padding: 34px 8px 8px; }
 }
+/* Red navigation and smoother scrolling across every game panel. */
+html { scroll-behavior: smooth; }
+*, *::before, *::after { scrollbar-color: #e0444d #170b10; scrollbar-width: thin; }
+*::-webkit-scrollbar { width: 12px; height: 12px; }
+*::-webkit-scrollbar-track { background: #170b10; border-left: 2px solid #4d1723; }
+*::-webkit-scrollbar-thumb { background: linear-gradient(#ff6b68, #a52335); border: 2px solid #2b0c14; box-shadow: inset 0 0 0 1px #ffd44a; }
+*::-webkit-scrollbar-thumb:hover { background: #ff8c86; }
+.shop-stats-panel { padding-right: 4px; }
+.shop-stats-panel > .character-details { min-height: 100%; }
+.weapon-slot-preview, .shop-weapon-icon, .shop-slot-preview { filter: drop-shadow(0 0 4px rgba(224,68,77,.42)); }
+.weapon-preview-book, .weapon-preview-staff { filter: drop-shadow(0 0 5px #9f6cff) drop-shadow(0 0 9px rgba(77,169,255,.55)); }
+.ranking-modal-backdrop { align-items: stretch; padding: clamp(8px, 2vw, 26px); }
+.ranking-modal { width: min(1240px, 100%); max-height: 96dvh; padding: 42px clamp(12px, 2vw, 28px) 20px; }

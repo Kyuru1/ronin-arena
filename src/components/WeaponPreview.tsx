@@ -36,5 +36,5 @@ export default function WeaponPreview({
     c.style.height = `${src.height}px`;
   }, [weapon, scale, angle, form]);
 
-  return <canvas ref={ref} className={`pixelated ${className}`} aria-hidden />;
+  return <canvas ref={ref} className={`pixelated weapon-preview-${weapon} ${className}`} aria-hidden />;
 }
