@@ -57,7 +57,7 @@ function normalizeDifficulty(value: unknown): Difficulty {
   return "medium";
 }
 
-const WEAPONS: Weapon[] = ["katana", "bow", "hammer", "shield", "mine", "book", "staff"];
+const WEAPONS: Weapon[] = ["katana", "bow", "hammer", "shield", "mine", "book", "staff", "harp", "godslayer"];
 
 function normalizeAvatar(value: unknown): ScoreEntry["avatarId"] {
   const avatars: AvatarId[] = ["samurai", "azureRonin", "violetRonin", "goldRonin", "jadeRonin", "shadowRonin", "bananaSamurai", "strawberryKnight", "orangeRonin", "snowRonin", "suitedHero", "dressHero", "crimsonSkeleton", "greenSlime", "sinisterShadow"];

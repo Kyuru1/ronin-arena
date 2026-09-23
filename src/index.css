@@ -680,7 +680,7 @@ input,
 }
 
 /* Responsive controls and readable compact shop. */
-.dash-action { border: 0; background: transparent; padding: 0; pointer-events: auto; touch-action: manipulation; cursor: pointer; }
+.dash-action { border: 0; background: transparent; padding: 0; pointer-events: auto; touch-action: none; cursor: pointer; }
 .dash-action.is-ready { filter: drop-shadow(0 0 4px rgba(255,212,74,.7)); }
 .dash-action:active { transform: scale(.92); }
 .weapon-slot-preview { max-height: 26px; max-width: 42px; object-fit: contain; }

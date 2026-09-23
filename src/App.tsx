@@ -54,6 +54,8 @@ const emptyStats: HudStats = {
     mine: { damage: 0, speed: 0, range: 0, form: 0 },
     book: { damage: 0, speed: 0, range: 0, form: 0 },
     staff: { damage: 0, speed: 0, range: 0, form: 0 },
+    harp: { damage: 0, speed: 0, range: 0, form: 0 },
+    godslayer: { damage: 0, speed: 0, range: 0, form: 0 },
   },
   magicType: "fire",
   difficulty: "medium",
@@ -240,6 +242,7 @@ export default function App() {
       if (!e) return;
       const w = e.contentRect.width;
       const h = e.contentRect.height;
+      if (w < 2 || h < 2) return;
       cancelAnimationFrame(pending);
       pending = requestAnimationFrame(() => game.resize(w, h));
     });
@@ -671,6 +674,7 @@ export default function App() {
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.hidden) pauseFromFocusLoss();
+      else requestAnimationFrame(() => gameRef.current?.recoverViewport());
     };
     const onPageHide = () => {
       if (gameRef.current?.isCoop) coopNet.leaveRoom();
@@ -712,7 +716,6 @@ export default function App() {
             hudScale={opts.hudScale}
             language={opts.language}
             t={t}
-            abilityBinding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO · Y / TRIÂNGULO" : opts.keyboardBindings.specialAbility.toUpperCase() + " · Y / TRIÂNGULO"}
           />
         )}
         {raceReveal && <RaceReveal raceId={raceReveal} binding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO" : opts.keyboardBindings.specialAbility.toUpperCase()} onContinue={() => dismissRaceReveal(false)} onHideForever={() => dismissRaceReveal(true)} />}

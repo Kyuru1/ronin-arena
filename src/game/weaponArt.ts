@@ -27,6 +27,8 @@ export const WEAPON_REST_LEN: Record<Weapon, number> = {
   mine: 9,
   book: 18,
   staff: 25,
+  harp: 28,
+  godslayer: 52,
 };
 
 export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: WeaponDrawOpts) {
@@ -51,6 +53,12 @@ export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: 
     case "staff":
       drawStaff(ctx, L, o.form ?? 0);
       break;
+    case "harp":
+      drawHarp(ctx);
+      break;
+    case "godslayer":
+      drawGodslayer(ctx, L);
+      break;
     default:
       drawKatana(ctx, L, o.glint ?? 0, o.glintP ?? 0, o.form ?? 0);
   }
@@ -69,6 +77,20 @@ function drawStaff(ctx: CanvasRenderingContext2D, L: number, form: number) {
   ctx.fillRect(-2, -8, 4, 4);
   ctx.fillRect(-4, -6, 2, 2);
   ctx.fillRect(3, -6, 2, 2);
+}
+
+function drawHarp(ctx: CanvasRenderingContext2D) {
+  ctx.fillStyle="#09060b"; ctx.fillRect(-3,-12,5,25); ctx.fillRect(1,-12,15,4); ctx.fillRect(1,9,15,4);
+  ctx.fillStyle="#d7a93d"; ctx.fillRect(-1,-10,3,21); ctx.fillRect(2,-10,12,2); ctx.fillRect(2,9,12,2);
+  ctx.fillStyle="#fff2a8"; for(let x=4;x<=13;x+=3) ctx.fillRect(x,-8,1,16);
+  ctx.fillStyle="#8cecff"; ctx.fillRect(14,-10,3,3); ctx.fillRect(14,8,3,3);
+}
+function drawGodslayer(ctx: CanvasRenderingContext2D, L:number) {
+  ctx.fillStyle="#070508"; ctx.fillRect(-11,-3,14,7); ctx.fillRect(2,-6,L+8,12);
+  ctx.fillStyle="#7c2140"; ctx.fillRect(-10,-1,12,3);
+  ctx.fillStyle="#ffd44a"; ctx.fillRect(1,-5,5,10); ctx.fillRect(6,-4,L-3,8);
+  ctx.fillStyle="#fff7d0"; ctx.fillRect(7,-3,L-7,2);
+  ctx.fillStyle="#e0444d"; ctx.fillRect(L+2,-2,6,4); ctx.fillRect(L+6,-4,3,8);
 }
 function drawKatana(ctx: CanvasRenderingContext2D, L: number, glint: number, glintP: number, form: number) {
   const bladeLen = form > 0 ? L + 14 : L;

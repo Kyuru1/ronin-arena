@@ -368,6 +368,8 @@ const WEAPON_CONFIG: Record<
   mine: { wind: 0, strike: 0, rec: 0, cd: 0.45, arc: 0, range: 12, dmg: 6, kb: 0 },
   book: { wind: 0, strike: 0, rec: 0, cd: 0.5, arc: 1.7, range: 78, dmg: 2, kb: 180 },
   staff: { wind: 0.12, strike: 0.12, rec: 0.18, cd: 0.55, arc: 1.2, range: 42, dmg: 2, kb: 110 },
+  harp: { wind: 0.08, strike: 0.2, rec: 0.18, cd: 1.54, arc: 1.1, range: 58, dmg: 12, kb: 190 },
+  godslayer: { wind: 0.13, strike: 0.22, rec: 0.2, cd: 0.42, arc: 2.3, range: 58, dmg: 18, kb: 420 },
 };
 
 const createWeaponLevels = (): WeaponLevels => ({
@@ -378,6 +380,8 @@ const createWeaponLevels = (): WeaponLevels => ({
   mine: { damage: 0, speed: 0, range: 0, form: 0 },
   book: { damage: 0, speed: 0, range: 0, form: 0 },
   staff: { damage: 0, speed: 0, range: 0, form: 0 },
+  harp: { damage: 0, speed: 0, range: 0, form: 0 },
+  godslayer: { damage: 0, speed: 0, range: 0, form: 0 },
 });
 
 export class Game {
@@ -444,6 +448,13 @@ export class Game {
   raceId: RaceId = "ronin";
   raceAbilityT = 0;
   raceAbilityCd = 0;
+  raceDamageGrowth = 0;
+  dwarfResistance = 0;
+  humanWillReady = false;
+  humanWillUsed = false;
+  humanWillDamage = 1;
+  divineAbility: "wings" | "aura" = "wings";
+  raceAbilityPulseT = 0;
 
   // Weapons in slots (up to 4)
   weapons: Weapon[] = ["katana"];
@@ -714,23 +725,46 @@ export class Game {
     if (this.phase !== "playing" || this.hp <= 0 || this.raceAbilityT > 0 || this.raceAbilityCd > 0) return false;
     const race = RACE_CONFIG[this.raceId];
     if (race.ability.healMaxHpFraction > 0 && this.hp >= this.maxHp) return false;
-    this.raceAbilityT = race.ability.duration;
-    this.raceAbilityCd = race.ability.duration + race.ability.cooldown;
+    if (race.ability.kind === "divine") {
+      this.divineAbility = Math.random() < 0.8 ? "wings" : "aura";
+      this.raceAbilityT = this.divineAbility === "wings" ? 3.5 : 5;
+      this.raceAbilityCd = this.raceAbilityT + (this.divineAbility === "wings" ? 38 : 60);
+      this.raceAbilityPulseT = 0;
+      this.banner = this.divineAbility === "wings" ? "WINGS!" : "AURA DIVINA!";
+    } else {
+      this.raceAbilityT = race.ability.duration;
+      this.raceAbilityCd = race.ability.duration + race.ability.cooldown;
+      this.banner = `${race.ability.name}!`;
+    }
     if (race.ability.healMaxHpFraction > 0) {
       const heal = Math.max(1, this.maxHp * race.ability.healMaxHpFraction);
       this.hp = Math.min(this.maxHp, this.hp + heal);
-      const healLabel = Number.isInteger(heal) ? String(heal) : heal.toFixed(1);
-      this.addScore(0, this.px, this.py - 12, `+${healLabel} VIDA`, race.color);
+      this.addScore(0, this.px, this.py - 12, `+${Number.isInteger(heal) ? heal : heal.toFixed(1)} VIDA`, race.color);
     }
-    this.banner = `${race.ability.name}!`;
-    this.bannerT = 1.4;
-    this.burst(this.px, this.py, 22, race.color, 150);
-    this.pushStats(true);
-    return true;
+    if (race.ability.kind === "flame") {
+      const aim = this.aimAngle();
+      for (const enemy of this.enemies.slice()) {
+        const dx = enemy.x - this.px, dy = enemy.y - this.py, distance = Math.hypot(dx, dy);
+        if (distance > 170 + enemy.r || Math.abs(angDiff(Math.atan2(dy, dx), aim)) > 0.48) continue;
+        enemy.fireT = Math.max(enemy.fireT, 5); enemy.fireTick = 0.15; this.damageEnemy(enemy, 16, aim);
+      }
+      for (let i=0;i<48;i++) { const a=aim+rnd(-.45,.45); this.parts.push({x:this.px+Math.cos(a)*12,y:this.py+Math.sin(a)*12,vx:Math.cos(a)*rnd(130,320),vy:Math.sin(a)*rnd(130,320),life:rnd(.3,.75),max:.75,size:rnd(2,5),color:i%3===0?"#ffd44a":"#ff5a3d",drag:2,kind:3}); }
+      this.shake=Math.max(this.shake,7);
+    }
+    this.bannerT = 1.4; this.burst(this.px, this.py, 28, race.color, 180); this.pushStats(true); return true;
   }
-  touchRaceAbility() {
-    this.activateRaceAbility();
+
+  private updateRaceAbility(dt: number) {
+    if (this.raceId !== "divinity" || this.divineAbility !== "aura" || this.raceAbilityT <= 0) return;
+    this.raceAbilityPulseT -= dt;
+    for (const enemy of this.enemies) if (Math.hypot(enemy.x-this.px,enemy.y-this.py)<=115+enemy.r) { enemy.stun=Math.max(enemy.stun,.18); enemy.slowT=Math.max(enemy.slowT,.25); }
+    if (this.raceAbilityPulseT > 0) return;
+    this.raceAbilityPulseT=1;
+    for (const enemy of this.enemies.slice()) { const d=Math.hypot(enemy.x-this.px,enemy.y-this.py); if(d<=34+enemy.r)this.damageEnemy(enemy,enemy.type==="boss"?35:100,Math.atan2(enemy.y-this.py,enemy.x-this.px)); }
+    this.shockwaves.push({x:this.px,y:this.py,r:5,maxR:115,life:.35,maxLife:.35,color:"#fff2a8"});
   }
+
+  touchRaceAbility() { this.activateRaceAbility(); }
   saveRun(atShop = false): SavedRun {
     return { version: 2, savedAt: Date.now(), atShop, stats: this.stats() };
   }
@@ -829,6 +863,13 @@ export class Game {
   setPotionTutorialHidden(hidden: boolean) {
     this.potionTutorialEnabled = !hidden;
     this.potionTutorialSeen = hidden;
+  }
+
+  recoverViewport() {
+    const rect = this.canvas.getBoundingClientRect();
+    if (rect.width > 1 && rect.height > 1) this.resize(rect.width, rect.height);
+    this.last = performance.now();
+    this.render();
   }
 
   resize(cw: number, ch: number) {
@@ -1198,8 +1239,7 @@ export class Game {
   buyWeapon(weapon: Weapon, cost: number): boolean {
     if (this.coins < cost) return false;
     if (this.weapons.includes(weapon)) return false;
-    const maxWeapons =
-      this.perk === "bladeMonk" ? 1 : this.perk === "bottomlessPocket" ? 6 : 4;
+    const maxWeapons = this.baseWeaponSlots() + this.racialWeaponCount();
     if (this.weapons.length >= maxWeapons) return false;
     this.coins -= cost;
     this.weapons.push(weapon);
@@ -1213,6 +1253,8 @@ export class Game {
 
   sellWeapon(slotIndex: number, refund: number): boolean {
     if (this.weapons.length <= 1) return false; // keep at least 1 weapon
+    const racial = this.weapons[slotIndex];
+    if ((this.raceId === "divinity" && (racial === "harp" || racial === "godslayer")) || (this.raceId === "elf" && racial === "bow")) return false;
     if (slotIndex < 0 || slotIndex >= this.weapons.length) return false;
     this.weapons.splice(slotIndex, 1);
     this.coins += refund;
@@ -1372,11 +1414,18 @@ export class Game {
     this.speedBonus = 0;
     this.raceAbilityT = 0;
     this.raceAbilityCd = 0;
+    this.raceDamageGrowth = 0;
+    this.dwarfResistance = 0;
+    this.humanWillReady = this.raceId === "human" && Math.random() < (RACE_CONFIG.human.willChance ?? 0);
+    this.humanWillUsed = false;
+    this.humanWillDamage = 1;
+    this.raceAbilityPulseT = 0;
     this.applyRaceStartingStats();
     this.weapons = ["katana"];
     this.weaponsUsed = ["katana"];
     this.activeSlot = 0;
     this.weaponLevels = createWeaponLevels();
+    this.applyRaceLoadout();
     this.perkBuffT = 0;
     this.perkEchoT = 0;
     this.perkAttackBonus = 1;
@@ -1432,6 +1481,8 @@ export class Game {
 
   startGame(): RaceId {
     unlockAudio();
+    this.resize(this.canvas.clientWidth || 480, this.canvas.clientHeight || 270);
+    this.last = performance.now();
     this.raceId = rollRace();
     this.reset();
     this.phase = "playing";
@@ -1497,6 +1548,30 @@ export class Game {
       dashSpeedMult: base.dashSpeedMult * limitMultiplier,
     };
     return limits;
+  }
+
+  private applyRaceLoadout() {
+    const race = RACE_CONFIG[this.raceId];
+    const racial = [...(race.startingWeapons ?? [])];
+    if (this.raceId === "divinity" && Math.random() < 0.1) racial.push("godslayer");
+    for (const weapon of racial) {
+      if (!this.weapons.includes(weapon)) this.weapons.push(weapon);
+      if (!this.weaponsUsed.includes(weapon)) this.weaponsUsed.push(weapon);
+    }
+  }
+
+  private racialWeaponCount() {
+    if (this.raceId === "divinity") return this.weapons.filter((w) => w === "harp" || w === "godslayer").length;
+    if (this.raceId === "elf") return this.weapons.includes("bow") ? 1 : 0;
+    return 0;
+  }
+
+  private baseWeaponSlots() {
+    return this.perk === "bladeMonk" ? 1 : this.perk === "bottomlessPocket" ? 6 : 4;
+  }
+
+  private playerRadius() {
+    return Math.round(9 * (RACE_CONFIG[this.raceId].playerScale ?? 1));
   }
 
   private applyRaceStartingStats() {
@@ -1638,7 +1713,7 @@ export class Game {
       moveSpeed: this.currentMoveSpeed(),
       attackSpeedMultiplier: (1 + this.weaponLevels[this.currentWeapon].speed * 0.14) * this.attackSpeedMultiplier(),
       effectiveDashCooldown: this.dashMax * (this.agilityT > 0 ? 0.5 : 1) * this.raceDashCooldownMultiplier() * this.perkDashCooldownMultiplier(),
-      maxWeaponSlots: this.perk === "bladeMonk" ? 1 : this.perk === "bottomlessPocket" ? 6 : 4,
+      maxWeaponSlots: this.baseWeaponSlots() + this.racialWeaponCount(),
       perkBuffT: this.perkBuffT,
       perkEchoReady: this.perk === "kyuEcho" && this.perkEchoT >= 6,
     };
@@ -1737,6 +1812,7 @@ export class Game {
     this.iframe = Math.max(0, this.iframe - dt);
     this.raceAbilityT = Math.max(0, this.raceAbilityT - dt);
     this.raceAbilityCd = Math.max(0, this.raceAbilityCd - dt);
+    this.updateRaceAbility(dt);
     for (const playerId of Object.keys(this.peerIframes)) {
       this.peerIframes[playerId] = Math.max(0, this.peerIframes[playerId] - dt);
     }
@@ -2252,6 +2328,12 @@ export class Game {
     this.atkRec = t.rec;
     this.atkCd = t.wind + t.strike + t.rec + t.cd;
     this.atkT = 0;
+    if (this.currentWeapon === "harp") {
+      const heal = this.maxHp * (0.17 + Math.random() * 0.03);
+      this.hp = Math.min(this.maxHp, this.hp + heal);
+      this.addScore(0,this.px,this.py-13,`+${heal.toFixed(1)} VIDA`,"#fff2a8");
+      this.burst(this.px,this.py,18,"#8cecff",120);
+    }
     this.hitSet.clear();
     this.trail.length = 0;
   }
@@ -2683,12 +2765,11 @@ export class Game {
       const d = Math.hypot(dx, dy);
       if (d > range + e.r) continue;
       const ang = Math.atan2(dy, dx);
-      if (
-        Math.abs(angDiff(ang, cur)) > arcHalf * 0.6 &&
-        Math.abs(angDiff(ang, this.atkAngle)) > arcHalf
-      ) {
-        continue;
-      }
+      const sideHit = this.currentWeapon === "harp" && (
+        Math.abs(angDiff(ang, this.atkAngle + Math.PI / 2)) <= arcHalf * 0.7 ||
+        Math.abs(angDiff(ang, this.atkAngle - Math.PI / 2)) <= arcHalf * 0.7
+      );
+      if (!sideHit && Math.abs(angDiff(ang, cur)) > arcHalf * 0.6 && Math.abs(angDiff(ang, this.atkAngle)) > arcHalf) continue;
       this.hitSet.add(e);
       killedThisFrame = this.damageEnemy(e, t.dmg, ang) || killedThisFrame;
       hitsThisFrame++;
@@ -2847,7 +2928,7 @@ export class Game {
 
   private raceDamageMultiplier(): number {
     const race = RACE_CONFIG[this.raceId];
-    return race.modifiers.damage * (this.raceAbilityT > 0 ? race.ability.damage : 1);
+    return race.modifiers.damage * (1 + this.raceDamageGrowth) * this.humanWillDamage * (this.raceAbilityT > 0 ? race.ability.damage : 1);
   }
 
   private raceMoveSpeedMultiplier(): number {
@@ -2866,7 +2947,8 @@ export class Game {
   }
 
   private playerDamage(dmg: number): number {
-    return dmg * this.perkDamageMultiplier() * (this.strengthT > 0 ? 1.5 : 1) * this.raceDamageMultiplier();
+    const ranged = ["bow", "book", "staff", "harp"].includes(this.currentWeapon) ? (RACE_CONFIG[this.raceId].rangedDamage ?? 1) : 1;
+    return dmg * ranged * this.perkDamageMultiplier() * (this.strengthT > 0 ? 1.5 : 1) * this.raceDamageMultiplier();
   }
 
   private shieldFacing(x: number, y: number): boolean {
@@ -2937,6 +3019,8 @@ export class Game {
     if (this.perk === "predatorInstinct") this.perkBuffT = 2.5;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     this.kills++;
+    const race = RACE_CONFIG[this.raceId];
+    if (race.killDamageStep) this.raceDamageGrowth = Math.min(race.killDamageCap ?? 0, this.raceDamageGrowth + race.killDamageStep);
     const mult = this.comboMult();
     const gained = Math.round(e.score * mult);
     this.addScore(gained, e.x, e.y - 6, `+${gained}`, mult >= 2 ? "#ffbd86" : "#ffffff");
@@ -3317,7 +3401,7 @@ export class Game {
       Sfx.crit(4);
       // Credita cada moeda pendente na hora, mantendo a animacao de coleta viva.
       // Em coop cada moeda vale coinValue para cada jogador (economia 2x dividida).
-      const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
+      const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier * (RACE_CONFIG[this.raceId].coinMultiplier ?? 1);
       let pendingCoins = 0;
       for (const p of this.pickups) {
         if (p.kind === "coin" && !p.credited) {
@@ -3341,6 +3425,8 @@ export class Game {
           }
         }
       }
+      const floorHeal = RACE_CONFIG[this.raceId].floorHeal ?? 0;
+      if (floorHeal > 0 && this.hp > 0) { this.hp = Math.min(this.maxHp, this.hp + floorHeal); this.addScore(0,this.px,this.py-12,`+${floorHeal} VIDA`,RACE_CONFIG[this.raceId].color); }
       if (this.isCoop) {
         if (this.hp <= 0) {
           this.hp = this.maxHp;
@@ -3378,7 +3464,7 @@ export class Game {
       const dx = this.px - e.x;
       const dy = this.py - e.y;
       const distance = Math.hypot(dx, dy);
-      if (distance <= radius) this.hurtPlayer(damage, dx / (distance || 1), dy / (distance || 1));
+      if (distance <= radius + this.playerRadius()) this.hurtPlayer(damage, dx / (distance || 1), dy / (distance || 1));
     }
     for (const [playerId, peer] of this.remoteRonins()) {
       const dx = peer.px - e.x;
@@ -3603,7 +3689,7 @@ export class Game {
           case "bombMinion": {
             e.vx += nx * e.speed * 4.2 * dt;
             e.vy += ny * e.speed * 4.2 * dt;
-            if (dist < e.r + 10) {
+            if (dist < e.r + this.playerRadius()) {
               this.explodeBombMinion(e);
               continue;
             }
@@ -3790,7 +3876,7 @@ export class Game {
         continue;
       }
 
-      if (e.type === "ram" && e.state === 2 && dist < e.r + 10 && e.spawnT <= 0) {
+      if (e.type === "ram" && e.state === 2 && dist < e.r + this.playerRadius() && e.spawnT <= 0) {
         this.hurtCoopTarget(targetPeerId, e.dmg, nx, ny, true);
         this.ramCrash(e);
         continue;
@@ -3798,7 +3884,7 @@ export class Game {
       if (
         e.type !== "ram" &&
         e.type !== "bombMinion" &&
-        dist < e.r + 8 &&
+        dist < e.r + this.playerRadius() &&
         e.touchCd <= 0 &&
         e.spawnT <= 0
       ) {
@@ -4074,7 +4160,7 @@ export class Game {
 
   /** Moeda coletada: no coop ela pertence somente ao coletor. */
   private creditCoinDrop(p: Pickup) {
-    const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier;
+    const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier * (RACE_CONFIG[this.raceId].coinMultiplier ?? 1);
     if (!p.credited) {
       p.credited = true;
       this.coins += coinValue;
@@ -4101,9 +4187,17 @@ export class Game {
 
   private hurtPlayer(dmg: number, nx: number, ny: number, contact = false) {
     if (this.iframe > 0 || this.dashT > 0 || this.phase !== "playing") return;
-    const ability = RACE_CONFIG[this.raceId].ability;
-    if (this.raceAbilityT > 0 && (ability.invulnerable || (contact && ability.contactImmune))) return;
-    this.hp -= dmg * DIFFICULTY_RULES[this.difficulty].damageTaken;
+    const race = RACE_CONFIG[this.raceId];
+    const ability = race.ability;
+    if (this.raceAbilityT > 0 && (ability.invulnerable || (contact && ability.contactImmune) || (this.raceId === "divinity" && this.divineAbility === "wings"))) return;
+    let taken = dmg * DIFFICULTY_RULES[this.difficulty].damageTaken;
+    if (race.silverHearts) taken *= 0.5;
+    if (this.raceId === "dwarf") {
+      const activeGuard = this.raceAbilityT > 0 ? 0.5 : 1;
+      taken *= Math.max(0.35, 1 - this.dwarfResistance) * activeGuard;
+      this.dwarfResistance = Math.min(0.65, this.dwarfResistance + 0.1);
+    }
+    this.hp -= taken;
     this.iframe = 1;
     this.combo = 0;
     this.pvx = nx * 190;
@@ -4122,6 +4216,10 @@ export class Game {
   }
 
   private die() {
+    if (this.raceId === "human" && this.humanWillReady && !this.humanWillUsed) {
+      this.humanWillUsed = true; this.humanWillDamage = 1.2; this.hp = Math.max(1, this.maxHp * 0.5); this.iframe = 3;
+      this.banner = "WILL! SEGUNDA CHANCE"; this.bannerT = 2.4; this.burst(this.px,this.py,36,"#ffffff",220); this.pushStats(true); return;
+    }
     this.raceAbilityT = 0;
     if (this.isCoop && this.aliveRemoteRonins().length > 0) {
       this.hp = 0;
@@ -4915,7 +5013,7 @@ export class Game {
         this.face,
         0,
         squash,
-        window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08,
+        (window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08) * (RACE_CONFIG[this.raceId].playerScale ?? 1),
       );
       if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0)
         this.drawPsychicHands(this.aimAngle());
@@ -5046,7 +5144,11 @@ export class Game {
     const draw = (s: { ox: number; oy: number; x: number; y: number }, color: string) => {
       const dx = s.x - s.ox;
       const dy = s.y - s.oy;
-      const origin = this.clientToCanvas(s.ox, s.oy);
+      const rect = this.canvas.getBoundingClientRect();
+      const origin = {
+        x: ((s.ox - rect.left) / Math.max(1, rect.width)) * this.W,
+        y: ((s.oy - rect.top) / Math.max(1, rect.height)) * this.H,
+      };
       const len = Math.hypot(dx, dy);
       const cl = Math.min(len, 24);
       const nx = len > 0.01 ? (dx / len) * cl : 0;

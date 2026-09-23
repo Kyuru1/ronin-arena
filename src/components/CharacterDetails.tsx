@@ -42,6 +42,8 @@ const WEAPON_NAMES: Record<Weapon, string> = {
   mine: "Mina",
   book: "Livro Arcano",
   staff: "Cajado",
+  harp: "Arpa Divina",
+  godslayer: "Godslayer",
 };
 
 function number(value: number | undefined, digits = 0, missing = "Not recorded") {
