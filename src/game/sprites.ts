@@ -168,19 +168,20 @@ export function buildSprites() {
 
   // Skins inspiradas nas referencias enviadas: mesma escala/colisao dos demais jogadores.
   SPR.crimsonSkeleton = makeSprite([
+    "..rrrrrrrr..",
+    ".rrrrrrddrr.",
+    ".rdddrrrddr.",
+    ".rdddrrrddr.",
+    ".rrrre.rrrr.",
+    ".rrrrrrrrrr.",
+    "..rrr.rrr...",
+    "...r.r.r....",
+    "....drrd....",
+    ".rr.drrd.rr.",
     "...rrrrrr...",
-    "..rrrrrrrr..",
-    ".rrddddddrr.",
-    ".rrdrrrrdrr.",
-    ".rrde..edrr.",
-    ".rrddddddrr.",
-    "...rr..rr...",
-    "..rrrrrrrr..",
     "...rr..rr...",
     "..rr....rr..",
-    ".dd......dd."
-
-  ], { r: "#e4545e", d: "#4b171f", e: "#09070b" });
+  ], { r: "#f36a72", d: "#2b0d14", e: "#09070b" });
   SPR.greenSlime = makeSprite([
     "...gggggg...",
     "..gggggggg..",
@@ -839,4 +840,3 @@ export function buildSprites() {
     { p: "#2a0509" },
   );
 }
-

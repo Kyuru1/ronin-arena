@@ -75,6 +75,6 @@ export default function AccountPanel({ profile, onProfile }: { profile: PlayerPr
   </div>;
 }
 function AvatarPicker({ value, onChange }: { value: AvatarId; onChange: (value: AvatarId) => void }) {
-  return <div className="grid grid-cols-3 gap-2 sm:gap-3">{AVATARS.map((avatar) => <button key={avatar.id} onClick={() => onChange(avatar.id)} className={`px-tile flex min-h-24 min-w-0 w-full flex-col items-center justify-center gap-2 overflow-hidden p-2 sm:min-h-28 ${value === avatar.id ? "outline outline-2 outline-[#ffd44a]" : ""}`}><PixelSprite name={avatar.sprite} scale={3} /><span className="whitespace-nowrap text-center font-pixel text-[6px] leading-none sm:text-[7px]">{avatar.label}</span></button>)}</div>;
+  return <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">{AVATARS.map((avatar) => <button key={avatar.id} onClick={() => onChange(avatar.id)} className={`profile-avatar-tile px-tile flex min-h-28 w-full flex-col items-center justify-center gap-3 p-3 sm:min-h-32 ${value === avatar.id ? "outline outline-2 outline-[#ffd44a]" : ""}`}><PixelSprite name={avatar.sprite} scale={3} /><span className="max-w-full break-words text-center font-pixel text-[7px] leading-4 sm:text-[8px] sm:leading-5">{avatar.label}</span></button>)}</div>;
 }
 

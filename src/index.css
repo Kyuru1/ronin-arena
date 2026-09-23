@@ -302,13 +302,13 @@ input,
 .profile-avatar-tile {
   width: 100%;
   min-width: 0;
-  white-space: nowrap;
+  height: auto;
 }
 
 .profile-avatar-tile span {
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 /* pixel checkerboard background for the menu screen */

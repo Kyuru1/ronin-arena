@@ -10,7 +10,9 @@ import ShopScreen from "./components/ShopScreen";
 import TutorialScreen from "./components/TutorialScreen";
 import InputModeScreen from "./components/InputModeScreen";
 import CoopLobbyModal from "./components/CoopLobbyModal";
+import RaceReveal from "./components/RaceReveal";
 import { coopNet } from "./game/coopNet";
+import type { RaceId } from "./game/races";
 
 import { supabase } from "./lib/supabase";
 import { loadProfile, type PlayerProfile } from "./game/auth";
@@ -55,6 +57,9 @@ const emptyStats: HudStats = {
   magicType: "fire",
   difficulty: "medium",
   perk: null,
+  raceId: "ronin",
+  raceAbilityT: 0,
+  raceAbilityCd: 0,
   isSpectating: false,
   spectatedName: null,
 };
@@ -63,6 +68,7 @@ const OPT_KEY = "ronin.options.v2";
 const NAME_KEY = "ronin.lastname";
 const TUTORIAL_KEY = "ronin.tutorial.hidden.v1";
 const POTION_TUTORIAL_KEY = "ronin.potion.tutorial.hidden.v1";
+const RACE_REVEAL_KEY = "ronin.race.reveal.hidden.v1";
 const RUN_KEY = "ronin.run.save.v2";
 
 const defaultOpts: UiOpts = {
@@ -76,7 +82,7 @@ const defaultOpts: UiOpts = {
   hudScale: 1,
   textScale: 1,
   keyboardOnly: false,
-  keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", prev: "q", next: "e", pause: "escape" },
+  keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", specialAbility: "f", prev: "q", next: "e", pause: "escape" },
 };
 
 function loadOpts(): UiOpts {
@@ -117,6 +123,7 @@ export default function App() {
   const [isCoopGame, setIsCoopGame] = useState(false);
   const [rematchWaiting, setRematchWaiting] = useState(false);
   const [rematchVotes, setRematchVotes] = useState(0);
+  const [raceReveal, setRaceReveal] = useState<RaceId | null>(null);
 
 
   useEffect(() => {
@@ -241,12 +248,22 @@ export default function App() {
     game.setPerk(selectedPerk.current);
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
-    game.startGame();
+    const race = game.startGame();
+    let raceRevealHidden = false;
+    try { raceRevealHidden = localStorage.getItem(RACE_REVEAL_KEY) === "1"; } catch { /* ignore storage errors */ }
+    if (raceRevealHidden) {
+      setRaceReveal(null);
+      setPhase("playing");
+    } else {
+      // Pausing only one client in a coop room would desync it from the host.
+      if (!game.isCoop) game.pause();
+      setRaceReveal(race);
+      setPhase(game.isCoop ? "playing" : "paused");
+    }
     setRank(-1);
     setPendingScore(false);
     setScoreSaving(false);
     setScoreError(null);
-    setPhase("playing");
     setMenuClosing(false);
   }, []);
 
@@ -338,12 +355,21 @@ export default function App() {
     game.setPerk(selectedPerk.current);
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
     try { localStorage.removeItem(RUN_KEY); } catch { /* ignore storage errors */ }
-    game.startGame();
+    const race = game.startGame();
+    let raceRevealHidden = false;
+    try { raceRevealHidden = localStorage.getItem(RACE_REVEAL_KEY) === "1"; } catch { /* ignore storage errors */ }
+    if (raceRevealHidden) {
+      setRaceReveal(null);
+      setPhase("playing");
+    } else {
+      game.pause();
+      setRaceReveal(race);
+      setPhase("paused");
+    }
     setRank(-1);
     setPendingScore(false);
     setScoreSaving(false);
     setScoreError(null);
-    setPhase("playing");
     setMenuClosing(false);
   }, [difficulty, isCoopGame]);
 
@@ -396,10 +422,21 @@ export default function App() {
     }
     selectedPerk.current = saved.stats.perk;
     setDifficulty(saved.stats.difficulty);
+    setRaceReveal(null);
     if (saved.atShop) setUpgrade({ wave: saved.stats.wave });
     setPhase(saved.atShop ? "upgrade" : "playing");
     setSavedRun(null);
   }, [discardSavedRun, savedRun]);
+  const dismissRaceReveal = useCallback((hideForever: boolean) => {
+    if (hideForever) {
+      try { localStorage.setItem(RACE_REVEAL_KEY, "1"); } catch { /* ignore storage errors */ }
+    }
+    setRaceReveal(null);
+    const game = gameRef.current;
+    if (!game) return;
+    if (game.phase === "paused") game.resume();
+    setPhase(game.phase === "paused" ? "paused" : "playing");
+  }, []);
   const togglePause = useCallback(() => {
     const g = gameRef.current;
     if (!g) return;
@@ -634,6 +671,8 @@ export default function App() {
             onPause={togglePause}
             onSelectSlot={selectSlot}
             onDash={() => gameRef.current?.touchDash()}
+            onRaceAbility={() => gameRef.current?.touchRaceAbility()}
+            raceAbilityBinding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO" : opts.keyboardBindings.specialAbility.toUpperCase()}
             onSpectate={(direction) => gameRef.current?.spectateNext(direction)}
             onPotionDismiss={dismissPotionTutorial}
             hudScale={opts.hudScale}
@@ -641,6 +680,7 @@ export default function App() {
             t={t}
           />
         )}
+        {raceReveal && <RaceReveal raceId={raceReveal} binding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO" : opts.keyboardBindings.specialAbility.toUpperCase()} onContinue={() => dismissRaceReveal(false)} onHideForever={() => dismissRaceReveal(true)} />}
 
 
 

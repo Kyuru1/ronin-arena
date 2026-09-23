@@ -1,5 +1,6 @@
 import type { Difficulty, Weapon, Perk, WeaponLevels, MagicType } from "./engine";
 import type { PlayerProfile } from "./auth";
+import type { RaceId } from "./races";
 import { supabase } from "../lib/supabase";
 
 export interface CoopRoomPlayer { profile: PlayerProfile; ready: boolean; }
@@ -9,7 +10,7 @@ export interface CoopShotState { x: number; y: number; vx: number; vy: number; l
 export interface CoopParticleState { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; drag: number; kind: 0 | 1 | 2 | 3; rot?: number; }
 export interface CoopImpactState { x: number; y: number; a: number; life: number; max: number; heavy: boolean; }
 export interface PeerRoninState {
-  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; coins: number; score: number; kills: number; magicType: MagicType; magicFxT: number; magicFxX: number; magicFxY: number; magicFxRadius: number; magicFxForm: number; username?: string; avatarId?: string;
+  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; raceId: RaceId; raceAbilityT: number; raceAbilityCd: number; coins: number; score: number; kills: number; magicType: MagicType; magicFxT: number; magicFxX: number; magicFxY: number; magicFxRadius: number; magicFxForm: number; username?: string; avatarId?: string;
 }
 export interface CoopEnemyState { id: number; type: string; x: number; y: number; hp: number; maxHp: number; face: number; atkAngle: number; state: string; animTimer: number; flash: number; }
 export interface CoopPickupState { id: number; kind: "coin" | "heart" | "potion"; potion?: string; x: number; y: number; credited: boolean; }

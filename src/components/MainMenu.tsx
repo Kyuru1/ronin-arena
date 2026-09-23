@@ -47,12 +47,11 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   useMenuNavigation();
   const [tab, setTab] = useState<MenuTab>("main");
   const [accountNotice, setAccountNotice] = useState<string | null>(null);
-  const [difficultyOpen, setDifficultyOpen] = useState(false);
-  const [perkOpen, setPerkOpen] = useState(false);
+  const [playStep, setPlayStep] = useState<"difficulty" | "perk" | null>(null);
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [rankingDifficulty, setRankingDifficulty] = useState<Difficulty>("medium");
   const [capturing, setCapturing] = useState<KeyboardAction | null>(null);
-  const bindingLabels: Array<[KeyboardAction, string]> = [["up", "MOVER CIMA"], ["down", "MOVER BAIXO"], ["left", "MOVER ESQUERDA"], ["right", "MOVER DIREITA"], ["attack", "ATACAR"], ["dash", "DASH"], ["prev", "ARMA ANTERIOR"], ["next", "PROXIMA ARMA"]];
+  const bindingLabels: Array<[KeyboardAction, string]> = [["up", "MOVER CIMA"], ["down", "MOVER BAIXO"], ["left", "MOVER ESQUERDA"], ["right", "MOVER DIREITA"], ["attack", "ATACAR"], ["dash", "DASH"], ["specialAbility", "HABILIDADE ESPECIAL"], ["prev", "ARMA ANTERIOR"], ["next", "PROXIMA ARMA"]];
   useEffect(() => {
     if (!capturing) return;
     const onCapture = (event: KeyboardEvent) => {
@@ -107,7 +106,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
           {tab === "language" && <div className="flex flex-col gap-2"><PxHeading>{t.language}</PxHeading>{LANGS.map((language) => <PxButton key={language} tone="menu" active={opts.language === language} onClick={() => onOpts({ language })} className="text-[9px]">{I18N[language].langName}{opts.language === language && <span className="ml-auto text-[#ffd44a]">■</span>}</PxButton>)}</div>}
 
-          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>CONTROLES</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">TECLADO · CLIQUE PARA REMAPEAR</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? "PRESSIONE" : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">CONTROLE</h3><div className="controls-list"><span>MOVER</span><strong>ANALOGICO ESQUERDO</strong><span>MIRAR</span><strong>ANALOGICO DIREITO</strong><span>ATACAR</span><strong>A ou RT</strong><span>DASH</span><strong>B ou RB</strong><span>TROCAR ARMA</span><strong>LB / RB ou DIRECIONAL</strong><span>PAUSAR</span><strong>MENU / START</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.</div></div>}
+          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>CONTROLES</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">TECLADO · CLIQUE PARA REMAPEAR</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? "PRESSIONE" : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">CONTROLE</h3><div className="controls-list"><span>MOVER</span><strong>ANALOGICO ESQUERDO</strong><span>MIRAR</span><strong>ANALOGICO DIREITO</strong><span>ATACAR</span><strong>A ou RT</strong><span>DASH</span><strong>B ou RB</strong><span>HABILIDADE ESPECIAL</span><strong>Y / TRIANGULO</strong><span>TROCAR ARMA</span><strong>LB / RB ou DIRECIONAL</strong><span>PAUSAR</span><strong>MENU / START</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.</div></div>}
 
           {tab === "account" && (
             <div className="flex flex-col gap-3">
@@ -128,7 +127,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
     );
   }
 
-  if (perkOpen) {
+  if (playStep === "perk") {
     const perks: { id: Perk; title: string; desc: string }[] = [
       { id: "bladeMonk", title: "Monge da Lâmina Única", desc: "Usa somente a katana e não pode comprar ou equipar outras armas. A katana recebe muito mais dano, cadência e recarga." },
       { id: "bloodContract", title: "Contrato de Sangue", desc: "Abaixo de 30% da vida, você causa mais dano e ataca mais rápido. Ficar ferido fica muito perigoso." },
@@ -142,15 +141,15 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
     const available = difficulty === "hard" ? perks.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : perks;
     return (
       <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
-        <PxFrame title="ESCOLHA SEU PERK" className="anim-pop w-full max-w-3xl p-4 sm:p-6">
-          <div className="mb-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">Escolha uma vantagem para esta partida.</div>
-          <div className="grid gap-2 sm:grid-cols-2">{available.map((perk) => <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPerkOpen(false); onStart(difficulty); }} className="min-h-24 flex-col items-start gap-2 p-3 text-left"><strong className="font-pixel text-[8px] text-[#ffd44a]">{perk.title}</strong><span className="font-pixel text-[6px] leading-4 text-[#a9c3be]">{perk.desc}</span></PxButton>)}</div>
-          <PxButton tone="dark" onClick={() => setPerkOpen(false)} className="mt-4 w-full py-3 text-[8px]">VOLTAR</PxButton>
+        <PxFrame title="ESCOLHA SEU PERK" className="anim-pop w-full max-w-5xl p-4 sm:p-6 lg:p-8">
+          <div className="mb-4 text-center font-pixel text-[8px] leading-5 text-[#91b9b5] sm:text-[9px]">Escolha uma vantagem para esta partida.</div>
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">{available.map((perk) => <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPlayStep(null); onStart(difficulty); }} className="min-h-28 flex-col items-start gap-3 p-4 text-left sm:min-h-32 sm:p-5"><strong className="font-pixel text-[9px] leading-5 text-[#ffd44a] sm:text-[10px]">{perk.title}</strong><span className="font-pixel text-[7px] leading-5 text-[#a9c3be] sm:text-[8px] sm:leading-6">{perk.desc}</span></PxButton>)}</div>
+          <PxButton tone="dark" onClick={() => setPlayStep("difficulty")} className="mt-4 w-full py-4 text-[9px] sm:text-[10px]">VOLTAR</PxButton>
         </PxFrame>
       </div>
     );
   }
-  if (difficultyOpen) {
+  if (playStep === "difficulty") {
     return (
       <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
         <PxFrame title={t.difficulty} className="anim-pop w-full max-w-2xl p-4 sm:p-6">
@@ -162,14 +161,14 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
               const titleKey = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard";
               const descKey = `${titleKey}Desc` as "difficultyEasyDesc" | "difficultyMediumDesc" | "difficultyHardDesc";
               return (
-                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => { onDifficulty(level); setDifficultyOpen(false); setPerkOpen(true); }} className="min-h-32 flex-col items-center justify-center gap-3 px-3 py-4 text-center">
+                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => { onDifficulty(level); setPlayStep("perk"); }} className="min-h-32 flex-col items-center justify-center gap-3 px-3 py-4 text-center">
                   <strong className="font-pixel text-[9px]">{t[titleKey]}</strong>
                   <span className="font-pixel text-[5px] leading-4 text-[#a9c3be]">{t[descKey]}</span>
                 </PxButton>
               );
             })}
           </div>
-          <PxButton tone="dark" onClick={() => setDifficultyOpen(false)} className="mt-5 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
+          <PxButton tone="dark" onClick={() => setPlayStep(null)} className="mt-5 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
         </PxFrame>
       </div>
     );
@@ -184,7 +183,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
         </header>
 
         <main className="menu-actions flex w-full max-w-sm flex-col items-center gap-3 py-6">
-          <button onClick={() => setDifficultyOpen(true)} className="menu-play group w-full">
+          <button onClick={() => setPlayStep("difficulty")} className="menu-play group w-full">
             <span className="font-pixel text-[16px] sm:text-[22px]">▶ {t.play}</span>
           </button>
           <button
