@@ -721,7 +721,9 @@ export default function App() {
             <h2 className="text-sm">{({ pt: "COMPUTADOR OU CELULAR?", en: "COMPUTER OR PHONE?", fr: "ORDINATEUR OU MOBILE ?", de: "COMPUTER ODER HANDY?", zh: "电脑还是手机？" })[opts.language]}</h2>
             {([false, true] as const).map((mobile) => <button key={String(mobile)} className="pxb pxb-menu min-h-16 p-4 text-xs" onClick={() => {
               const mode: InputMode = mobile ? "touch" : "keyboardMouse";
-              setIsTouch(mobile); setInputMode(mode); gameRef.current?.setOpts({ inputMode: mode }); setDeviceChosen(true);
+               if (mobile && !document.fullscreenElement) { document.documentElement.requestFullscreen?.().catch(() => {}); }
+               setIsTouch(mobile); setInputMode(mode); gameRef.current?.setOpts({ inputMode: mode }); setDeviceChosen(true);
+               setPhase("menu");
             }}>{mobile ? ({ pt: "CELULAR", en: "PHONE", fr: "MOBILE", de: "HANDY", zh: "手机" })[opts.language] : ({ pt: "COMPUTADOR", en: "COMPUTER", fr: "ORDINATEUR", de: "COMPUTER", zh: "电脑" })[opts.language]}</button>)}
           </div>
         </div>}
@@ -735,6 +737,7 @@ export default function App() {
             onMute={toggleMute}
             onPause={togglePause}
             onSelectSlot={selectSlot}
+            isTouch={isTouch}
             onDash={() => gameRef.current?.touchDash()}
             onRaceAbility={() => gameRef.current?.touchRaceAbility()}
             raceAbilityBinding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO" : opts.keyboardBindings.specialAbility.toUpperCase()}
@@ -822,4 +825,9 @@ export default function App() {
     </div>
   );
 }
+
+
+
+
+
 

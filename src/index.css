@@ -857,3 +857,4 @@ html { scroll-behavior: smooth; }
 .control-bind, .control-pad-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; }
 .control-bind > span, .control-pad-row > span { min-width: 0; }
 .control-pad-row > strong { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+.mobile-aim-assist-label{position:absolute;top:78px;left:50%;transform:translateX(-50%);z-index:20;border:2px solid #ffd44a;background:rgba(22,11,18,.9);padding:5px 8px;color:#ffd44a;font-family:monospace;font-size:6px;white-space:nowrap;box-shadow:0 0 8px rgba(255,212,74,.55)}@media(max-width:640px){.mobile-aim-assist-label{top:66px;font-size:5px;max-width:90vw;white-space:normal;text-align:center}}

@@ -606,6 +606,7 @@ export class Game {
   dashQueued = false;
   moveStick: { id: number; ox: number; oy: number; x: number; y: number } | null = null;
   aimStick: { id: number; ox: number; oy: number; x: number; y: number } | null = null;
+  aimAssistTarget: Enemy | null = null;
   gamepadButtons: boolean[] = [];
 
   onStats: (s: HudStats) => void = () => {};
@@ -1925,7 +1926,7 @@ export class Game {
     }
     if (this.opts.inputMode === "keyboard") return this.keyboardAimAngle;
     if (this.mouseActive) return Math.atan2(this.mouseY - this.py, this.mouseX - this.px);
-    const near = this.nearestEnemy(240);
+    const near = this.opts.inputMode === "touch" ? this.aimAssistTarget ?? this.nearestEnemy(320) : this.nearestEnemy(240);
     if (near) return Math.atan2(near.y - this.py, near.x - this.px);
     return this.face > 0 ? 0 : Math.PI;
   }
@@ -4738,6 +4739,12 @@ export class Game {
         if (peer.hp > 0) this.shadow(peer.px, peer.py + 8, 7);
       }
 
+    if (this.opts.inputMode === "touch" && this.aimAssistTarget && this.enemies.includes(this.aimAssistTarget)) {
+      const e = this.aimAssistTarget;
+      ctx.save(); ctx.globalAlpha = 0.82 + Math.sin(this.elapsed * 8) * 0.16; ctx.strokeStyle = "#ffd44a"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(e.x, e.y, e.r + 8 + Math.sin(this.elapsed * 6) * 2, 0, TAU); ctx.stroke(); ctx.restore();
+    }
+
     // Enemies sorted by Y
     const list = [...this.enemies].sort((a, b) => a.y - b.y);
     for (const e of list) this.drawEnemy(e);
@@ -5991,3 +5998,5 @@ function gibColor(t: EnemyType) {
 function prevent(e: Event) {
   e.preventDefault();
 }
+
+

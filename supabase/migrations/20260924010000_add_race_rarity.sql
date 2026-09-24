@@ -1,0 +1,12 @@
+-- Persiste a categoria de raridade associada a cada raça no ranking.
+-- Pesos individuais do jogo somam por categoria: divina 0,1; mítica 0,9;
+-- lendária 4; épica 12; azul 17; incomum 28; comum 40.
+ALTER TABLE public.ranking ADD COLUMN IF NOT EXISTS race_rarity TEXT;
+ALTER TABLE public.ranking DROP CONSTRAINT IF EXISTS ranking_race_rarity_check;
+ALTER TABLE public.ranking ADD CONSTRAINT ranking_race_rarity_check CHECK (race_rarity IS NULL OR race_rarity IN ('divine','mythic','legendary','epic','blue','uncommon','common'));
+UPDATE public.ranking SET race_rarity = CASE race_id WHEN 'divinity' THEN 'divine' WHEN 'godHunter' THEN 'mythic' WHEN 'draconic' THEN 'legendary' WHEN 'oni' THEN 'epic' WHEN 'giant' THEN 'epic' WHEN 'oniBlood' THEN 'epic' WHEN 'elf' THEN 'blue' WHEN 'spiritualHeir' THEN 'blue' WHEN 'dwarf' THEN 'uncommon' WHEN 'orc' THEN 'uncommon' WHEN 'human' THEN 'common' WHEN 'goblin' THEN 'common' WHEN 'ronin' THEN 'common' WHEN 'survivor' THEN 'common' ELSE NULL END WHERE race_id IS NOT NULL;
+CREATE OR REPLACE FUNCTION public.set_ranking_race_rarity() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN NEW.race_rarity := CASE NEW.race_id WHEN 'divinity' THEN 'divine' WHEN 'godHunter' THEN 'mythic' WHEN 'draconic' THEN 'legendary' WHEN 'oni' THEN 'epic' WHEN 'giant' THEN 'epic' WHEN 'oniBlood' THEN 'epic' WHEN 'elf' THEN 'blue' WHEN 'spiritualHeir' THEN 'blue' WHEN 'dwarf' THEN 'uncommon' WHEN 'orc' THEN 'uncommon' WHEN 'human' THEN 'common' WHEN 'goblin' THEN 'common' WHEN 'ronin' THEN 'common' WHEN 'survivor' THEN 'common' ELSE NULL END; RETURN NEW; END; $$;
+DROP TRIGGER IF EXISTS ranking_race_rarity_sync ON public.ranking;
+CREATE TRIGGER ranking_race_rarity_sync BEFORE INSERT OR UPDATE OF race_id ON public.ranking FOR EACH ROW EXECUTE FUNCTION public.set_ranking_race_rarity();
+DROP VIEW IF EXISTS public.top_50_ranking;
+CREATE VIEW public.top_50_ranking AS SELECT ranked.id, ranked.user_id, ranked.player_name, ranked.avatar_id, ranked.difficulty, ranked.score, ranked.wave, ranked.kills, ranked.survival_time_seconds, ranked.created_at, ranked.race_id, ranked.race_rarity, ranked.perk_id, ranked.weapons, ranked.coins, ranked.game_mode, ranked.run_details, ranked.placement FROM (SELECT ranking.*, ROW_NUMBER() OVER (PARTITION BY difficulty ORDER BY score DESC, wave DESC, kills DESC, survival_time_seconds DESC, created_at ASC, id ASC) AS placement FROM public.ranking) AS ranked WHERE ranked.placement <= 50;

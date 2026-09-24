@@ -12,7 +12,7 @@ function Heart({ filled }: { filled: boolean }) {
   return <svg viewBox="0 0 7 6" className="h-7 w-9 sm:h-8 sm:w-10" shapeRendering="crispEdges"><g fill={filled ? "#ff4353" : "#2a0e13"}><rect x="1" y="0" width="2" height="1" /><rect x="4" y="0" width="2" height="1" /><rect x="0" y="1" width="7" height="2" /><rect x="1" y="3" width="5" height="1" /><rect x="2" y="4" width="3" height="1" /><rect x="3" y="5" width="1" height="1" /></g>{filled && <rect x="1" y="1" width="1" height="1" fill="#ffd2b5" />}</svg>;
 }
 
-export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRaceAbility, raceAbilityBinding, onSpectate, onPotionDismiss, hudScale, language, t }: {
+export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRaceAbility, raceAbilityBinding, onSpectate, onPotionDismiss, hudScale, language, t, isTouch }: {
   stats: HudStats;
   best: number;
   onPause: () => void;
@@ -130,6 +130,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
 
       </div>
 
+      {isTouch && <div className="mobile-aim-assist-label">AUXÍLIO DE MIRA · ALVO FIXADO</div>}
       <button onClick={onRaceAbility} disabled={!raceAbilityReady} className={`pointer-events-auto absolute bottom-3 left-3 flex h-[70px] w-[92px] flex-col items-center justify-center gap-1 border-4 bg-[#0b1215] font-pixel shadow-[0_4px_0_#070305] ${stats.raceAbilityT > 0 ? "anim-pulse" : ""}`} style={{ borderColor: race.color, backgroundColor: `${race.color}20` }} title={`${race.ability.name}: ${raceAbilityState}`} aria-label="Habilidade Especial"><strong className="text-center text-[6px]" style={{ color: race.color }}>{race.ability.name}</strong><span className="text-[15px]" style={{ color: race.color }}>{race.icon}</span><span className="text-[7px] text-[#ff6a68]">{raceAbilityState}</span><span className="text-[5px] text-[#d8c2b8]">{raceAbilityBinding}</span></button>
       <div className="pointer-events-none absolute bottom-3 right-3 flex items-center gap-2"><PixelSprite name="coin" scale={3} /><strong className="font-pixel text-[15px] text-[#ffd44a]">{Math.round(stats.coins)}</strong></div>
       {stats.combo > 1 && <div key={stats.combo} className="combat-combo anim-pop absolute left-1/2 top-24 -translate-x-1/2"><strong className="font-pixel text-shadow-pix">COMBO x{comboMult.toFixed(1)}</strong><span className="font-pixel">{stats.combo} {t.kills}</span><div className="combat-combo-track"><i style={{ width: `${stats.comboP * 100}%` }} /></div></div>}
@@ -140,11 +141,11 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
       {stats.mineTutorial && <div className="font-pixel absolute bottom-28 left-1/2 w-[min(90%,460px)] -translate-x-1/2 border-4 border-[#070305] bg-[#10282b]/95 px-4 py-3 text-center text-[7px] leading-5 text-[#ffd44a] shadow-[0_5px_0_#070305]">{t.mineTutorial}</div>}
 
       <div className="pointer-events-auto mx-auto flex max-w-full items-end justify-center gap-2 pb-1" style={{ transform: `scale(${hudScale})`, transformOrigin: "bottom center" }}>
-        <button onClick={activateDash} onPointerDown={moveDash} style={dashPos && isTouchPointer ? { position: "fixed", left: dashPos.x, top: dashPos.y, zIndex: 30 } : undefined} className={`dash-gauge dash-action mobile-dash-button ${stats.dashReady ? "is-ready" : ""}`} title={`${g.dash}: ${stats.dashReady ? t.ready : `${stats.dashCd.toFixed(1)}s`}`} aria-label={g.dash}>
+        {isTouch && <button onClick={activateDash} onPointerDown={moveDash} style={dashPos && isTouchPointer ? { position: "fixed", left: dashPos.x, top: dashPos.y, zIndex: 30 } : undefined} className={`dash-gauge dash-action mobile-dash-button ${stats.dashReady ? "is-ready" : ""}`} title={`${g.dash}: ${stats.dashReady ? t.ready : `${stats.dashCd.toFixed(1)}s`}`} aria-label={g.dash}>
           <svg className="absolute inset-0 h-full w-full -rotate-90" viewBox="0 0 52 52"><circle cx="26" cy="26" r="22" fill="#0b1215" stroke="#352029" strokeWidth="5" /><circle cx="26" cy="26" r="22" fill="none" stroke={stats.dashReady ? "#ffd44a" : "#e0444d"} strokeWidth="5" strokeDasharray={`${dashProgress * 138.23} 138.23`} /></svg>
           <PixelSprite name="player" scale={2} className={stats.dashReady ? "anim-bob" : "opacity-50"} />
           <strong>{stats.dashReady ? "DASH" : `${Math.ceil(stats.dashCd)}s`}</strong>
-        </button>
+        </button>}
 
         <div className="weapon-rail">{Array.from({ length: stats.maxWeaponSlots }, (_, index) => index).map((index) => {
           const weapon = stats.weapons[index];
@@ -161,4 +162,8 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
     </div>
   );
 }
+
+
+
+
 
