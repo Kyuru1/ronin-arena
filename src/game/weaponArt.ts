@@ -66,19 +66,36 @@ export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: 
 
 
 function drawStaff(ctx: CanvasRenderingContext2D, L: number, form: number) {
-  const glow = form > 0 ? "#9f6cff" : "#4da9ff";
+  const evolved = form > 0;
+  const glow = evolved ? "#b35cff" : "#4da9ff";
+  const core = evolved ? "#2c143d" : "#17344d";
+  // layered wood / metal shaft with a crystal head, readable at game scale.
   ctx.fillStyle = "#070508";
-  ctx.fillRect(-2, -2, 4, L + 4);
-  ctx.fillStyle = form > 0 ? "#241634" : "#19304a";
-  ctx.fillRect(-1, -1, 2, L + 2);
-  ctx.fillStyle = "#d9b45c";
-  ctx.fillRect(-3, -4, 6, 3);
+  ctx.fillRect(-3, -2, 6, L + 5);
+  ctx.fillStyle = core;
+  ctx.fillRect(-1, 0, 3, L + 1);
+  ctx.fillStyle = evolved ? "#6b348d" : "#2b78a1";
+  ctx.fillRect(0, 2, 1, L - 2);
+  for (let y = 5; y < L; y += 7) {
+    ctx.fillStyle = "#d4a552";
+    ctx.fillRect(-3, y, 6, 1);
+  }
+  ctx.fillStyle = "#070508";
+  ctx.fillRect(-6, -10, 12, 10);
+  ctx.fillStyle = evolved ? "#6330a0" : "#20598d";
+  ctx.fillRect(-4, -8, 8, 7);
   ctx.fillStyle = glow;
-  ctx.fillRect(-2, -8, 4, 4);
-  ctx.fillRect(-4, -6, 2, 2);
-  ctx.fillRect(3, -6, 2, 2);
+  ctx.fillRect(-3, -11, 6, 5);
+  ctx.fillRect(-5, -8, 2, 3);
+  ctx.fillRect(4, -8, 2, 3);
+  ctx.fillStyle = "#f1e8ff";
+  ctx.fillRect(-1, -10, 2, 3);
+  if (evolved) {
+    ctx.fillStyle = "#c77dff";
+    ctx.fillRect(-7, -4, 2, 2);
+    ctx.fillRect(6, -4, 2, 2);
+  }
 }
-
 function drawHarp(ctx: CanvasRenderingContext2D) {
   // A compact gold concert harp: heavy pillar, curved neck and a broad sound box.
   ctx.fillStyle = "#080608";

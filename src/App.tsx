@@ -311,6 +311,8 @@ export default function App() {
         currentGame.reset();
         currentGame.phase = "menu";
       }
+      // A rematch ends the old room: return to the create/join screen instead of reusing its lobby.
+      coopNet.leaveRoom();
       setIsCoopGame(false);
       setRematchWaiting(false);
       setRematchVotes(0);
@@ -672,9 +674,12 @@ export default function App() {
 
   /* Keep the visible pause screen in sync when the browser suspends the game. */
   useEffect(() => {
+    const recoverMobileViewport = () => {
+      requestAnimationFrame(() => requestAnimationFrame(() => gameRef.current?.recoverViewport()));
+    };
     const onVisibilityChange = () => {
       if (document.hidden) pauseFromFocusLoss();
-      else requestAnimationFrame(() => gameRef.current?.recoverViewport());
+      else recoverMobileViewport();
     };
     const onPageHide = () => {
       if (gameRef.current?.isCoop) coopNet.leaveRoom();
@@ -682,10 +687,14 @@ export default function App() {
     };
     window.addEventListener("blur", pauseFromFocusLoss);
     window.addEventListener("pagehide", onPageHide);
+    window.addEventListener("resize", recoverMobileViewport);
+    window.addEventListener("orientationchange", recoverMobileViewport);
     document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener("blur", pauseFromFocusLoss);
       window.removeEventListener("pagehide", onPageHide);
+      window.removeEventListener("resize", recoverMobileViewport);
+      window.removeEventListener("orientationchange", recoverMobileViewport);
       document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [pauseFromFocusLoss]);

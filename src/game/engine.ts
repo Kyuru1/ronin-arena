@@ -25,7 +25,7 @@ export type WeaponLevels = Record<Weapon, Record<WeaponUpgrade, number>>;
 
 export const DIFFICULTY_RULES = {
   easy: {
-    limits: { maxHp: 60, speed: 400, dashMax: 1, dashSpeedMult: 6 },
+    limits: { maxHp: 50, speed: 400, dashMax: 1, dashSpeedMult: 6 },
     damageTaken: 0.5,
     coinMultiplier: 2,
   },
@@ -51,7 +51,7 @@ export function isPowerUpAtLimit(
   const base = DIFFICULTY_RULES[difficulty].limits;
   const race = RACE_CONFIG[stats.raceId ?? "ronin"];
   const limits = {
-    maxHp: Math.max(1, Math.floor(base.maxHp * race.modifiers.maxHp * race.modifiers.attributeLimit)),
+    maxHp: Math.min(50, Math.max(1, Math.floor(base.maxHp * race.modifiers.maxHp * race.modifiers.attributeLimit))),
     speed: base.speed * race.modifiers.attributeLimit,
     dashMax: base.dashMax / race.modifiers.attributeLimit,
     dashSpeedMult: base.dashSpeedMult * race.modifiers.attributeLimit,
@@ -738,7 +738,7 @@ export class Game {
     }
     if (race.ability.healMaxHpFraction > 0) {
       const heal = Math.max(1, this.maxHp * race.ability.healMaxHpFraction);
-      this.hp = Math.min(this.maxHp, this.hp + heal);
+      this.hp = Math.round(Math.min(this.maxHp, this.hp + heal));
       this.addScore(0, this.px, this.py - 12, `+${Number.isInteger(heal) ? heal : heal.toFixed(1)} VIDA`, race.color);
     }
     if (race.ability.kind === "flame") {
@@ -777,8 +777,8 @@ export class Game {
     this.raceId = isRaceId(s.raceId) ? s.raceId : "ronin";
     this.raceAbilityT = Math.max(0, Number(s.raceAbilityT) || 0);
     this.raceAbilityCd = Math.max(this.raceAbilityT, Number(s.raceAbilityCd) || 0);
-    this.hp = s.hp;
-    this.maxHp = s.maxHp;
+    this.hp = Math.round(s.hp);
+    this.maxHp = Math.min(50, Math.max(1, Math.round(s.maxHp)));
     this.score = s.score;
     this.coins = s.coins;
     this.wave = s.wave;
@@ -1241,7 +1241,7 @@ export class Game {
     if (this.weapons.includes(weapon)) return false;
     const maxWeapons = this.baseWeaponSlots() + this.racialWeaponCount();
     if (this.weapons.length >= maxWeapons) return false;
-    this.coins -= cost;
+    this.coins = Math.max(0, Math.round(this.coins - cost));
     this.weapons.push(weapon);
     if (!this.weaponsUsed.includes(weapon)) this.weaponsUsed.push(weapon);
     this.activeSlot = this.weapons.length - 1;
@@ -1257,7 +1257,7 @@ export class Game {
     if ((this.raceId === "divinity" && (racial === "harp" || racial === "godslayer")) || (this.raceId === "elf" && racial === "bow")) return false;
     if (slotIndex < 0 || slotIndex >= this.weapons.length) return false;
     this.weapons.splice(slotIndex, 1);
-    this.coins += refund;
+    this.coins = Math.round(this.coins + refund);
     if (this.activeSlot >= this.weapons.length) {
       this.activeSlot = this.weapons.length - 1;
     }
@@ -1279,7 +1279,7 @@ export class Game {
       weapon !== "staff"
     )
       return false;
-    this.coins -= cost;
+    this.coins = Math.max(0, Math.round(this.coins - cost));
     this.weaponLevels[weapon][upgrade]++;
     Sfx.buy();
     this.pushStats(true);
@@ -1296,14 +1296,14 @@ export class Game {
     if (this.coins < cost) return false;
     const atLimit = isPowerUpAtLimit(this, power, this.difficulty);
     if (atLimit) return false;
-    this.coins -= cost;
+    this.coins = Math.max(0, Math.round(this.coins - cost));
     if (power === "speed") {
       this.speedBonus = Math.min(this.limits().speed - 108, this.speedBonus + 18);
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].speedBoost, "#ffae57");
     } else if (power === "heart") {
       const maxHpLimit = Math.floor(this.limits().maxHp);
       this.maxHp = Math.min(maxHpLimit, Math.floor(this.maxHp) + 1);
-      this.hp = Math.min(this.maxHp, this.hp + 2);
+      this.hp = Math.round(Math.min(this.maxHp, this.hp + 2));
       this.addScore(40, this.px, this.py - 16, I18N[this.opts.language].healthBoost, "#ff4f58");
     } else if (power === "dashCd") {
       this.dashMax = Math.max(this.limits().dashMax, this.dashMax - 0.8);
@@ -1327,7 +1327,7 @@ export class Game {
     }
 
     const limits = this.limits();
-    this.maxHp = Math.min(Math.floor(this.maxHp), limits.maxHp);
+    this.maxHp = Math.min(50, Math.min(Math.floor(this.maxHp), limits.maxHp));
     this.speedBonus = Math.min(this.speedBonus, limits.speed - 108);
     this.dashMax = Math.max(this.dashMax, limits.dashMax);
     this.dashSpeedMult = Math.min(this.dashSpeedMult, limits.dashSpeedMult);
@@ -1345,7 +1345,7 @@ export class Game {
       if (!this.allCoopPlayersReadyForNextWave()) {
         this.phase = "playing";
         this.last = performance.now();
-        this.iframe = Math.max(this.iframe, 0.8);
+        this.iframe = Math.max(this.iframe, 0.4);
         this.banner = "AGUARDANDO TODOS NA LOJA...";
         this.bannerT = 2.5;
         this.pushStats(true);
@@ -1370,7 +1370,7 @@ export class Game {
     this.phase = "playing";
     this.last = performance.now();
     // re-center the player and give a short breather before the ring closes in
-    this.iframe = Math.max(this.iframe, 0.8);
+    this.iframe = Math.max(this.iframe, 0.4);
     this.beginWave();
   }
 
@@ -1542,7 +1542,7 @@ export class Game {
     const race = RACE_CONFIG[this.raceId];
     const limitMultiplier = race.modifiers.attributeLimit;
     const limits = {
-      maxHp: Math.max(1, Math.floor(base.maxHp * race.modifiers.maxHp * limitMultiplier)),
+      maxHp: Math.min(50, Math.max(1, Math.floor(base.maxHp * race.modifiers.maxHp * limitMultiplier))),
       speed: base.speed * limitMultiplier,
       dashMax: base.dashMax / limitMultiplier,
       dashSpeedMult: base.dashSpeedMult * limitMultiplier,
@@ -1577,7 +1577,7 @@ export class Game {
   private applyRaceStartingStats() {
     const race = RACE_CONFIG[this.raceId];
     const baseMaxHp = this.perk === "sharpGlass" ? 3 : 5;
-    this.maxHp = Math.max(1, Math.floor(baseMaxHp * race.modifiers.maxHp));
+    this.maxHp = Math.min(50, Math.max(1, Math.floor(baseMaxHp * race.modifiers.maxHp)));
     this.hp = this.maxHp;
     if (race.modifiers.initialProgress <= 0) return;
     const progress = race.modifiers.initialProgress;
@@ -1591,11 +1591,11 @@ export class Game {
 
   private enforceStatLimits() {
     const limits = this.limits();
-    this.maxHp = Math.min(Math.floor(this.maxHp), limits.maxHp);
+    this.maxHp = Math.min(50, Math.min(Math.floor(this.maxHp), limits.maxHp));
     this.speedBonus = Math.min(this.speedBonus, limits.speed - 108);
     this.dashMax = Math.max(this.dashMax, limits.dashMax);
     this.dashSpeedMult = Math.min(this.dashSpeedMult, limits.dashSpeedMult);
-    this.hp = clamp(this.hp, 0, this.maxHp);
+    this.hp = Math.round(clamp(this.hp, 0, this.maxHp));
   }
   private perkDamageMultiplier(): number {
     if (this.perk === "bladeMonk" && this.currentWeapon === "katana") return 1.85;
@@ -2330,7 +2330,7 @@ export class Game {
     this.atkT = 0;
     if (this.currentWeapon === "harp") {
       const heal = this.maxHp * (0.17 + Math.random() * 0.03);
-      this.hp = Math.min(this.maxHp, this.hp + heal);
+      this.hp = Math.round(Math.min(this.maxHp, this.hp + heal));
       this.addScore(0,this.px,this.py-13,`+${heal.toFixed(1)} VIDA`,"#fff2a8");
       this.burst(this.px,this.py,18,"#8cecff",120);
     }
@@ -3171,9 +3171,9 @@ export class Game {
       case "bomber":
         return { hp: 8 + hpB, r: 8, speed: 48 + spB * 0.45, score: 64, dmg: enemyDamage };
       case "bombMinion":
-        return { hp: 4 + hpB, r: 7, speed: 62 + spB * 0.55, score: 52, dmg: this.wave <= 10 ? 2 : 5 };
+        return { hp: 4 + hpB, r: 7, speed: 62 + spB * 0.55, score: 52, dmg: Math.max(2, enemyDamage) };
       case "ram":
-        return { hp: 12 + hpB * 2, r: 10, speed: 34 + spB * 0.35, score: 78, dmg: this.wave <= 10 ? 5 : 10 };
+        return { hp: 12 + hpB * 2, r: 10, speed: 34 + spB * 0.35, score: 78, dmg: Math.max(5, enemyDamage * 2) };
       case "warlock":
         return { hp: 10 + Math.floor(hpB * 1.3), r: 8, speed: 48 + spB * 0.45, score: 82, dmg: enemyDamage };
       case "golem":
@@ -3401,7 +3401,7 @@ export class Game {
       Sfx.crit(4);
       // Credita cada moeda pendente na hora, mantendo a animacao de coleta viva.
       // Em coop cada moeda vale coinValue para cada jogador (economia 2x dividida).
-      const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier * (RACE_CONFIG[this.raceId].coinMultiplier ?? 1);
+      const coinValue = Math.max(1, Math.round(DIFFICULTY_RULES[this.difficulty].coinMultiplier * (RACE_CONFIG[this.raceId].coinMultiplier ?? 1)));
       let pendingCoins = 0;
       for (const p of this.pickups) {
         if (p.kind === "coin" && !p.credited) {
@@ -3412,7 +3412,7 @@ export class Game {
       }
       if (pendingCoins > 0) {
         const total = pendingCoins * coinValue;
-        this.coins += total;
+        this.coins = Math.round(this.coins + total);
         if (this.isCoop) {
           this.onCoinSplit?.(total);
           if (this.isHost) {
@@ -3426,7 +3426,7 @@ export class Game {
         }
       }
       const floorHeal = RACE_CONFIG[this.raceId].floorHeal ?? 0;
-      if (floorHeal > 0 && this.hp > 0) { this.hp = Math.min(this.maxHp, this.hp + floorHeal); this.addScore(0,this.px,this.py-12,`+${floorHeal} VIDA`,RACE_CONFIG[this.raceId].color); }
+      if (floorHeal > 0 && this.hp > 0) { this.hp = Math.round(Math.min(this.maxHp, this.hp + floorHeal)); this.addScore(0,this.px,this.py-12,`+${floorHeal} VIDA`,RACE_CONFIG[this.raceId].color); }
       if (this.isCoop) {
         if (this.hp <= 0) {
           this.hp = this.maxHp;
@@ -3774,34 +3774,42 @@ export class Game {
               e.vx += nx * e.speed * 4 * dt;
               e.vy += ny * e.speed * 4 * dt;
               if (e.cd <= 0) {
-                e.cd = bossType === "golem" ? 2.2 : 1.5;
-                const volley = bossType === "golem" ? 14 : 10;
-                const shotSpeed = bossType === "golem" ? 145 : 135;
-                for (let v = 0; v < volley; v++) {
-                  const a = (v / volley) * TAU + e.t * 0.25;
-                  this.shots.push({
-                    x: e.x,
-                    y: e.y,
-                    vx: Math.cos(a) * shotSpeed,
-                    vy: Math.sin(a) * shotSpeed,
-                    life: 4,
-                    r: 4,
-                    dmg: e.dmg,
-                  });
+                const aim = Math.atan2(dy, dx);
+                if (bossType === "monk") {
+                  e.cd = 4.5;
+                  for (let v = 0; v < 3; v++) {
+                    const a = aim + (v - 1) * 0.7;
+                    this.spawnEnemy("skeleton", e.x + Math.cos(a) * 22, e.y + Math.sin(a) * 22);
+                  }
+                  this.shockwaves.push({ x: e.x, y: e.y, r: 8, maxR: 70, life: 0.55, maxLife: 0.55, color: "#ffd27a" });
+                  this.burst(e.x, e.y, 24, "#ffd27a", 150);
+                } else if (bossType === "wisp") {
+                  e.cd = 2.4;
+                  for (let v = 0; v < 8; v++) {
+                    const a = (v / 8) * TAU + e.t * 0.7;
+                    this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 118, vy: Math.sin(a) * 118, life: 3.2, r: 3, dmg: e.dmg, color: "#8cecff" });
+                  }
+                  this.shockwaves.push({ x: e.x, y: e.y, r: 6, maxR: 86, life: 0.6, maxLife: 0.6, color: "#8cecff" });
+                  this.burst(e.x, e.y, 20, "#8cecff", 130);
+                } else if (bossType === "warlock") {
+                  e.cd = 2.1;
+                  for (let v = -2; v <= 2; v++) {
+                    const a = aim + v * 0.16;
+                    this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * 185, vy: Math.sin(a) * 185, life: 3.4, r: 4, dmg: e.dmg, color: "#a677ff" });
+                  }
+                  this.burst(e.x, e.y, 20, "#a677ff", 150);
+                } else {
+                  e.cd = bossType === "golem" ? 2.2 : bossType === "archer" ? 1.15 : 1.6;
+                  const volley = bossType === "golem" ? 14 : bossType === "archer" ? 3 : 10;
+                  const shotSpeed = bossType === "golem" ? 145 : bossType === "archer" ? 215 : 135;
+                  for (let v = 0; v < volley; v++) {
+                    const a = bossType === "archer" ? aim + (v - 1) * 0.18 : (v / volley) * TAU + e.t * 0.25;
+                    this.shots.push({ x: e.x, y: e.y, vx: Math.cos(a) * shotSpeed, vy: Math.sin(a) * shotSpeed, life: 4, r: 4, dmg: e.dmg, color: bossType === "golem" ? "#d79bff" : bossType === "archer" ? "#ffd27a" : "#ff3c4a" });
+                  }
+                  if (bossType === "golem") this.shockwaves.push({ x: e.x, y: e.y, r: 8, maxR: 55, life: 0.45, maxLife: 0.45, color: "#d79bff" });
+                  this.shake = Math.max(this.shake, bossType === "golem" ? 8 : 4);
+                  this.burst(e.x, e.y, 18, bossType === "golem" ? "#d79bff" : "#ff3c4a", 120);
                 }
-                if (bossType === "golem") {
-                  this.shockwaves.push({
-                    x: e.x,
-                    y: e.y,
-                    r: 8,
-                    maxR: 55,
-                    life: 0.45,
-                    maxLife: 0.45,
-                    color: "#d79bff",
-                  });
-                }
-                this.shake = Math.max(this.shake, bossType === "golem" ? 8 : 4);
-                this.burst(e.x, e.y, 18, bossType === "golem" ? "#d79bff" : "#ff3c4a", 120);
                 Sfx.enemyShoot("burst");
               }
             }
@@ -3913,8 +3921,8 @@ export class Game {
     if (!peer || peer.hp <= 0 || peer.isDashing || (this.peerIframes[targetPeerId] ?? 0) > 0) return;
     const peerRace = isRaceId(peer.raceId) ? RACE_CONFIG[peer.raceId] : null;
     if (peerRace && (peer.raceAbilityT ?? 0) > 0 && (peerRace.ability.invulnerable || (contact && peerRace.ability.contactImmune))) return;
-    peer.hp = Math.max(0, peer.hp - dmg * DIFFICULTY_RULES[this.difficulty].damageTaken);
-    this.peerIframes[targetPeerId] = 1;
+    peer.hp = Math.round(Math.max(0, peer.hp - dmg * DIFFICULTY_RULES[this.difficulty].damageTaken));
+    this.peerIframes[targetPeerId] = 0.4;
     this.peerRonin = Object.values(this.peerRonins)[0] ?? null;
     this.onGamePacketOut?.({ type: "PLAYER_DAMAGE", target: targetPeerId, dmg, nx, ny });
   }
@@ -4107,10 +4115,10 @@ export class Game {
         this.pickups.splice(i, 1);
         if (p.kind === "heart") {
           if (collectedByPeer && this.peerRonin) {
-            this.peerRonin.hp = Math.min(this.peerRonin.maxHp || 5, this.peerRonin.hp + 1);
+            this.peerRonin.hp = Math.round(Math.min(this.peerRonin.maxHp || 5, this.peerRonin.hp + 1));
             this.onGamePacketOut?.({ type: "PICKUP_EFFECT", kind: "heart", target: "guest" });
           } else {
-            this.hp = Math.min(this.maxHp, this.hp + 1);
+            this.hp = Math.round(Math.min(this.maxHp, this.hp + 1));
           }
           this.addScore(0, p.x, p.y - 8, I18N[this.opts.language].healthPickup, "#ff4d6d");
           this.burst(p.x, p.y, 12, "#ff4d6d", 110);
@@ -4123,7 +4131,7 @@ export class Game {
           // Poçao coletada pelo parceiro: aplica nele e mostra so o efeito local.
           this.onGamePacketOut?.({ type: "PICKUP_EFFECT", kind: "potion", potion: p.potion, target: "guest" });
           if (p.potion === "health" && this.peerRonin) {
-            this.peerRonin.hp = Math.min(this.peerRonin.maxHp || 5, this.peerRonin.hp + 2);
+            this.peerRonin.hp = Math.round(Math.min(this.peerRonin.maxHp || 5, this.peerRonin.hp + 2));
             this.addScore(0, p.x, p.y - 8, "+2 VIDA", "#ff4d6d");
             Sfx.heal();
           }
@@ -4133,7 +4141,7 @@ export class Game {
           Sfx.pickup();
         } else {
           if (p.potion === "health") {
-            this.hp = Math.min(this.maxHp, this.hp + 2);
+            this.hp = Math.round(Math.min(this.maxHp, this.hp + 2));
             this.addScore(0, p.x, p.y - 8, "+2 VIDA", "#ff4d6d");
             Sfx.heal();
           }
@@ -4160,10 +4168,10 @@ export class Game {
 
   /** Moeda coletada: no coop ela pertence somente ao coletor. */
   private creditCoinDrop(p: Pickup) {
-    const coinValue = DIFFICULTY_RULES[this.difficulty].coinMultiplier * (RACE_CONFIG[this.raceId].coinMultiplier ?? 1);
+    const coinValue = Math.max(1, Math.round(DIFFICULTY_RULES[this.difficulty].coinMultiplier * (RACE_CONFIG[this.raceId].coinMultiplier ?? 1)));
     if (!p.credited) {
       p.credited = true;
-      this.coins += coinValue;
+      this.coins = Math.round(this.coins + coinValue);
       if (this.isCoop) {
         this.onCoinSplit?.(coinValue);
         if (this.isHost || p.local) {
@@ -4197,8 +4205,8 @@ export class Game {
       taken *= Math.max(0.35, 1 - this.dwarfResistance) * activeGuard;
       this.dwarfResistance = Math.min(0.65, this.dwarfResistance + 0.1);
     }
-    this.hp -= taken;
-    this.iframe = 1;
+    this.hp = Math.round(this.hp - taken);
+    this.iframe = 0.4;
     this.combo = 0;
     this.pvx = nx * 190;
     this.pvy = ny * 190;
@@ -4217,7 +4225,7 @@ export class Game {
 
   private die() {
     if (this.raceId === "human" && this.humanWillReady && !this.humanWillUsed) {
-      this.humanWillUsed = true; this.humanWillDamage = 1.2; this.hp = Math.max(1, this.maxHp * 0.5); this.iframe = 3;
+      this.humanWillUsed = true; this.humanWillDamage = 1.2; this.hp = Math.max(1, Math.round(this.maxHp * 0.5)); this.iframe = 0.4;
       this.banner = "WILL! SEGUNDA CHANCE"; this.bannerT = 2.4; this.burst(this.px,this.py,36,"#ffffff",220); this.pushStats(true); return;
     }
     this.raceAbilityT = 0;
@@ -4862,7 +4870,24 @@ export class Game {
       ctx.fillRect(Math.round(e.x - 2), Math.round(e.y - e.r - 5), 4, 3);
       ctx.restore();
     }
+    const visualColor = e.type === "boss"
+      ? (e.bossType === "warlock" ? "#a677ff" : e.bossType === "wisp" ? "#8cecff" : e.bossType === "golem" ? "#d79bff" : "#ff6a58")
+      : e.type === "warlock" ? "#a677ff" : e.type === "wisp" ? "#8cecff" : e.type === "bomber" ? "#ffb25b" : "#d65764";
     ctx.save();
+    ctx.globalAlpha = e.type === "boss" ? 0.28 + Math.sin(e.t * 8) * 0.08 : 0.12 + Math.sin(e.t * 7) * 0.04;
+    ctx.fillStyle = visualColor;
+    ctx.beginPath();
+    ctx.arc(e.x, e.y + e.r * 0.45, e.type === "boss" ? e.r + 8 : e.r + 3, 0, TAU);
+    ctx.fill();
+    if (e.type === "boss") {
+      ctx.globalAlpha = 0.55;
+      ctx.strokeStyle = visualColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r + 5 + Math.sin(e.t * 6) * 2, 0, TAU);
+      ctx.stroke();
+    }
+    ctx.restore();    ctx.save();
     ctx.filter = "saturate(2) contrast(1.22) brightness(1.1)";
     this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY, e.type === "boss" ? 1.65 : 1.08);
     ctx.restore();
@@ -5517,7 +5542,7 @@ export class Game {
         this.pickups = [...nextPickups, ...localDrops];
       }
     } else if (packet.type === "COIN_DIVIDED") {
-      this.coins += packet.amount;
+      this.coins = Math.round(this.coins + packet.amount);
       this.addScore(10 * packet.amount, this.px, this.py - 6, `+${packet.amount} 👥`, "#ffd747");
       this.burst(this.px, this.py, 6, "#ffd747", 75);
       Sfx.coin();
@@ -5535,14 +5560,14 @@ export class Game {
       }
     } else if (packet.type === "PICKUP_EFFECT") {
       if (packet.kind === "heart") {
-        this.hp = Math.min(this.maxHp, this.hp + 1);
+        this.hp = Math.round(Math.min(this.maxHp, this.hp + 1));
         this.addScore(0, this.px, this.py - 8, I18N[this.opts.language].healthPickup, "#ff4d6d");
         this.burst(this.px, this.py, 12, "#ff4d6d", 110);
         Sfx.heal();
       } else if (packet.potion) {
         const potion = packet.potion as PotionType;
         if (potion === "health") {
-          this.hp = Math.min(this.maxHp, this.hp + 2);
+          this.hp = Math.round(Math.min(this.maxHp, this.hp + 2));
           this.addScore(0, this.px, this.py - 8, "+2 VIDA", "#ff4d6d");
           Sfx.heal();
         }
