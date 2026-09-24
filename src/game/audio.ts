@@ -3,6 +3,8 @@
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = false;
+let effectsEnabled = true;
+let musicEnabled = true;
 let volume = 0.45;
 let musicGain: GainNode | null = null;
 let musicTimer = 0;
@@ -43,6 +45,10 @@ export function setMuted(m: boolean) {
   if (master) master.gain.value = m ? 0 : volume;
 }
 
+export function setSoundEffectsEnabled(enabled: boolean) { effectsEnabled = enabled; }
+
+export function setMusicEnabled(enabled: boolean) { musicEnabled = enabled; if (musicGain) musicGain.gain.value = enabled ? 0.16 : 0; }
+
 export function isMuted() {
   return muted;
 }
@@ -64,7 +70,7 @@ function tone(
   delay = 0,
 ) {
   const c = ac();
-  if (!c || muted) return;
+  if (!c || muted || !effectsEnabled) return;
   const t = c.currentTime + delay;
   const o = c.createOscillator();
   const g = c.createGain();
@@ -81,7 +87,7 @@ function tone(
 
 function noise(dur: number, vol: number, f0: number, f1: number, q = 1, delay = 0) {
   const c = ac();
-  if (!c || muted) return;
+  if (!c || muted || !effectsEnabled) return;
   const t = c.currentTime + delay;
   const src = c.createBufferSource();
   src.buffer = noiseBuffer(c, dur);
@@ -100,7 +106,7 @@ function noise(dur: number, vol: number, f0: number, f1: number, q = 1, delay = 
 
 function musicNote(freq: number, dur: number, vol: number, delay = 0, type: OscillatorType = "triangle") {
   const c = ac();
-  if (!c || !master) return;
+  if (!c || !master || !musicEnabled) return;
   if (!musicGain) {
     musicGain = c.createGain();
     musicGain.gain.value = 0.16;
@@ -121,7 +127,7 @@ function musicNote(freq: number, dur: number, vol: number, delay = 0, type: Osci
 
 function musicDrum(accent: boolean) {
   const c = ac();
-  if (!c || !master) return;
+  if (!c || !master || !musicEnabled) return;
   if (!musicGain) {
     musicGain = c.createGain();
     musicGain.gain.value = 0.16;
@@ -142,7 +148,7 @@ function musicDrum(accent: boolean) {
 
 function musicHat(open = false) {
   const c = ac();
-  if (!c || !master || !musicGain) return;
+  if (!c || !master || !musicGain || !musicEnabled) return;
   const t = c.currentTime;
   const src = c.createBufferSource();
   src.buffer = noiseBuffer(c, open ? 0.12 : 0.045);

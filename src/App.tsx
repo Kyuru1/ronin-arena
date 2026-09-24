@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Game, type Difficulty, type InputMode, type Perk, type HudStats, type MagicType, type PowerUp, type SavedRun, type UpgradeOffer, type Weapon, type WeaponUpgrade } from "./game/engine";
-import { isMuted, setMuted, setVolume, unlockAudio, Sfx } from "./game/audio";
+import { isMuted, setMuted, setVolume, setSoundEffectsEnabled, setMusicEnabled, unlockAudio, Sfx } from "./game/audio";
 import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
 import Hud from "./components/Hud";
@@ -92,6 +92,8 @@ const RUN_KEY = "ronin.run.save.v2";
 
 const defaultOpts: UiOpts = {
   sound: true,
+  soundEffects: true,
+  music: true,
   shake: true,
   flash: true,
   volume: 0.45,
@@ -190,6 +192,8 @@ export default function App() {
     setOpts(o);
     setMuted(!o.sound);
     setVolume(o.volume);
+    setSoundEffectsEnabled(o.soundEffects !== false);
+    setMusicEnabled(o.music !== false);
     setMutedState(!o.sound);
     document.fonts?.load('10px "Press Start 2P"').catch(() => {});
     void loadRemoteScores().then(setScores);
@@ -619,11 +623,15 @@ export default function App() {
       const next = { ...prev, ...p };
       setMuted(!next.sound);
       setVolume(next.volume);
+      setSoundEffectsEnabled(next.soundEffects !== false);
+      setMusicEnabled(next.music !== false);
       setMutedState(!next.sound);
       gameRef.current?.setOpts({
         shake: next.shake ? 1 : 0,
         flash: next.flash ? 1 : 0,
         volume: next.volume,
+        soundEffects: next.soundEffects,
+        music: next.music,
         quality: next.quality,
         vsync: next.vsync,
       });
@@ -714,7 +722,7 @@ export default function App() {
     <div className={`relative flex h-full w-full items-center justify-center overflow-hidden bg-[#070305] ui-text-${opts.textScale === 0.85 ? "small" : opts.textScale === 1.15 ? "large" : "normal"}`}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(117,16,29,0.25),transparent_65%)]" />
 
-      <div className="social-links" aria-label="Comunidades oficiais">
+      {deviceChosen && phase === "menu" && <div className="social-links" aria-label="Comunidades oficiais">
         <a
           className="social-link social-link-discord"
           href="https://discord.gg/AGfUnjtE32"
@@ -739,7 +747,7 @@ export default function App() {
             <path d="M17.34 5.47A5.24 5.24 0 0 1 16.05 2h-3.47v13.02a2.76 2.76 0 1 1-2.02-2.65V8.85a6.23 6.23 0 1 0 5.5 6.18V8.42a8.43 8.43 0 0 0 4.93 1.58V6.55a5.13 5.13 0 0 1-3.65-1.08Z" />
           </svg>
         </a>
-      </div>
+      </div>}
 
       <div ref={wrapRef} data-device={isTouch ? "mobile" : "desktop"} className="relative h-full w-full max-w-[1500px]">
         {deviceChosen && isTouch && (phase !== "playing" || coopModalOpen) && <MobilePanelNavigation />}
