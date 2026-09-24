@@ -3,6 +3,7 @@ import type { PlayerProfile } from "../game/auth";
 import type { Difficulty } from "../game/engine";
 import { coopNet, type CoopRoomState } from "../game/coopNet";
 import { PxButton, PxChip, PxFrame, PxHeading } from "./PixelUi";
+import { PERKS } from "../game/perks";
 import PixelSprite from "./PixelSprite";
 
 interface CoopLobbyModalProps { profile: PlayerProfile; onClose: () => void; onStartCoop: (isHost: boolean, difficulty: Difficulty) => void; }
@@ -60,7 +61,7 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
           {host && !isHostPlayer && id && <PxButton tone="red" onClick={() => coopNet.kickPlayer(id)} className="mt-2 w-full px-1 py-1.5 text-[5px]">EXPULSAR</PxButton>}
         </> : <div className="pt-8 font-pixel text-[6px] text-[#6c3a42]">VAGA LIVRE</div>}</div>;
       })}</div>
-      {host && <div className="px-inset p-3"><PxHeading>DIFICULDADE</PxHeading><div className="mt-2 flex gap-2">{(["easy", "medium", "hard"] as const).map((value) => <PxChip key={value} on={room.difficulty === value} onClick={() => coopNet.setDifficulty(value)}>{value === "easy" ? "FÁCIL" : value === "medium" ? "MÉDIO" : "DIFÍCIL"}</PxChip>)}</div></div>}
+      {host && <div className="px-inset p-3"><PxHeading>DIFICULDADE</PxHeading><div className="mt-2 flex gap-2">{(["easy", "medium", "hard"] as const).map((value) => <PxChip key={value} on={room.difficulty === value} onClick={() => coopNet.setDifficulty(value)}>{value === "easy" ? "FÁCIL" : value === "medium" ? "MÉDIO" : "DIFÍCIL"}</PxChip>)}</div></div>}      <div className="px-inset p-3"><PxHeading>SUA PERK</PxHeading><div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-4">{PERKS.map((perk) => <button key={perk.id} onClick={() => coopNet.setPerk(perk.id)} className={`border-2 px-2 py-2 text-left font-pixel text-[5px] leading-3 ${room.players[profile.id]?.perk === perk.id ? "bg-[#3a1824] text-[#ffe2c4]" : "border-[#4a2630] text-[#9d7478]"}`} style={room.players[profile.id]?.perk === perk.id ? { borderColor: perk.accent, color: perk.accent } : undefined}>{perk.name}</button>)}</div></div>
       {message && <div className="font-pixel text-center text-[7px] leading-4 text-[#ef4444]">{message}</div>}
       {host ? <PxButton tone="gold" disabled={!allReady} onClick={() => coopNet.startGame()} className="w-full py-4 text-[9px]">{allReady ? "INICIAR PARTIDA" : "AGUARDANDO TODOS PRONTOS..."}</PxButton> : <PxButton tone={room.players[profile.id]?.ready ? "dark" : "gold"} onClick={() => coopNet.toggleReady()} className="w-full py-4 text-[9px]">{room.players[profile.id]?.ready ? "CANCELAR PRONTO" : "ESTOU PRONTO"}</PxButton>}
       <PxButton tone="dark" onClick={leave} className="w-full py-3 text-[8px]">SAIR DA SALA</PxButton>

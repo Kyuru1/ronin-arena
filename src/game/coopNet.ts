@@ -3,14 +3,14 @@ import type { PlayerProfile } from "./auth";
 import type { RaceId } from "./races";
 import { supabase } from "../lib/supabase";
 
-export interface CoopRoomPlayer { profile: PlayerProfile; ready: boolean; }
+export interface CoopRoomPlayer { profile: PlayerProfile; ready: boolean; perk: Perk | null; }
 export interface CoopRoomState { code: string; difficulty: Difficulty; started: boolean; hostId: string; players: Record<string, CoopRoomPlayer>; rematchVotes?: Record<string, boolean>; }
 export interface CoopArrowState { x: number; y: number; rot: number; }
 export interface CoopShotState { x: number; y: number; vx: number; vy: number; life: number; r: number; dmg: number; color?: string; }
 export interface CoopParticleState { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; drag: number; kind: 0 | 1 | 2 | 3; rot?: number; }
 export interface CoopImpactState { x: number; y: number; a: number; life: number; max: number; heavy: boolean; }
 export interface PeerRoninState {
-  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; raceId: RaceId; raceAbilityT: number; raceAbilityCd: number; coins: number; score: number; kills: number; magicType: MagicType; magicFxT: number; magicFxX: number; magicFxY: number; magicFxRadius: number; magicFxForm: number; username?: string; avatarId?: string;
+  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; raceId: RaceId; worldW?: number; worldH?: number; raceAbilityT: number; raceAbilityCd: number; coins: number; score: number; kills: number; magicType: MagicType; magicFxT: number; magicFxX: number; magicFxY: number; magicFxRadius: number; magicFxForm: number; username?: string; avatarId?: string;
 }
 export interface CoopEnemyState { id: number; type: string; x: number; y: number; hp: number; maxHp: number; face: number; atkAngle: number; state: string; animTimer: number; flash: number; }
 export interface CoopPickupState { id: number; kind: "coin" | "heart" | "potion"; potion?: string; x: number; y: number; credited: boolean; }
@@ -74,7 +74,7 @@ export class CoopNetwork {
   async createRoom(profile: PlayerProfile, difficulty: Difficulty = "medium") {
     const code = newCode(); await this.open(code);
     this.roomCode = code; this.role = "host"; this.playerId = profile.id;
-    this.updateRoom({ code, difficulty, started: false, hostId: profile.id, players: { [profile.id]: { profile, ready: true } } }, false);
+    this.updateRoom({ code, difficulty, started: false, hostId: profile.id, players: { [profile.id]: { profile, ready: true, perk: null } } }, false);
     this.publish("HOST_READY", this.roomState);
   }
 
@@ -86,6 +86,11 @@ export class CoopNetwork {
   }
 
   setDifficulty(difficulty: Difficulty) { if (!this.isHost() || !this.roomState) return; this.updateRoom({ ...this.roomState, difficulty }); }
+  setPerk(perk: Perk | null) {
+    if (!this.roomState || !this.playerId || !this.roomState.players[this.playerId]) return;
+    if (this.isHost()) this.updateRoom({ ...this.roomState, players: { ...this.roomState.players, [this.playerId]: { ...this.roomState.players[this.playerId], perk } } });
+    else this.publish("PERK_UPDATE", { playerId: this.playerId, perk });
+  }
   toggleReady() { if (!this.roomState || !this.playerId || this.isHost()) return; this.publish("READY_UPDATE", { playerId: this.playerId, ready: !this.roomState.players[this.playerId]?.ready }); }
   startGame() {
     if (!this.isHost() || !this.roomState) return;
@@ -132,7 +137,13 @@ export class CoopNetwork {
         const profile = message.payload as PlayerProfile;
         if (this.roomState.players[profile.id]) return;
         if (Object.keys(this.roomState.players).length >= MAX_PLAYERS) { this.publish("ERROR", "Esta sala já está cheia (4 jogadores)."); return; }
-        this.updateRoom({ ...this.roomState, players: { ...this.roomState.players, [profile.id]: { profile, ready: false } } }); break;
+        this.updateRoom({ ...this.roomState, players: { ...this.roomState.players, [profile.id]: { profile, ready: false, perk: null } } }); break;
+      }
+      case "PERK_UPDATE": {
+        if (!this.isHost() || !this.roomState) return;
+        const update = message.payload as { playerId: string; perk: Perk | null };
+        const player = this.roomState.players[update.playerId]; if (!player) return;
+        this.updateRoom({ ...this.roomState, players: { ...this.roomState.players, [update.playerId]: { ...player, perk: update.perk } } }); break;
       }
       case "READY_UPDATE": {
         if (!this.isHost() || !this.roomState) return;

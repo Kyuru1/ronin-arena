@@ -414,6 +414,7 @@ export class Game {
   public nextPickupId = 1;
   private netSyncTimer = 0;
   private peerIframes: Record<string, number> = {};
+  private peerDamageRemainders: Record<string, number> = {};
   private pendingGuestHits: Array<{
     enemyId: number;
     dmg: number;
@@ -432,6 +433,7 @@ export class Game {
   coins = 0;
   face = 1;
   iframe = 0;
+  private pendingLifeDamage = 0;
   dashT = 0;
   dashCd = 0;
   dashMax = 6;
@@ -629,6 +631,7 @@ export class Game {
     this.coopPlayerIds = new Set([localId, ...players.map(([id]) => id)].filter(Boolean));
     this.shopReadyPlayerIds.clear();
     this.peerIframes = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id]) => [id, 0]));
+    this.peerDamageRemainders = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id]) => [id, 0]));
     this.peerRonins = Object.fromEntries(
       players
         .filter(([id]) => id !== localId)
@@ -1408,6 +1411,7 @@ export class Game {
     this.hp = this.maxHp = this.perk === "sharpGlass" ? 3 : 5;
     this.coins = 0;
     this.iframe = 0;
+    this.pendingLifeDamage = 0;
     this.dashT = this.dashCd = 0;
     this.dashMax = 6;
     this.dashSpeedMult = 1.25;
@@ -1880,7 +1884,8 @@ export class Game {
     for (let i = this.shockwaves.length - 1; i >= 0; i--) {
       const sw = this.shockwaves[i];
       sw.life -= dt;
-      sw.r = sw.maxR * (1 - sw.life / sw.maxLife);
+      const shockProgress = 1 - sw.life / sw.maxLife;
+      sw.r = sw.maxR * (1 - Math.pow(1 - shockProgress, 2));
       if (sw.life <= 0) this.shockwaves.splice(i, 1);
     }
     for (let i = this.psychicZones.length - 1; i >= 0; i--) {
@@ -3921,7 +3926,10 @@ export class Game {
     if (!peer || peer.hp <= 0 || peer.isDashing || (this.peerIframes[targetPeerId] ?? 0) > 0) return;
     const peerRace = isRaceId(peer.raceId) ? RACE_CONFIG[peer.raceId] : null;
     if (peerRace && (peer.raceAbilityT ?? 0) > 0 && (peerRace.ability.invulnerable || (contact && peerRace.ability.contactImmune))) return;
-    peer.hp = Math.round(Math.max(0, peer.hp - dmg * DIFFICULTY_RULES[this.difficulty].damageTaken));
+    const peerAccumulated = (this.peerDamageRemainders[targetPeerId] ?? 0) + dmg * DIFFICULTY_RULES[this.difficulty].damageTaken;
+    const peerWholeDamage = Math.floor(peerAccumulated + 1e-6);
+    this.peerDamageRemainders[targetPeerId] = peerAccumulated - peerWholeDamage;
+    if (peerWholeDamage > 0) peer.hp = Math.max(0, peer.hp - peerWholeDamage);
     this.peerIframes[targetPeerId] = 0.4;
     this.peerRonin = Object.values(this.peerRonins)[0] ?? null;
     this.onGamePacketOut?.({ type: "PLAYER_DAMAGE", target: targetPeerId, dmg, nx, ny });
@@ -4205,7 +4213,11 @@ export class Game {
       taken *= Math.max(0.35, 1 - this.dwarfResistance) * activeGuard;
       this.dwarfResistance = Math.min(0.65, this.dwarfResistance + 0.1);
     }
-    this.hp = Math.round(this.hp - taken);
+    // HP stays integral, but fractional damage is accumulated instead of disappearing.
+    const accumulatedDamage = this.pendingLifeDamage + Math.max(0, taken);
+    const wholeDamage = Math.floor(accumulatedDamage + 1e-6);
+    this.pendingLifeDamage = accumulatedDamage - wholeDamage;
+    if (wholeDamage > 0) this.hp = Math.max(0, this.hp - wholeDamage);
     this.iframe = 0.4;
     this.combo = 0;
     this.pvx = nx * 190;
@@ -4471,7 +4483,7 @@ export class Game {
     // Shockwave rings from Hammer slams
     for (const sw of this.shockwaves) {
       ctx.save();
-      ctx.globalAlpha = (sw.life / sw.maxLife) * 0.75;
+      ctx.globalAlpha = Math.pow(clamp(sw.life / sw.maxLife, 0, 1), 1.6) * 0.75;
       ctx.strokeStyle = sw.color ?? "#ff9a60";
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -5276,6 +5288,8 @@ export class Game {
       const hostRonin: PeerRoninState = {
         px: this.px,
         py: this.py,
+        worldW: this.worldW,
+        worldH: this.worldH,
         face: this.face,
         walk: this.walkT > 0,
         hp: this.hp,
@@ -5342,6 +5356,8 @@ export class Game {
       const guestRonin: PeerRoninState = {
         px: this.px,
         py: this.py,
+        worldW: this.worldW,
+        worldH: this.worldH,
         face: this.face,
         walk: this.walkT > 0,
         hp: this.hp,
@@ -5391,15 +5407,20 @@ export class Game {
     }
   }
 
+  private normalizePeerPosition(peer: PeerRoninState): PeerRoninState {
+    if (!peer.worldW || !peer.worldH) return peer;
+    return { ...peer, px: peer.px * this.worldW / peer.worldW, py: peer.py * this.worldH / peer.worldH, worldW: this.worldW, worldH: this.worldH };
+  }
   public applyPeerPacket(packet: GamePacket, senderId = "") {
     if (!this.isCoop) return;
 
     if (packet.type === "GUEST_SYNC") {
       const { guestRonin, hits } = packet.payload;
+      const normalizedGuest = this.normalizePeerPosition(guestRonin);
       const playerId = senderId || packet.payload.playerId;
       if (!playerId || playerId === this.localPlayerId) return;
       const existing = this.peerRonins[playerId];
-      this.peerRonins[playerId] = existing ? Object.assign(existing, guestRonin) : guestRonin;
+      this.peerRonins[playerId] = existing ? Object.assign(existing, normalizedGuest, { px: existing.px + (normalizedGuest.px - existing.px) * 0.45, py: existing.py + (normalizedGuest.py - existing.py) * 0.45 }) : normalizedGuest;
       this.peerRonin = this.spectatorTargetId
         ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[playerId]
         : Object.values(this.peerRonins)[0] ?? null;
@@ -5419,13 +5440,15 @@ export class Game {
         packet.payload;
       const hostId = senderId || "host";
       const existingHost = this.peerRonins[hostId];
+      const normalizedHost = this.normalizePeerPosition(hostRonin);
       this.peerRonins[hostId] = existingHost
-        ? Object.assign(existingHost, hostRonin)
-        : hostRonin;
+        ? Object.assign(existingHost, normalizedHost, { px: existingHost.px + (normalizedHost.px - existingHost.px) * 0.45, py: existingHost.py + (normalizedHost.py - existingHost.py) * 0.45 })
+        : normalizedHost;
       for (const [playerId, ronin] of Object.entries(ronins ?? {})) {
         if (playerId === this.localPlayerId) continue;
         const existing = this.peerRonins[playerId];
-        this.peerRonins[playerId] = existing ? Object.assign(existing, ronin) : ronin;
+        const normalizedRonin = this.normalizePeerPosition(ronin);
+        this.peerRonins[playerId] = existing ? Object.assign(existing, normalizedRonin, { px: existing.px + (normalizedRonin.px - existing.px) * 0.45, py: existing.py + (normalizedRonin.py - existing.py) * 0.45 }) : normalizedRonin;
       }
       this.peerRonin = this.spectatorTargetId
         ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[hostId]

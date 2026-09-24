@@ -294,6 +294,7 @@ export default function App() {
     game.isCoop = true;
     game.isHost = isHost;
     game.setDifficulty(coopDifficulty);
+    selectedPerk.current = coopNet.roomState?.players[profileRef.current?.id ?? coopNet.playerId ?? ""]?.perk ?? null;
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
     game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
     game.onGamePacketOut = (packet) => coopNet.sendPacket(packet);
@@ -761,7 +762,7 @@ export default function App() {
           />
         )}
 
-        {phase === "input-select" && <InputModeScreen onSelect={chooseInputMode} />}
+        {phase === "input-select" && <InputModeScreen language={opts.language} onSelect={chooseInputMode} />}
         {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} inputMode={inputMode} onBegin={finishTutorial} />}
         {phase === "paused" && <PauseScreen stats={stats} avatarId={profile?.avatarId ?? "samurai"} waitingForHost={!!(gameRef.current?.isCoop && !gameRef.current.isHost && gameRef.current.pausedByHost)} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (
