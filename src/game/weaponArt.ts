@@ -20,7 +20,7 @@ export interface WeaponDrawOpts {
 
 /** Default rest length used both for previews and idle stance. */
 export const WEAPON_REST_LEN: Record<Weapon, number> = {
-  katana: 34,
+  katana: 28,
   bow: 24,
   hammer: 36,
   shield: 28,

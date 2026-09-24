@@ -534,41 +534,16 @@ input,
   backdrop-filter: saturate(1.12) contrast(1.08);
 }
 .menu-grid { position: relative; }
-.menu-grid::before {
-  content: "";
-  position: absolute;
-  inset: 12px;
-  border: 2px solid rgba(226, 68, 77, 0.4);
-  box-shadow: inset 0 0 0 3px rgba(7, 3, 5, 0.45), 0 0 28px rgba(10, 2, 6, 0.52);
-  pointer-events: none;
-}
+.menu-grid::before { display: none; }
 .menu-title-panel, .menu-actions, .menu-options { position: relative; z-index: 1; }
-.menu-title-panel {
-  max-width: 640px;
-  border: 3px solid rgba(121, 39, 51, 0.88);
-  border-bottom: 5px solid rgba(9, 3, 6, 0.92);
-  background: rgba(24, 7, 13, 0.76);
-  box-shadow: inset 0 0 0 2px rgba(244, 228, 207, 0.05), 0 5px 0 rgba(7, 3, 5, 0.72);
-  padding: 17px 20px;
-}
-.menu-actions { border-left: 3px solid rgba(121, 39, 51, 0.74); border-right: 3px solid rgba(121, 39, 51, 0.74); background: rgba(20, 6, 11, 0.52); padding-left: 18px; padding-right: 18px; }
+.menu-title-panel { max-width: 640px; border: 0; background: transparent; box-shadow: none; padding: 10px 20px 0; }
+.menu-actions { padding: 18px; }
 .menu-options { border: 3px solid rgba(121, 39, 51, 0.88); background: rgba(20, 6, 11, 0.76); box-shadow: inset 0 0 0 2px rgba(244, 228, 207, 0.04), 0 5px 0 rgba(7, 3, 5, 0.72); padding: 14px; }
 .menu-options .pxb-menu { background: rgba(27, 10, 16, 0.9); border-color: #070305; }
 .menu-options .pxb-menu:hover { background: rgba(63, 18, 28, 0.95); }
 .menu-install { margin-top: 4px; min-height: 42px; }
 .menu-install:disabled { cursor: default; filter: saturate(.45); opacity: .72; }
-.menu-play {
-  display: flex;
-  min-height: 68px;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  border: 3px solid #070305;
-  background: #e6535c;
-  color: #2a0509;
-  box-shadow: inset 0 5px 0 rgba(255,255,255,.25), inset 0 -7px 0 rgba(70,5,12,.35), 0 7px 0 #070305;
-}
+.menu-play { display: flex; min-height: 68px; flex-direction: column; align-items: center; justify-content: center; gap: 10px; border: 3px solid #070305; background: #e6535c; color: #2a0509; box-shadow: inset 0 5px 0 rgba(255,255,255,.25), inset 0 -7px 0 rgba(70,5,12,.35), 0 7px 0 #070305; }
 .menu-play:hover { background: #f46a70; color: #2a0509; }
 .menu-play:active { transform: translateY(5px); box-shadow: inset 0 4px 0 rgba(70,5,12,.35), 0 2px 0 #070305; }
 .menu-control {
@@ -636,14 +611,6 @@ input,
   .weapon-rail { gap: 2px; padding: 3px; }
   .dash-gauge { height: 54px; width: 54px; }
   .menu-grid::before { display: none; }
-}
-@media (max-width: 430px) {
-  .combat-topbar { grid-template-columns: 1fr auto; }
-  .combat-wave { grid-column: 1 / -1; grid-row: 2; margin: 0 auto; }
-  .combat-panel:last-child { grid-column: 2; grid-row: 1; }
-  .ranking-head, .ranking-row { grid-template-columns: 24px minmax(60px,1fr) 68px 34px; }
-  .ranking-head span:last-child, .ranking-row span:last-child { display: none; }
-}
 
 /* Combat HUD: leave the arena visible and keep each control independent. */
 .combat-topbar { filter: drop-shadow(0 2px 0 rgba(7,3,5,.9)); }
@@ -831,3 +798,7 @@ html { scroll-behavior: smooth; }
 .potion-stack-fly .potion-active { min-width:126px; border-left-width:4px; }
 @keyframes potion-slide-in { from { transform:translateX(-130%) !important; opacity:0; } to { opacity:1; } }
 @media (max-width:640px) { .potion-stack-fly { top:96px; } .weapon-rail { justify-content:center; } }
+
+
+/* menu layout repair */
+}

@@ -9,6 +9,6 @@
   "theme_color": "#070305",
   "orientation": "landscape",
   "icons": [
-    { "src": "/ronin-arena/kyu-arena-logo.png", "sizes": "1536x1536", "type": "image/png", "purpose": "any maskable" }
+    { "src": "./kyu-arena-logo.png", "sizes": "1536x1536", "type": "image/png", "purpose": "any maskable" }
   ]
 }
