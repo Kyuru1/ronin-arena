@@ -2168,11 +2168,8 @@ export class Game {
         this.currentWeapon !== "bow" &&
         this.currentWeapon !== "mine" &&
         this.currentWeapon !== "book" &&
-        this.currentweapon !== "staff" &&
-      weapon !== "boomerang" &&
-      weapon !== "shuriken" &&
-      weapon !== "spear"
-    ) {
+        this.currentWeapon !== "staff"
+      ) {
         this.doSwingHits();
       }
       if (this.atkT <= 0) {

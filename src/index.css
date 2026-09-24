@@ -818,3 +818,20 @@ html { scroll-behavior: smooth; }
 .pxb, .px-frame, .menu-play, .shop-category, .ranking-details-button { transition: transform .16s ease, background-color .16s ease, border-color .16s ease, box-shadow .16s ease, opacity .16s ease; }
 .pxb:hover:not(:disabled), .menu-play:hover, .shop-category:hover, .ranking-details-button:hover { transform: translateY(-2px); }
 .pxb:active:not(:disabled), .menu-play:active { transform: translateY(1px) scale(.99); }
+
+/* Compact two-column main menu and resilient ranking layouts. */
+.menu-options { max-width: min(680px, calc(100vw - 32px)); }
+.menu-options .pxb { min-width: 0; }
+.ranking-head, .ranking-row { white-space: nowrap; }
+.ranking-row-detailed { grid-template-columns: 30px minmax(96px, 1fr) 70px 52px 82px 54px; }
+.ranking-head span, .ranking-row > span { overflow: hidden; text-overflow: ellipsis; }
+.ranking-details-button { min-width: 64px; white-space: nowrap; }
+.ranking-modal-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.ranking-modal-summary > * { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ranking-modal .character-details { max-height: calc(98dvh - 190px); overflow: auto; }
+@media (max-width: 700px) {
+  .menu-options { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: calc(100vw - 24px); }
+  .ranking-row-detailed { grid-template-columns: 24px minmax(76px, 1fr) 64px 40px 68px; }
+  .ranking-modal-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ranking-modal .character-details { max-height: calc(98dvh - 170px); }
+}

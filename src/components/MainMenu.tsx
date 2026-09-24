@@ -240,7 +240,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
           </button>
         </main>
 
-        <footer className="menu-options flex w-full max-w-sm flex-col gap-2">
+        <footer className="menu-options grid w-full max-w-2xl grid-cols-2 gap-2">
           <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("controls")} className="justify-center text-[8px]"><PixelSprite name="icoBook" scale={1} />{labels.controls}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
