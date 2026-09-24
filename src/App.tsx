@@ -714,6 +714,33 @@ export default function App() {
     <div className={`relative flex h-full w-full items-center justify-center overflow-hidden bg-[#070305] ui-text-${opts.textScale === 0.85 ? "small" : opts.textScale === 1.15 ? "large" : "normal"}`}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(117,16,29,0.25),transparent_65%)]" />
 
+      <div className="social-links" aria-label="Comunidades oficiais">
+        <a
+          className="social-link social-link-discord"
+          href="https://discord.gg/AGfUnjtE32"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Entrar no Discord"
+          title="Discord"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.32 4.37A19.8 19.8 0 0 0 15.36 2.8a13.6 13.6 0 0 0-.64 1.32 18.4 18.4 0 0 0-5.44 0 13.6 13.6 0 0 0-.65-1.32 19.8 19.8 0 0 0-4.95 1.57C.55 9.05-.3 13.6.12 18.08a20 20 0 0 0 6.08 3.08 14.8 14.8 0 0 0 1.3-2.1 12.9 12.9 0 0 1-2.05-.98l.5-.39a14.2 14.2 0 0 0 12.1 0l.5.39c-.66.39-1.35.72-2.06.98.38.73.82 1.43 1.3 2.1a20 20 0 0 0 6.09-3.08c.5-5.2-.84-9.7-3.56-13.71ZM8.02 15.32c-1.18 0-2.15-1.08-2.15-2.41s.95-2.42 2.15-2.42c1.2 0 2.17 1.1 2.15 2.42 0 1.33-.95 2.41-2.15 2.41Zm7.96 0c-1.18 0-2.15-1.08-2.15-2.41s.95-2.42 2.15-2.42c1.2 0 2.17 1.1 2.15 2.42 0 1.33-.95 2.41-2.15 2.41Z" />
+          </svg>
+        </a>
+        <a
+          className="social-link social-link-tiktok"
+          href="https://www.tiktok.com/@kyuarena"
+          target="_blank"
+          rel="noreferrer"
+          aria-label="Abrir TikTok"
+          title="TikTok"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M17.34 5.47A5.24 5.24 0 0 1 16.05 2h-3.47v13.02a2.76 2.76 0 1 1-2.02-2.65V8.85a6.23 6.23 0 1 0 5.5 6.18V8.42a8.43 8.43 0 0 0 4.93 1.58V6.55a5.13 5.13 0 0 1-3.65-1.08Z" />
+          </svg>
+        </a>
+      </div>
+
       <div ref={wrapRef} data-device={isTouch ? "mobile" : "desktop"} className="relative h-full w-full max-w-[1500px]">
         {deviceChosen && isTouch && (phase !== "playing" || coopModalOpen) && <MobilePanelNavigation />}
         {!deviceChosen && <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#070305] p-4">
@@ -825,9 +852,3 @@ export default function App() {
     </div>
   );
 }
-
-
-
-
-
-
