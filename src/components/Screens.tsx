@@ -111,13 +111,18 @@ export function PauseScreen({
       {settingsOpen && <div className="absolute inset-0 z-10 flex items-center justify-center overflow-y-auto bg-[#070305]/70 p-3 sm:p-6">
         <PxFrame title={t.settings} className="anim-pop w-full max-w-xl p-4 sm:p-6">
           <div className="grid gap-2 sm:grid-cols-2">
+            <PxRow label={t.quality}><div className="flex gap-1"><PxChip on={opts.quality === "high"} onClick={() => onOpts({ quality: "high" })}>{t.qualityHigh}</PxChip><PxChip on={opts.quality === "low"} onClick={() => onOpts({ quality: "low" })}>{t.qualityLow}</PxChip></div></PxRow>
+            <PxRow label={t.vsync}><PxChip on={opts.vsync} onClick={() => onOpts({ vsync: !opts.vsync })}>{opts.vsync ? t.on : t.off}</PxChip></PxRow>
             <PxRow label={t.screenShake}><PxChip on={opts.shake} onClick={() => onOpts({ shake: !opts.shake })}>{opts.shake ? t.on : t.off}</PxChip></PxRow>
             <PxRow label={t.screenFlash}><PxChip on={opts.flash} onClick={() => onOpts({ flash: !opts.flash })}>{opts.flash ? t.on : t.off}</PxChip></PxRow>
             <PxRow label={t.sound}><PxChip on={opts.sound} onClick={() => onOpts({ sound: !opts.sound })}>{opts.sound ? t.on : t.off}</PxChip></PxRow>
+            <PxRow label="EFEITOS SONOROS"><PxChip on={opts.soundEffects} onClick={() => onOpts({ soundEffects: !opts.soundEffects })}>{opts.soundEffects ? t.on : t.off}</PxChip></PxRow>
+            <PxRow label="MÚSICA"><PxChip on={opts.music} onClick={() => onOpts({ music: !opts.music })}>{opts.music ? t.on : t.off}</PxChip></PxRow>
             <PxRow label={t.keyboardOnly}><PxChip on={opts.keyboardOnly} onClick={() => onOpts({ keyboardOnly: !opts.keyboardOnly })}>{opts.keyboardOnly ? t.on : t.off}</PxChip></PxRow>
             <PxRow label={t.fullscreen}><PxChip on onClick={onFullscreen}>{t.enter}</PxChip></PxRow>
           </div>
           <div className="px-inset mt-3 p-3"><div className="mb-2 flex justify-between font-pixel text-[6px]"><span>{t.volume}</span><span className="text-[#ffd44a]">{Math.round(opts.volume * 100)}%</span></div><input type="range" min={0} max={100} value={Math.round(opts.volume * 100)} onChange={(event) => onOpts({ volume: Number(event.target.value) / 100 })} className="slider w-full" /></div>
+          <div className="px-inset mt-3 p-3"><div className="mb-2 font-pixel text-[6px]">{t.textSize}</div><div className="flex flex-wrap gap-1">{([0.85, 1, 1.15] as const).map((size) => <PxChip key={size} on={opts.textScale === size} onClick={() => onOpts({ textScale: size })}>{size === 0.85 ? t.textSmall : size === 1 ? t.textNormal : t.textLarge}</PxChip>)}</div></div>
           <div className="px-inset mt-3 p-3"><div className="mb-2 font-pixel text-[6px]">{t.hudSize}</div><div className="flex flex-wrap gap-1">{([0.65, 0.85, 1, 1.25, 1.5] as const).map((size) => <PxChip key={size} on={opts.hudScale === size} onClick={() => onOpts({ hudScale: size })}>{size === 0.65 ? t.hudTiny : size === 0.85 ? t.hudSmall : size === 1 ? t.hudNormal : size === 1.25 ? t.hudLarge : t.hudHuge}</PxChip>)}</div></div>
           <PxButton tone="dark" onClick={() => setSettingsOpen(false)} className="mt-4 w-full py-3 text-[8px]">◀ {t.paused}</PxButton>
         </PxFrame>

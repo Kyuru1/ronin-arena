@@ -512,7 +512,7 @@ input,
   touch-action: pan-y;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
-  scrollbar-color: var(--edge1) var(--ink);
+  scrollbar-color: #e0444d #170b10;
 }
 .scrollbar-thin::-webkit-scrollbar {
   width: 10px;
