@@ -4827,8 +4827,9 @@ export class Game {
   private drawEnemy(e: Enemy) {
     const ctx = this.ctx;
     const spr = e.type === "boss" ? SPR[e.bossType ?? "spitter"] : SPR[e.type];
-    const bob =
-      e.type === "bat" || e.type === "wisp" ? Math.sin(e.t * 12) * 2 : Math.sin(e.t * 9) * 0.8;
+    const walking = Math.min(1, Math.hypot(e.vx, e.vy) / Math.max(1, e.speed));
+    const bob = e.type === "bat" || e.type === "wisp" ? Math.sin(e.t * 12) * 2.2 : Math.sin(e.t * (8 + walking * 7)) * (0.45 + walking * 0.7);
+    const stepSquash = 1 + Math.sin(e.t * (10 + walking * 8)) * walking * 0.035;
     if (e.spawnT > 0) {
       const p = 1 - e.spawnT / 0.28;
       ctx.globalAlpha = p;
@@ -4882,26 +4883,9 @@ export class Game {
       ctx.fillRect(Math.round(e.x - 2), Math.round(e.y - e.r - 5), 4, 3);
       ctx.restore();
     }
-    const visualColor = e.type === "boss"
-      ? (e.bossType === "warlock" ? "#a677ff" : e.bossType === "wisp" ? "#8cecff" : e.bossType === "golem" ? "#d79bff" : "#ff6a58")
-      : e.type === "warlock" ? "#a677ff" : e.type === "wisp" ? "#8cecff" : e.type === "bomber" ? "#ffb25b" : "#d65764";
     ctx.save();
-    ctx.globalAlpha = e.type === "boss" ? 0.28 + Math.sin(e.t * 8) * 0.08 : 0.12 + Math.sin(e.t * 7) * 0.04;
-    ctx.fillStyle = visualColor;
-    ctx.beginPath();
-    ctx.arc(e.x, e.y + e.r * 0.45, e.type === "boss" ? e.r + 8 : e.r + 3, 0, TAU);
-    ctx.fill();
-    if (e.type === "boss") {
-      ctx.globalAlpha = 0.55;
-      ctx.strokeStyle = visualColor;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(e.x, e.y, e.r + 5 + Math.sin(e.t * 6) * 2, 0, TAU);
-      ctx.stroke();
-    }
-    ctx.restore();    ctx.save();
     ctx.filter = "saturate(2) contrast(1.22) brightness(1.1)";
-    this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY, e.type === "boss" ? 1.65 : 1.08);
+    this.blit(spr, e.x, e.y + bob, e.face, e.flash > 0 ? 1 : 0, e.scaleY * stepSquash, e.type === "boss" ? 1.65 : 1.08);
     ctx.restore();
     if (e.maxHp > 2 && (e.hp < e.maxHp || e.type === "boss")) {
       const w = e.type === "boss" ? 46 : 14;
@@ -4994,7 +4978,8 @@ export class Game {
     }
 
     const blink = this.iframe > 0 && Math.floor(this.iframe * 18) % 2 === 0;
-    const bob = this.walkT > 0 ? Math.abs(Math.sin(this.walkT)) * 1.4 : 0;
+    const idleBob = Math.sin(this.elapsed * 2.4) * 0.35;
+    const bob = this.walkT > 0 ? Math.abs(Math.sin(this.walkT)) * 1.4 : idleBob;
     const bx = this.px + this.leanX;
     const by = this.py + this.leanY - bob;
 
