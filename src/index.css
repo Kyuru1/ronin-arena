@@ -611,6 +611,7 @@ input,
   .weapon-rail { gap: 2px; padding: 3px; }
   .dash-gauge { height: 54px; width: 54px; }
   .menu-grid::before { display: none; }
+}
 
 /* Combat HUD: leave the arena visible and keep each control independent. */
 .combat-topbar { filter: drop-shadow(0 2px 0 rgba(7,3,5,.9)); }
@@ -801,7 +802,6 @@ html { scroll-behavior: smooth; }
 
 
 /* menu layout repair */
-}
 
 /* Clean HUD: keep gameplay information readable without black panels. */
 .combat-topbar { filter: none; }
@@ -835,3 +835,25 @@ html { scroll-behavior: smooth; }
   .ranking-modal-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ranking-modal .character-details { max-height: calc(98dvh - 170px); }
 }
+/* Preserve readable, scrollable panels at every UI scale. */
+.menu-arena { overflow-x: hidden; overflow-y: auto; }
+.px-backdrop { overflow-x: hidden; overscroll-behavior: contain; }
+.px-backdrop > .px-frame, .controls-grid > .px-inset, .controls-list { min-width: 0; }
+.control-bind > span { min-width: 0; overflow-wrap: anywhere; }
+.control-bind > button { flex: 0 0 auto; }
+.ranking-modal-backdrop { align-items: center; }
+.ranking-modal { overscroll-behavior: contain; }
+@media (max-width: 700px) {
+  .ui-text-large .menu-arena, .ui-text-large .px-backdrop { zoom: 1; }
+  .controls-grid { grid-template-columns: 1fr; }
+  .controls-list { font-size: 5px; line-height: 1.7; }
+  .control-bind { gap: 5px; }
+  .control-bind button { min-width: 48px; font-size: 5px; }
+  .ranking-modal-backdrop { align-items: flex-start; }
+}
+
+/* Explicit control rows prevent labels and bindings from colliding. */
+.controls-list { display: flex; flex-direction: column; gap: 9px; line-height: 1.7; }
+.control-bind, .control-pad-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 10px; }
+.control-bind > span, .control-pad-row > span { min-width: 0; }
+.control-pad-row > strong { min-width: 0; text-align: right; overflow-wrap: anywhere; }

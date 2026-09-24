@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { Difficulty, KeyboardAction, KeyboardBindings, Perk } from "../game/engine";
 import { I18N, LANGS, type Language } from "../game/i18n";
 import type { ScoreEntry } from "../game/storage";
@@ -113,7 +114,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
           {tab === "language" && <div className="flex flex-col gap-2"><PxHeading>{t.language}</PxHeading>{LANGS.map((language) => <PxButton key={language} tone="menu" active={opts.language === language} onClick={() => onOpts({ language })} className="text-[9px]">{I18N[language].langName}{opts.language === language && <span className="ml-auto text-[#ffd44a]">■</span>}</PxButton>)}</div>}
 
-          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>{labels.controls}</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">{labels.keyboard}</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? labels.press : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">{labels.gamepad}</h3><div className="controls-list"><span>{labels.move}</span><strong>{labels.leftStick}</strong><span>{labels.aim}</span><strong>{labels.rightStick}</strong><span>{labels.attack}</span><strong>{labels.attackPad}</strong><span>{labels.dash}</span><strong>{labels.dashPad}</strong><span>{labels.special}</span><strong>{labels.specialPad}</strong><span>{labels.next}</span><strong>{labels.swapPad}</strong><span>{labels.pause}</span><strong>{labels.pausePad}</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">{labels.hint}</div></div>}
+          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>{labels.controls}</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">{labels.keyboard}</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? labels.press : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">{labels.gamepad}</h3><div className="controls-list">{[[labels.move, labels.leftStick], [labels.aim, labels.rightStick], [labels.attack, labels.attackPad], [labels.dash, labels.dashPad], [labels.special, labels.specialPad], [labels.next, labels.swapPad], [labels.pause, labels.pausePad]].map(([action, binding]) => <div key={action} className="control-pad-row"><span>{action}</span><strong>{binding}</strong></div>)}</div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">{labels.hint}</div></div>}
 
           {tab === "account" && (
             <div className="flex flex-col gap-3">
@@ -144,7 +145,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
               </div>
             </div>
           </div>}
-          {selectedRanking && <div className="ranking-modal-backdrop" role="dialog" aria-modal="true" aria-label={`Detalhes da run de ${selectedRanking.name}`} onMouseDown={(event) => { if (event.currentTarget === event.target) setSelectedRanking(null); }}>
+          {createPortal(selectedRanking && <div className="ranking-modal-backdrop" role="dialog" aria-modal="true" aria-label={`Detalhes da run de ${selectedRanking.name}`} onMouseDown={(event) => { if (event.currentTarget === event.target) setSelectedRanking(null); }}>
             <PxFrame title={`${labels.run} ${selectedRanking.name}`} className="ranking-modal anim-pop">
               <div className="ranking-modal-summary">
                 <strong>{selectedRanking.name}</strong>
@@ -169,7 +170,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
               }} abilityBinding="F · Y / TRIANGLE" language={opts.language} />
               <PxButton tone="dark" onClick={() => setSelectedRanking(null)} className="mt-3 w-full py-3 text-[8px]">{labels.close}</PxButton>
             </PxFrame>
-          </div>}
+          </div>, document.body)}
 
           <PxButton tone="dark" onClick={() => setTab("main")} className="mt-4 w-full py-3 text-[8px]">◀ {t.menu}</PxButton>
         </PxFrame>

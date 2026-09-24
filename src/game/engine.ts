@@ -2193,7 +2193,8 @@ export class Game {
       if (wantAttack && !this.mineHeld && this.atkCd <= 0 && this.dashT <= 0) this.placeMine();
       this.mineHeld = wantAttack;
     } else if (this.currentWeapon === "boomerang" || this.currentWeapon === "shuriken") {
-      if (wantAttack && this.atkCd <= 0 && this.dashT <= 0) this.throwWeapon(this.currentWeapon);
+      const boomerangAway = this.currentWeapon === "boomerang" && this.arrows.some((arrow) => arrow.weapon === "boomerang");
+      if (wantAttack && !boomerangAway && this.atkCd <= 0 && this.dashT <= 0) this.throwWeapon(this.currentWeapon);
     } else {
       const busy = this.atkWind > 0 || this.atkT > 0 || this.atkCd > 0;
       if (wantAttack && !busy && this.dashT <= 0) this.startAttack();
@@ -2805,7 +2806,7 @@ export class Game {
       if (this.currentWeapon === "spear") {
         const forward = dx * Math.cos(this.atkAngle) + dy * Math.sin(this.atkAngle);
         const side = Math.abs(-dx * Math.sin(this.atkAngle) + dy * Math.cos(this.atkAngle));
-        const shaftStart = range * 0.38;
+        const shaftStart = 0;
         const tipReach = range * (.78 + .22 * Math.sin(p * Math.PI));
         if (forward < shaftStart - e.r || forward > tipReach + e.r || side > 3 + e.r) continue;
       }
@@ -4106,13 +4107,7 @@ export class Game {
 
       const outside = a.x < 8 || a.y < 8 || a.x > this.worldW - 8 || a.y > this.worldH - 8;
       if (a.weapon === "shuriken" && a.explode && (a.life <= 0 || outside)) {
-        this.burst(a.x, a.y, 24, "#dbe8ee", 150);
-        this.shockwaves.push({ x: a.x, y: a.y, r: 4, maxR: 42, life: .35, maxLife: .35, color: "#c9d8e2" });
-        for (let ray = 0; ray < 8; ray++) {
-          const angle = ray / 8 * TAU;
-          this.arrows.push({ x: a.x, y: a.y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520,
-            life: .65, pierce: 1, rot: angle, dmg: Math.max(1, a.dmg * .7), hitSet: new Set(), weapon: "shuriken" });
-        }
+        this.explodeShuriken(a);
         this.arrows.splice(i, 1); continue;
       }
 
@@ -4141,6 +4136,11 @@ export class Game {
           a.hitSet.add(e);
           this.damageEnemy(e, a.dmg, a.rot);
           this.burst(a.x, a.y, 6, a.weapon === "boomerang" ? "#ffb35c" : "#dbe8ee", 90);
+          if (a.weapon === "shuriken" && a.explode) {
+            this.explodeShuriken(a);
+            this.arrows.splice(i, 1);
+            continue;
+          }
           if (a.weapon === "boomerang") {
             a.guideHits = (a.guideHits ?? 0) + 1; a.target = null;
             if ((a.guideHits ?? 0) >= 5) a.returning = true;
@@ -4156,6 +4156,15 @@ export class Game {
         this.burst(a.x, a.y, 5, "#ffd0a2", 70);
         this.arrows.splice(i, 1);
       }
+    }
+  }
+
+  private explodeShuriken(a: PlayerArrow) {
+    this.burst(a.x, a.y, 24, "#dbe8ee", 150);
+    this.shockwaves.push({ x: a.x, y: a.y, r: 4, maxR: 42, life: .35, maxLife: .35, color: "#c9d8e2" });
+    for (let ray = 0; ray < 8; ray++) {
+      const angle = ray / 8 * TAU;
+      this.arrows.push({ x: a.x, y: a.y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520, life: .65, pierce: 1, rot: angle, dmg: Math.max(1, a.dmg * .7), hitSet: new Set(), weapon: "shuriken" });
     }
   }
 
@@ -5197,7 +5206,8 @@ export class Game {
       this.currentWeapon === "shuriken"
         ? this.aimAngle()
         : this.swingAngleNow();
-    this.drawWeapon(weaponAngle, this.bladeLen(), 1);
+    const boomerangAway = this.currentWeapon === "boomerang" && this.arrows.some((arrow) => arrow.weapon === "boomerang");
+    if (!boomerangAway) this.drawWeapon(weaponAngle, this.bladeLen(), 1);
 
     // Bow: aim dots + charge bar while the string is being drawn
     if (this.currentWeapon === "bow" && (this.bowHolding || this.bowCharge > 0.02)) {
@@ -5554,7 +5564,7 @@ export class Game {
       explode: weapon === "shuriken" && evolved,
     });
     const speedLevel = (1 + levels.speed * 0.14) * this.attackSpeedMultiplier();
-    this.atkCd = (weapon === "shuriken" && evolved ? 1.5 : WEAPON_CONFIG[weapon].cd) / speedLevel;
+    this.atkCd = (weapon === "shuriken" && evolved ? 0.2 : WEAPON_CONFIG[weapon].cd) / speedLevel;
     this.atkAngle = angle; this.glint = 1;
     this.burst(this.px + Math.cos(angle) * 14, this.py + Math.sin(angle) * 14, 7, weapon === "shuriken" ? "#dbe8ee" : "#ffb35c", 90);
     Sfx.swing(weapon);
