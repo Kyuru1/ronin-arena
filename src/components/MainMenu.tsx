@@ -55,7 +55,8 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   const [rankingDifficulty, setRankingDifficulty] = useState<Difficulty>("medium");
   const [capturing, setCapturing] = useState<KeyboardAction | null>(null);
   const [selectedRanking, setSelectedRanking] = useState<ScoreEntry | null>(null);
-  const bindingLabels: Array<[KeyboardAction, string]> = [["up", "MOVER CIMA"], ["down", "MOVER BAIXO"], ["left", "MOVER ESQUERDA"], ["right", "MOVER DIREITA"], ["attack", "ATACAR"], ["dash", "DASH"], ["specialAbility", "HABILIDADE ESPECIAL"], ["prev", "ARMA ANTERIOR"], ["next", "PROXIMA ARMA"]];
+  const labels = opts.language === "en" ? { controls: "CONTROLS", keyboard: "KEYBOARD · CLICK TO REMAP", gamepad: "GAMEPAD", up: "MOVE UP", down: "MOVE DOWN", left: "MOVE LEFT", right: "MOVE RIGHT", attack: "ATTACK", dash: "DASH", special: "SPECIAL ABILITY", prev: "PREVIOUS WEAPON", next: "NEXT WEAPON", move: "MOVE", aim: "AIM", leftStick: "LEFT STICK", rightStick: "RIGHT STICK", attackPad: "A or RT", dashPad: "B or RB", specialPad: "Y / TRIANGLE", swapPad: "LB / RB or D-PAD", pause: "PAUSE", pausePad: "MENU / START", hint: "KEYBOARD AND CONTROLLER WORK TOGETHER WHEN A CONTROLLER IS CONNECTED.", press: "PRESS", space: "SPACE", details: "DETAILS", close: "CLOSE", run: "RUN OF", score: "SCORE", wave: "WAVE", kills: "KILLS", coins: "COINS" } : opts.language === "fr" ? { controls: "COMMANDES", keyboard: "CLAVIER · CLIQUEZ POUR REMAPPER", gamepad: "MANETTE", up: "MONTER", down: "DESCENDRE", left: "GAUCHE", right: "DROITE", attack: "ATTAQUER", dash: "DASH", special: "CAPACITÉ SPÉCIALE", prev: "ARME PRÉCÉDENTE", next: "ARME SUIVANTE", move: "BOUGER", aim: "VISER", leftStick: "STICK GAUCHE", rightStick: "STICK DROIT", attackPad: "A ou RT", dashPad: "B ou RB", specialPad: "Y / TRIANGLE", swapPad: "LB / RB ou CROIX", pause: "PAUSE", pausePad: "MENU / START", hint: "CLAVIER ET MANETTE FONCTIONNENT ENSEMBLE.", press: "APPUYEZ", space: "ESPACE", details: "DÉTAILS", close: "FERMER", run: "RUN DE", score: "SCORE", wave: "VAGUE", kills: "ÉLIMINATIONS", coins: "PIÈCES" } : opts.language === "de" ? { controls: "STEUERUNG", keyboard: "TASTATUR · KLICKEN ZUM BELEGEN", gamepad: "CONTROLLER", up: "NACH OBEN", down: "NACH UNTEN", left: "NACH LINKS", right: "NACH RECHTS", attack: "ANGRIFF", dash: "DASH", special: "SPEZIALFÄHIGKEIT", prev: "VORHERIGE WAFFE", next: "NÄCHSTE WAFFE", move: "BEWEGEN", aim: "ZIELEN", leftStick: "LINKER STICK", rightStick: "RECHTER STICK", attackPad: "A oder RT", dashPad: "B oder RB", specialPad: "Y / DREIECK", swapPad: "LB / RB oder KREUZ", pause: "PAUSE", pausePad: "MENÜ / START", hint: "TASTATUR UND CONTROLLER FUNKTIONIEREN ZUSAMMEN.", press: "DRÜCKEN", space: "LEERTASTE", details: "DETAILS", close: "SCHLIESSEN", run: "RUN VON", score: "PUNKTE", wave: "WELLE", kills: "BESIEGT", coins: "MÜNZEN" } : opts.language === "zh" ? { controls: "操作", keyboard: "键盘·点击重新绑定", gamepad: "手柄", up: "向上移动", down: "向下移动", left: "向左移动", right: "向右移动", attack: "攻击", dash: "冲刺", special: "特殊技能", prev: "上一把武器", next: "下一把武器", move: "移动", aim: "瞄准", leftStick: "左摇杆", rightStick: "右摇杆", attackPad: "A 或 RT", dashPad: "B 或 RB", specialPad: "Y / 三角", swapPad: "LB / RB 或方向键", pause: "暂停", pausePad: "菜单 / START", hint: "连接手柄后，键盘和手柄可以同时使用。", press: "按下", space: "空格", details: "详情", close: "关闭", run: "玩家", score: "分数", wave: "波次", kills: "击杀", coins: "金币" } : { controls: "CONTROLES", keyboard: "TECLADO · CLIQUE PARA REMAPEAR", gamepad: "CONTROLE", up: "MOVER CIMA", down: "MOVER BAIXO", left: "MOVER ESQUERDA", right: "MOVER DIREITA", attack: "ATACAR", dash: "DASH", special: "HABILIDADE ESPECIAL", prev: "ARMA ANTERIOR", next: "PRÓXIMA ARMA", move: "MOVER", aim: "MIRAR", leftStick: "ANALÓGICO ESQUERDO", rightStick: "ANALÓGICO DIREITO", attackPad: "A ou RT", dashPad: "B ou RB", specialPad: "Y / TRIÂNGULO", swapPad: "LB / RB ou DIRECIONAL", pause: "PAUSAR", pausePad: "MENU / START", hint: "TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.", press: "PRESSIONE", space: "ESPAÇO", details: "DETALHES", close: "FECHAR", run: "RUN DE", score: "PONTOS", wave: "ONDA", kills: "ABATES", coins: "MOEDAS" };
+  const bindingLabels: Array<[KeyboardAction, string]> = [["up", labels.up], ["down", labels.down], ["left", labels.left], ["right", labels.right], ["attack", labels.attack], ["dash", labels.dash], ["specialAbility", labels.special], ["prev", labels.prev], ["next", labels.next]];
   useEffect(() => {
     if (!capturing) return;
     const onCapture = (event: KeyboardEvent) => {
@@ -68,7 +69,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
     window.addEventListener("keydown", onCapture, true);
     return () => window.removeEventListener("keydown", onCapture, true);
   }, [capturing, onOpts, opts.keyboardBindings]);
-  const keyLabel = (key: string) => key === " " ? "ESPACO" : key === "escape" ? "ESC" : key.length === 1 ? key.toUpperCase() : key.toUpperCase();
+  const keyLabel = (key: string) => key === " " ? labels.space : key === "escape" ? "ESC" : key.length === 1 ? key.toUpperCase() : key.toUpperCase();
   useEffect(() => {
     const onBeforeInstall = (event: Event) => {
       event.preventDefault();
@@ -110,7 +111,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
           {tab === "language" && <div className="flex flex-col gap-2"><PxHeading>{t.language}</PxHeading>{LANGS.map((language) => <PxButton key={language} tone="menu" active={opts.language === language} onClick={() => onOpts({ language })} className="text-[9px]">{I18N[language].langName}{opts.language === language && <span className="ml-auto text-[#ffd44a]">■</span>}</PxButton>)}</div>}
 
-          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>CONTROLES</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">TECLADO · CLIQUE PARA REMAPEAR</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? "PRESSIONE" : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">CONTROLE</h3><div className="controls-list"><span>MOVER</span><strong>ANALOGICO ESQUERDO</strong><span>MIRAR</span><strong>ANALOGICO DIREITO</strong><span>ATACAR</span><strong>A ou RT</strong><span>DASH</span><strong>B ou RB</strong><span>HABILIDADE ESPECIAL</span><strong>Y / TRIANGULO</strong><span>TROCAR ARMA</span><strong>LB / RB ou DIRECIONAL</strong><span>PAUSAR</span><strong>MENU / START</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">TECLADO E CONTROLE FUNCIONAM JUNTOS QUANDO O CONTROLE ESTIVER CONECTADO.</div></div>}
+          {tab === "controls" && <div className="flex flex-col gap-3"><PxHeading>{labels.controls}</PxHeading><div className="controls-grid"><div className="px-inset p-3"><h3 className="controls-title">{labels.keyboard}</h3><div className="controls-list">{bindingLabels.map(([action, label]) => <div key={action} className="control-bind"><span>{label}</span><button onClick={() => setCapturing(action)} className={capturing === action ? "is-capturing" : ""}>{capturing === action ? labels.press : keyLabel(opts.keyboardBindings[action])}</button></div>)}</div></div><div className="px-inset p-3"><h3 className="controls-title">{labels.gamepad}</h3><div className="controls-list"><span>{labels.move}</span><strong>{labels.leftStick}</strong><span>{labels.aim}</span><strong>{labels.rightStick}</strong><span>{labels.attack}</span><strong>{labels.attackPad}</strong><span>{labels.dash}</span><strong>{labels.dashPad}</strong><span>{labels.special}</span><strong>{labels.specialPad}</strong><span>{labels.next}</span><strong>{labels.swapPad}</strong><span>{labels.pause}</span><strong>{labels.pausePad}</strong></div></div></div><div className="px-inset p-3 text-center font-pixel text-[7px] leading-5 text-[#91b9b5]">{labels.hint}</div></div>}
 
           {tab === "account" && (
             <div className="flex flex-col gap-3">
@@ -127,7 +128,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
             <PxHeading>{t.ranking} · TOP 50</PxHeading>
             <div className="flex gap-1">{(["easy", "medium", "hard"] as const).map((level) => { const key = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard"; return <PxChip key={level} on={rankingDifficulty === level} onClick={() => setRankingDifficulty(level)}>{t[key]}</PxChip>; })}</div>
             <div className="px-inset">
-              <div className="ranking-head ranking-row-detailed"><span>#</span><span>{t.name}</span><span>{opts.language === "pt" ? "DETALHES" : "DETAILS"}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div>
+              <div className="ranking-head ranking-row-detailed"><span>#</span><span>{t.name}</span><span>{labels.details}</span><span>{t.wave}</span><span>{t.score}</span><span>{t.kills}</span></div>
               <div className="scrollbar-thin max-h-[75vh] overflow-y-auto">
                 {scores.filter((score) => score.difficulty === rankingDifficulty).slice(0, 50).length === 0
                   ? <div className="p-8 text-center font-pixel text-[8px] text-[#6c3a42]">{t.noScores}</div>
@@ -135,14 +136,14 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
                     <div key={`${score.date}-${index}`} className={`ranking-row ranking-row-detailed ${index < 3 ? "is-top" : ""}`}>
                       <span>{index + 1}</span>
                       <span className="flex min-w-0 items-center gap-2 overflow-hidden"><PixelSprite name={score.avatarId === "samurai" ? "player" : score.avatarId ?? "player"} scale={1} /><span className="min-w-0 truncate">{score.name}</span></span>
-                      <button className="ranking-details-button" onClick={() => setSelectedRanking(score)}>{opts.language === "pt" ? "DETALHES" : "DETAILS"}</button>
+                      <button className="ranking-details-button" onClick={() => setSelectedRanking(score)}>{labels.details}</button>
                       <span>{score.wave}</span><span>{score.score.toLocaleString()}</span><span>{score.kills}</span>
                     </div>)}
               </div>
             </div>
           </div>}
           {selectedRanking && <div className="ranking-modal-backdrop" role="dialog" aria-modal="true" aria-label={`Detalhes da run de ${selectedRanking.name}`} onMouseDown={(event) => { if (event.currentTarget === event.target) setSelectedRanking(null); }}>
-            <PxFrame title={`RUN DE ${selectedRanking.name}`} className="ranking-modal anim-pop">
+            <PxFrame title={`${labels.run} ${selectedRanking.name}`} className="ranking-modal anim-pop">
               <div className="ranking-modal-summary">
                 <strong>{selectedRanking.name}</strong>
                 <span>SCORE {selectedRanking.score.toLocaleString()}</span>
@@ -164,7 +165,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
                 score: selectedRanking.score,
                 time: selectedRanking.time,
               }} abilityBinding="F · Y / TRIANGLE" language={opts.language} />
-              <PxButton tone="dark" onClick={() => setSelectedRanking(null)} className="mt-3 w-full py-3 text-[8px]">{opts.language === "pt" ? "FECHAR" : "CLOSE"}</PxButton>
+              <PxButton tone="dark" onClick={() => setSelectedRanking(null)} className="mt-3 w-full py-3 text-[8px]">{labels.close}</PxButton>
             </PxFrame>
           </div>}
 
@@ -242,7 +243,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
 
         <footer className="menu-options flex w-full max-w-sm flex-col gap-2">
           <PxButton tone="menu" onClick={() => setTab("settings")} className="justify-center text-[8px]"><PixelSprite name="icoGear" scale={1} />{t.settings}</PxButton>
-          <PxButton tone="menu" onClick={() => setTab("controls")} className="justify-center text-[8px]"><PixelSprite name="icoBook" scale={1} />CONTROLES</PxButton>
+          <PxButton tone="menu" onClick={() => setTab("controls")} className="justify-center text-[8px]"><PixelSprite name="icoBook" scale={1} />{labels.controls}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("account")} className="min-w-0 justify-center overflow-hidden text-[8px]"><PixelSprite name="player" scale={1} /><span className="min-w-0 max-w-full truncate">{profile ? profile.username : "PERFIL"}</span></PxButton>

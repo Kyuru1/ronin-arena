@@ -29,16 +29,16 @@ export function SavedRunPrompt({
 }) {
   return (
     <div className="px-backdrop absolute inset-0 z-40 flex items-center justify-center p-3 sm:p-6">
-      <PxFrame title="CONTINUAR RUN?" icon="player" className="anim-pop w-full max-w-sm p-4 pt-7 sm:p-5 sm:pt-8">
+      <PxFrame title="CONTINUE RUN?" icon="player" className="anim-pop w-full max-w-sm p-4 pt-7 sm:p-5 sm:pt-8">
         <div className="flex flex-col items-center gap-3 text-center">
           <PixelSprite name="player" scale={4} />
           <p className="font-pixel text-[7px] leading-5 text-[#ffe2c4] sm:text-[8px]">
-            SUA RUN DA WAVE {wave} ESTA SALVA{atShop ? " NO SHOP" : ""}.
+            YOUR WAVE {wave} RUN IS SAVED{atShop ? " IN THE SHOP" : ""}.
           </p>
-          <p className="font-pixel text-[6px] leading-4 text-[#91b9b5]">QUER VOLTAR PARA A ULTIMA RUN?</p>
+          <p className="font-pixel text-[6px] leading-4 text-[#91b9b5]">RETURN TO THE LAST RUN?</p>
           <div className="flex w-full flex-col gap-2">
             <PxButton tone="gold" onClick={onContinue} className="w-full py-3 text-[9px] sm:text-[10px]">CONTINUAR</PxButton>
-            <PxButton tone="dark" onClick={onDiscard} className="w-full py-2.5 text-[8px]">NOVA PARTIDA</PxButton>
+            <PxButton tone="dark" onClick={onDiscard} className="w-full py-2.5 text-[8px]">NEW RUN</PxButton>
           </div>
         </div>
       </PxFrame>
@@ -73,16 +73,16 @@ export function PauseScreen({
   const [settingsOpen, setSettingsOpen] = useState(false);
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center overflow-y-auto bg-[#070305]/85 p-3">
-      <PxFrame title={waitingForHost ? "HOST PAUSOU O JOGO" : t.paused} className="anim-pop my-auto w-full max-w-xs p-4 pt-6 sm:p-5 sm:pt-7">
+      <PxFrame title={waitingForHost ? "HOST PAUSED THE GAME" : t.paused} className="anim-pop my-auto w-full max-w-xs p-4 pt-6 sm:p-5 sm:pt-7">
         <div className="flex flex-col items-center gap-3">
           <PixelSprite name={avatarId === "samurai" ? "player" : avatarId} scale={4} />
           {waitingForHost ? (
             <>
               <p className="px-inset w-full p-3 text-center font-pixel text-[7px] leading-4 text-[#ffd44a] sm:text-[8px]">
-                O anfitriao pausou a partida.
+                The host paused the game.
               </p>
               <PxButton tone="dark" disabled className="w-full py-3 text-[8px] sm:text-[9px]">
-                AGUARDANDO ANFITRIAO...
+                WAITING FOR HOST...
               </PxButton>
               <PxButton tone="red" onClick={onQuit} className="w-full py-3 text-[10px] sm:text-[11px]">
                 SAIR
@@ -97,7 +97,7 @@ export function PauseScreen({
                 <StatCell label={t.time} value={formatTime(stats.time)} />
               </div>
               <PxButton tone="menu" onClick={() => setSettingsOpen((open) => !open)} className="w-full py-2.5 text-[8px] sm:text-[9px]">{t.settings}</PxButton>
-              <PxButton tone="gold" onClick={onSave} className="w-full py-2.5 text-[8px] sm:text-[9px]">SALVAR RUN</PxButton>
+              <PxButton tone="gold" onClick={onSave} className="w-full py-2.5 text-[8px] sm:text-[9px]">SAVE RUN</PxButton>
               <PxButton tone="red" onClick={onResume} className="w-full py-3 text-[10px] sm:text-[11px]">
                 ▶ {t.resume}
               </PxButton>
@@ -165,7 +165,7 @@ export function GameOverScreen({
   return (
     <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#12040a]/88 p-3">
       <PxFrame
-        title={isCoop ? "PARTIDA COOP ENCERRADA" : t.youDied}
+        title={isCoop ? "CO-OP RUN OVER" : t.youDied}
         icon="icoSkull"
         className="anim-pop w-full max-w-sm p-4 pt-6 sm:p-5 sm:pt-7"
       >
@@ -173,7 +173,7 @@ export function GameOverScreen({
           {/* Banner Coop */}
           {isCoop && (
             <div className="px-inset w-full p-2.5 text-center font-pixel text-[7px] sm:text-[8px] text-[#ffd44a] bg-[#422006]/80 border border-[#b45309]/50">
-              MODO COOPERATIVO · RANKING DESATIVADO
+              CO-OP MODE · RANKING DISABLED
             </div>
           )}
 
@@ -194,7 +194,7 @@ export function GameOverScreen({
           {pendingScore && !isCoop ? (
             <div className="w-full">
               <PxHeading>{t.ranking}</PxHeading>
-              <div className="px-inset mb-3 p-3 text-center font-pixel text-[8px] text-[#ffe2c4]">RECORDE DE: {defaultName}</div>
+              <div className="px-inset mb-3 p-3 text-center font-pixel text-[8px] text-[#ffe2c4]">RECORD BY: {defaultName}</div>
               {scoreError && <div className="mb-2 border border-[#a35662] bg-[#2a0d14] p-2 text-center font-pixel text-[7px] leading-4 text-[#ffb3ad]">{scoreError}</div>}
               <PxButton tone="gold" onClick={onSubmitName} disabled={scoreSaving} className="w-full py-3 text-[9px] sm:text-[10px]">
                 {scoreSaving ? "SALVANDO..." : t.save}
@@ -211,7 +211,7 @@ export function GameOverScreen({
               )}
               {!isCoop && (
                 <div className="px-inset scrollbar-thin max-h-[22vh] w-full overflow-y-auto">
-                  {difficultyScores.length === 0 ? <div className="px-3 py-4 text-center font-pixel text-[7px] text-[#a35662]">SEM RECORDES NESTA DIFICULDADE</div> : difficultyScores.map((s, i) => (
+                  {difficultyScores.length === 0 ? <div className="px-3 py-4 text-center font-pixel text-[7px] text-[#a35662]">NO SCORES FOR THIS DIFFICULTY</div> : difficultyScores.map((s, i) => (
                     <div
                       key={`${s.userId ?? s.name}-${s.date}-${i}`}
                       className={`font-pixel flex items-center gap-2 px-3 py-1.5 text-[7px] sm:text-[8px] ${
@@ -228,9 +228,9 @@ export function GameOverScreen({
               {isCoop ? (
                 <>
                   <PxButton tone={rematchWaiting ? "dark" : "red"} disabled={rematchWaiting} onClick={onRestart} className="w-full py-3.5 text-[9px] sm:text-[10px]">
-                    {rematchWaiting ? `AGUARDANDO ALIADOS... ${rematchVotes}/${rematchTotal}` : "▶ TENTAR NOVAMENTE"}
+                    {rematchWaiting ? `WAITING FOR ALLIES... ${rematchVotes}/${rematchTotal}` : "▶ TRY AGAIN"}
                   </PxButton>
-                  <div className="font-pixel text-center text-[6px] leading-4 text-[#91b9b5]">Todos precisam confirmar. A equipe voltará ao mesmo lobby e código.</div>
+                  <div className="font-pixel text-center text-[6px] leading-4 text-[#91b9b5]">Everyone must confirm. The team will return to the same lobby and code.</div>
                 </>
               ) : (
                 <PxButton tone="red" onClick={onRestart} className="w-full py-3.5 text-[11px] sm:text-[12px]">

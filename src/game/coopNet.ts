@@ -6,7 +6,7 @@ import { supabase } from "../lib/supabase";
 export interface CoopRoomPlayer { profile: PlayerProfile; ready: boolean; perk: Perk | null; }
 export interface CoopRoomState { code: string; difficulty: Difficulty; started: boolean; hostId: string; players: Record<string, CoopRoomPlayer>; rematchVotes?: Record<string, boolean>; }
 export interface CoopArrowState { x: number; y: number; rot: number; }
-export interface CoopShotState { x: number; y: number; vx: number; vy: number; life: number; r: number; dmg: number; color?: string; }
+export interface CoopShotState { x: number; y: number; vx: number; vy: number; life: number; r: number; dmg: number; color?: string; explosive?: boolean; zone?: "fire" | "poison"; warmup?: number; }
 export interface CoopParticleState { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; drag: number; kind: 0 | 1 | 2 | 3; rot?: number; }
 export interface CoopImpactState { x: number; y: number; a: number; life: number; max: number; heavy: boolean; }
 export interface PeerRoninState {

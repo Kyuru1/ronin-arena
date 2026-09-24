@@ -1,0 +1,49 @@
+/* Device choice controls layout independently from touch-capability detection. */
+[data-device="desktop"] .shop-frame {
+  width: calc(100% - 24px) !important;
+  max-width: 1440px;
+  max-height: calc(100dvh - 28px) !important;
+}
+@media (min-width: 900px) {
+  [data-device="desktop"] .shop-layout { grid-template-columns: minmax(240px, .8fr) minmax(0, 1.4fr); }
+  [data-device="desktop"] .shop-layout > div:last-child { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+  [data-device="desktop"] .shop-layout > div:last-child > :first-child { grid-column: 1 / -1; }
+}
+[data-device="mobile"] > canvas { touch-action: none; }
+[data-device="mobile"] .px-backdrop { padding: 10px 6px; bottom: 54px; }
+[data-device="mobile"] .menu-arena { bottom: 54px; }
+[data-device="mobile"] .px-frame {
+  max-width: 100%;
+  max-height: calc(100dvh - 78px) !important;
+  overflow-y: auto;
+}
+[data-device="mobile"] .shop-frame {
+  width: calc(100% - 4px) !important;
+  max-width: none;
+  padding: 32px 8px 8px !important;
+}
+[data-device="mobile"] .shop-category { min-height: 92px; padding: 10px; gap: 8px; }
+[data-device="mobile"] .shop-category strong { font-size: 8px; }
+[data-device="mobile"] .shop-frame .grid { gap: 6px; }
+[data-device="mobile"] .shop-frame .grid:has(> .shop-category) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+[data-device="mobile"] .shop-layout { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 6px; }
+[data-device="mobile"] .shop-layout > div:first-child { display: flex; flex-direction: column; }
+[data-device="mobile"] .shop-layout .min-h-40 { min-height: 80px; }
+[data-device="mobile"] .shop-layout .px-inset { padding: 7px; }
+[data-device="mobile"] .shop-layout .shop-weapon-icon { max-width: 28px; }
+[data-device="mobile"] .shop-layout button { white-space: normal; }
+[data-device="mobile"] .shop-layout .truncate { white-space: normal; overflow: visible; }
+[data-device="mobile"] .menu-grid { padding: 12px; }
+[data-device="mobile"] .menu-actions { padding: 12px 0; }
+[data-device="mobile"] .menu-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 520px; }
+[data-device="mobile"] .menu-title-panel h1 { font-size: 24px; }
+[data-device="mobile"] .controls-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.mobile-panel-navigation { position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; align-items: center; gap: 12px; background: #170b10; padding: 3px 8px; border: 2px solid #b43949; color: #ffe2c4; }
+.mobile-panel-navigation button { width: 64px; min-height: 40px; background: #70202f; color: #ffe2c4; touch-action: manipulation; }
+.mobile-panel-navigation button:disabled { opacity: .35; }
+@media (orientation: landscape) and (max-height: 520px) {
+  [data-device="mobile"] .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  [data-device="mobile"] .menu-title-panel { grid-column: 1 / -1; }
+  [data-device="mobile"] .shop-category { min-height: 60px; }
+  [data-device="mobile"] .shop-frame .grid:has(> .shop-category) { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}

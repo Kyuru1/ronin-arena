@@ -245,6 +245,10 @@ interface FloatText {
 }
 
 interface Projectile {
+  explosive?: boolean;
+  zone?: "fire" | "poison";
+  warmup?: number;
+  tick?: number;
   x: number;
   y: number;
   vx: number;
@@ -3208,8 +3212,8 @@ export class Game {
       y,
       vx: 0,
       vy: 0,
-      hp: type === "boss" ? 220 + this.wave * 35 : s.hp,
-      maxHp: type === "boss" ? 220 + this.wave * 35 : s.hp,
+      hp: type === "boss" ? Math.max(600, 220 + this.wave * 35) : s.hp,
+      maxHp: type === "boss" ? Math.max(600, 220 + this.wave * 35) : s.hp,
       r: s.r,
       speed: s.speed,
       flash: 0,
@@ -3276,7 +3280,7 @@ export class Game {
   }
 
   private chooseBossType(): Exclude<EnemyType, "boss"> {
-    const types: Exclude<EnemyType, "boss">[] = ["spitter", "archer", "wisp", "monk", "warlock"];
+    const types: Exclude<EnemyType, "boss">[] = ["spitter", "archer", "wisp", "monk", "warlock", "ninja", "demon", "golem"];
     if (this.wave >= 5) types.push("ninja", "golem");
     if (this.wave >= 7)
       types.push(
@@ -3780,6 +3784,20 @@ export class Game {
               e.vy += ny * e.speed * 4 * dt;
               if (e.cd <= 0) {
                 const aim = Math.atan2(dy, dx);
+                e.scaleY = 0.78;
+                if (bossType === "spitter" || bossType === "warlock") {
+                  const zone = bossType === "spitter" ? "poison" : "fire";
+                  for (let pool = -1; pool <= 1; pool++) {
+                    this.shots.push({ x: clamp(e.x + nx * 80 - ny * pool * 34, 20, this.worldW - 20),
+                      y: clamp(e.y + ny * 80 + nx * pool * 34, 20, this.worldH - 20), vx: 0, vy: 0,
+                      life: zone === "poison" ? 5 : 3.5, warmup: 0.8, zone, r: 19, dmg: e.dmg,
+                      color: zone === "poison" ? "#9be65b" : "#ff8045" });
+                  }
+                }
+                // A slow, readable bomb precedes each caster's signature attack.
+                this.shots.push({ x: e.x, y: e.y, vx: Math.cos(aim) * 90, vy: Math.sin(aim) * 90,
+                  life: 1.25, r: 7, dmg: e.dmg, explosive: true,
+                  color: bossType === "spitter" ? "#9be65b" : bossType === "warlock" ? "#ff8045" : "#bd96ff" });
                 if (bossType === "monk") {
                   e.cd = 4.5;
                   for (let v = 0; v < 3; v++) {
@@ -3941,6 +3959,33 @@ export class Game {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
       s.life -= dt;
+      if (s.zone) {
+        s.warmup = Math.max(0, (s.warmup ?? 0) - dt);
+        s.tick = Math.max(0, (s.tick ?? 0) - dt);
+        if (s.life <= 0) { this.shots.splice(i, 1); continue; }
+        if (s.warmup === 0 && s.tick === 0) {
+          s.tick = s.zone === "poison" ? 0.9 : 0.6;
+          if (this.hp > 0 && Math.hypot(this.px - s.x, this.py - s.y) < s.r + this.playerRadius())
+            this.hurtPlayer(s.dmg, 0, 0);
+          for (const [id, peer] of this.remoteRonins()) {
+            if (peer.hp > 0 && Math.hypot(peer.px - s.x, peer.py - s.y) < s.r + 9)
+              this.hurtCoopTarget(id, s.dmg, 0, 0);
+          }
+          this.burst(s.x, s.y, 5, s.color ?? "#ff8045", 20);
+        }
+        continue;
+      }
+      if (s.explosive && s.life <= 0) {
+        this.shots.splice(i, 1);
+        this.burst(s.x, s.y, 24, s.color ?? "#ff8045", 130);
+        this.shockwaves.push({ x: s.x, y: s.y, r: 3, maxR: 28, life: 0.35, maxLife: 0.35, color: s.color ?? "#ff8045" });
+        for (let fragment = 0; fragment < 12; fragment++) {
+          const angle = fragment / 12 * TAU;
+          this.shots.push({ x: s.x, y: s.y, vx: Math.cos(angle) * 125, vy: Math.sin(angle) * 125,
+            life: 1.7, r: 2, dmg: s.dmg, color: s.color });
+        }
+        continue;
+      }
       if (Math.random() < dt * 30) {
         this.parts.push({
           x: s.x,
@@ -4609,6 +4654,21 @@ export class Game {
     // Enemy Projectiles
     for (const s of this.shots) {
       const color = s.color ?? "#ffe1b5";
+      if (s.zone) {
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.strokeStyle = color;
+        ctx.globalAlpha = (s.warmup ?? 0) > 0 ? 0.12 : 0.28;
+        ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r * 0.65, 0, 0, TAU); ctx.fill();
+        ctx.globalAlpha = 0.65; ctx.lineWidth = 1; ctx.stroke();
+        if (!(s.warmup && s.warmup > 0)) for (let i = 0; i < 8; i++) {
+          const a = i * TAU / 8 + this.elapsed * 0.6;
+          const rise = (this.elapsed * 12 + i * 3) % 14;
+          ctx.globalAlpha = (1 - rise / 14) * 0.8;
+          ctx.fillRect(s.x + Math.cos(a) * s.r * 0.65, s.y + Math.sin(a) * s.r * 0.35 - rise, 3, s.zone === "fire" ? 6 : 3);
+        }
+        ctx.restore(); continue;
+      }
       const length = Math.min(13, Math.max(5, Math.hypot(s.vx, s.vy) * 0.045));
       const angle = Math.atan2(s.vy, s.vx);
       ctx.save();
@@ -4622,7 +4682,7 @@ export class Game {
       ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.fillStyle = color;
-      ctx.fillRect(Math.round(s.x - 2), Math.round(s.y - 2), 4, 4);
+      ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill();
       ctx.fillStyle = "#fff4d0";
       ctx.fillRect(Math.round(s.x - 1), Math.round(s.y - 1), 2, 2);
       ctx.restore();
@@ -4829,7 +4889,7 @@ export class Game {
     const spr = e.type === "boss" ? SPR[e.bossType ?? "spitter"] : SPR[e.type];
     const walking = Math.min(1, Math.hypot(e.vx, e.vy) / Math.max(1, e.speed));
     const bob = e.type === "bat" || e.type === "wisp" ? Math.sin(e.t * 12) * 2.2 : Math.sin(e.t * (8 + walking * 7)) * (0.45 + walking * 0.7);
-    const stepSquash = 1 + Math.sin(e.t * (10 + walking * 8)) * walking * 0.035;
+    const stepSquash = 1 + Math.sin(e.t * 3 + e.id) * (1 - walking) * 0.025 + Math.sin(e.t * 16 + e.id) * walking * 0.07;
     if (e.spawnT > 0) {
       const p = 1 - e.spawnT / 0.28;
       ctx.globalAlpha = p;
@@ -5027,7 +5087,7 @@ export class Game {
     }
 
     if (!blink && this.hp > 0) {
-      const squash = this.atkT > 0 ? 1.04 : this.dashT > 0 ? 1.12 : 1;
+      const squash = this.atkT > 0 ? 1 + Math.sin(this.elapsed * 30) * 0.06 : this.dashT > 0 ? 0.85 : this.walkT > 0 ? 1 + Math.sin(this.walkT * 2) * 0.065 : 1 + Math.sin(this.elapsed * 3) * 0.025;
       this.blit(
         this.localPlayerSprite(),
         bx,
@@ -5330,6 +5390,7 @@ export class Game {
             r: s.r,
             dmg: s.dmg,
             color: s.color,
+            explosive: s.explosive, zone: s.zone, warmup: s.warmup,
           })),
           particles: this.parts.slice(-180).map((p): CoopParticleState => ({ ...p })),
           impacts: this.impacts.slice(-48).map((impact): CoopImpactState => ({ ...impact })),
@@ -5461,6 +5522,7 @@ export class Game {
         r: s.r,
         dmg: s.dmg,
         color: s.color,
+        explosive: s.explosive, zone: s.zone, warmup: s.warmup,
       }));
 
       const currentMap = new Map(this.enemies.map((e) => [e.id, e]));

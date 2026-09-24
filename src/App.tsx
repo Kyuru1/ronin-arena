@@ -4,6 +4,8 @@ import { isMuted, setMuted, setVolume, unlockAudio, Sfx } from "./game/audio";
 import { loadRemoteScores, saveRemoteScore, type ScoreEntry } from "./game/storage";
 import { I18N } from "./game/i18n";
 import Hud from "./components/Hud";
+import MobilePanelNavigation from "./components/MobilePanelNavigation";
+import "./responsive-panels.css";
 import { GameOverScreen, PauseScreen, SavedRunPrompt } from "./components/Screens";
 import MainMenu, { type UiOpts } from "./components/MainMenu";
 import ShopScreen from "./components/ShopScreen";
@@ -129,6 +131,7 @@ export default function App() {
   const [muted, setMutedState] = useState(false);
   const [opts, setOpts] = useState<UiOpts>(defaultOpts);
   const [isTouch, setIsTouch] = useState(false);
+  const [deviceChosen, setDeviceChosen] = useState(false);
   const [difficulty, setDifficulty] = useState<Difficulty>("medium");
   const [savedRun, setSavedRun] = useState<SavedRun | null>(null);
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
@@ -292,6 +295,7 @@ export default function App() {
     const roomPlayers = coopNet.roomPlayers();
     setIsCoopGame(true);
     game.isCoop = true;
+    game.setOpts({ inputMode });
     game.isHost = isHost;
     game.setDifficulty(coopDifficulty);
     selectedPerk.current = coopNet.roomState?.players[profileRef.current?.id ?? coopNet.playerId ?? ""]?.perk ?? null;
@@ -312,8 +316,7 @@ export default function App() {
         currentGame.reset();
         currentGame.phase = "menu";
       }
-      // A rematch ends the old room: return to the create/join screen instead of reusing its lobby.
-      coopNet.leaveRoom();
+      // Keep the existing realtime room and all of its members. Every client returns to the same lobby.
       setIsCoopGame(false);
       setRematchWaiting(false);
       setRematchVotes(0);
@@ -323,7 +326,7 @@ export default function App() {
     unlockAudio();
     setCoopModalOpen(false);
     launchRun();
-  }, [launchRun]);
+  }, [launchRun, inputMode]);
   const selectedPerk = useRef<Perk | null>(null);
   const choosePerk = useCallback((perk: Perk | null) => { selectedPerk.current = perk; gameRef.current?.setPerk(perk); }, []);
 
@@ -340,6 +343,7 @@ export default function App() {
         /* ignore */
       }
       if (isTouch) {
+        setInputMode("touch");
         gameRef.current?.setOpts({ inputMode: "touch" });
         if (hidden) launchRun();
         else { setPhase("tutorial"); setMenuClosing(false); }
@@ -707,7 +711,17 @@ export default function App() {
     <div className={`relative flex h-full w-full items-center justify-center overflow-hidden bg-[#070305] ui-text-${opts.textScale === 0.85 ? "small" : opts.textScale === 1.15 ? "large" : "normal"}`}>
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_45%,rgba(117,16,29,0.25),transparent_65%)]" />
 
-      <div ref={wrapRef} className="relative h-full w-full max-w-[1500px]">
+      <div ref={wrapRef} data-device={isTouch ? "mobile" : "desktop"} className="relative h-full w-full max-w-[1500px]">
+        {deviceChosen && isTouch && (phase !== "playing" || coopModalOpen) && <MobilePanelNavigation />}
+        {!deviceChosen && <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#070305] p-4">
+          <div className="flex w-full max-w-md flex-col gap-5 text-center font-pixel text-[#ffe2c4]">
+            <h2 className="text-sm">{({ pt: "COMPUTADOR OU CELULAR?", en: "COMPUTER OR PHONE?", fr: "ORDINATEUR OU MOBILE ?", de: "COMPUTER ODER HANDY?", zh: "电脑还是手机？" })[opts.language]}</h2>
+            {([false, true] as const).map((mobile) => <button key={String(mobile)} className="pxb pxb-menu min-h-16 p-4 text-xs" onClick={() => {
+              const mode: InputMode = mobile ? "touch" : "keyboardMouse";
+              setIsTouch(mobile); setInputMode(mode); gameRef.current?.setOpts({ inputMode: mode }); setDeviceChosen(true);
+            }}>{mobile ? ({ pt: "CELULAR", en: "PHONE", fr: "MOBILE", de: "HANDY", zh: "手机" })[opts.language] : ({ pt: "COMPUTADOR", en: "COMPUTER", fr: "ORDINATEUR", de: "COMPUTER", zh: "电脑" })[opts.language]}</button>)}
+          </div>
+        </div>}
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full object-contain" />
 
         {(phase === "playing" || phase === "paused") && (
