@@ -89,7 +89,9 @@
 
 **Habilidade — Flame:** Lança fogo de longo alcance, com dano alto e queimadura. Recarga de **24 segundos**.
 
-## Raças especiais e legadas
+## Raças especiais e legadas incluídas no jogo
+
+As raças adicionadas antes da expansão principal permanecem no sorteio e estão documentadas abaixo: **Caçador de Deuses**, **Sangue Oni**, **Herdeiro Espiritual**, **Ronin** e **Sobrevivente**.
 
 ### 10. **God Hunter** — Lendária — **1%**
 

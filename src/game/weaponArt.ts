@@ -29,6 +29,9 @@ export const WEAPON_REST_LEN: Record<Weapon, number> = {
   staff: 25,
   harp: 28,
   godslayer: 52,
+  boomerang: 22,
+  shuriken: 18,
+  spear: 54,
 };
 
 export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: WeaponDrawOpts) {
@@ -59,9 +62,43 @@ export function drawWeaponArt(ctx: CanvasRenderingContext2D, weapon: Weapon, o: 
     case "godslayer":
       drawGodslayer(ctx, L);
       break;
+    case "boomerang":
+      drawBoomerang(ctx, o.form ?? 0);
+      break;
+    case "shuriken":
+      drawShuriken(ctx, o.form ?? 0);
+      break;
+    case "spear":
+      drawSpear(ctx, L, o.form ?? 0);
+      break;
     default:
       drawKatana(ctx, L, o.glint ?? 0, o.glintP ?? 0, o.form ?? 0);
   }
+}
+
+function drawBoomerang(ctx: CanvasRenderingContext2D, form: number) {
+  const s = form > 0 ? 1.45 : 1;
+  ctx.save(); ctx.scale(s, s);
+  ctx.fillStyle = "#080608"; ctx.fillRect(-9, -9, 7, 18); ctx.fillRect(-8, 3, 18, 7);
+  ctx.fillStyle = "#a12d36"; ctx.fillRect(-7, -7, 3, 13); ctx.fillRect(-6, 5, 13, 3);
+  ctx.fillStyle = "#ffd06e"; ctx.fillRect(-5, -5, 2, 8); ctx.fillRect(-4, 4, 9, 2);
+  ctx.restore();
+}
+function drawShuriken(ctx: CanvasRenderingContext2D, form: number) {
+  const s = form > 0 ? 1.8 : 1;
+  ctx.save(); ctx.scale(s, s); ctx.rotate(Math.PI / 4);
+  ctx.fillStyle = "#09080b"; ctx.fillRect(-2, -11, 5, 22); ctx.fillRect(-11, -2, 22, 5);
+  ctx.fillStyle = "#aab4bd"; ctx.fillRect(-1, -9, 3, 18); ctx.fillRect(-9, -1, 18, 3);
+  ctx.fillStyle = "#e5edf0"; ctx.fillRect(-1, -1, 3, 3); ctx.restore();
+}
+function drawSpear(ctx: CanvasRenderingContext2D, L: number, form: number) {
+  const length = L + (form > 0 ? 18 : 0);
+  ctx.fillStyle = "#080608"; ctx.fillRect(-12, -3, length + 12, 7);
+  ctx.fillStyle = form > 0 ? "#6f2d55" : "#774523"; ctx.fillRect(-10, -1, length + 8, 3);
+  ctx.fillStyle = "#d19a52"; for (let x = -8; x < length - 4; x += 8) ctx.fillRect(x, -2, 2, 5);
+  ctx.fillStyle = "#09080b"; ctx.fillRect(length - 3, -7, 12, 15);
+  ctx.fillStyle = form > 0 ? "#c18cff" : "#d9e1df"; ctx.fillRect(length - 1, -5, 7, 11); ctx.fillRect(length + 6, -2, 6, 5);
+  ctx.fillStyle = "#fff4df"; ctx.fillRect(length + 7, -1, 4, 2);
 }
 
 

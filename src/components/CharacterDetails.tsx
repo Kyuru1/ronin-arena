@@ -5,6 +5,7 @@ import { RACE_CONFIG, type RaceId } from "../game/races";
 import type { Language } from "../game/i18n";
 import PixelSprite from "./PixelSprite";
 import WeaponPreview from "./WeaponPreview";
+import { localizedWeapon, PERK_TEXT } from "../game/localizedContent";
 
 export interface CharacterDetailsData {
   avatarId?: AvatarId;
@@ -44,6 +45,9 @@ const WEAPON_NAMES: Record<Weapon, string> = {
   staff: "Cajado",
   harp: "Arpa Divina",
   godslayer: "Godslayer",
+  boomerang: "Bumerangue",
+  shuriken: "Shuriken",
+  spear: "Lança",
 };
 
 function number(value: number | undefined, digits = 0, missing = "Not recorded") {
@@ -59,6 +63,7 @@ export default function CharacterDetails({ data, abilityBinding = "F · Y / TRIA
   const label = (portuguese: string, english: string) => pt ? portuguese : english;
   const race = data.raceId ? RACE_CONFIG[data.raceId] : null;
   const perk = data.perk ? PERK_CONFIG[data.perk] : null;
+  const perkText = data.perk ? PERK_TEXT[language][data.perk] : null;
   const weapons = data.weapons ?? [];
   const current = weapons[data.activeSlot ?? 0] ?? weapons[0];
   const effects = [
@@ -77,7 +82,7 @@ export default function CharacterDetails({ data, abilityBinding = "F · Y / TRIA
         <span>{data.gameMode === "coop" ? label("COOPERATIVO", "CO-OP") : "SOLO"}</span>
         <div className="character-current-weapon">
           {current && <WeaponPreview weapon={current} form={data.weaponLevels?.[current]?.form ?? 0} scale={2} />}
-          <span>{current ? WEAPON_NAMES[current] : label("ARMA NÃO REGISTRADA", "WEAPON NOT RECORDED")}</span>
+          <span>{current ? localizedWeapon(language, current)?.[0] ?? WEAPON_NAMES[current] : label("ARMA NÃO REGISTRADA", "WEAPON NOT RECORDED")}</span>
         </div>
       </div>
 
@@ -97,15 +102,15 @@ export default function CharacterDetails({ data, abilityBinding = "F · Y / TRIA
 
     <div className="character-arsenal">
       <strong>{label("ARSENAL DA RUN", "RUN ARSENAL")}</strong>
-      <div>{weapons.length ? weapons.map((weapon, index) => <span key={`${weapon}-${index}`} className={index === data.activeSlot ? "is-active" : ""}><WeaponPreview weapon={weapon} form={data.weaponLevels?.[weapon]?.form ?? 0} scale={1} />{WEAPON_NAMES[weapon]}{data.weaponLevels && <small>D{data.weaponLevels[weapon].damage} V{data.weaponLevels[weapon].speed} A{data.weaponLevels[weapon].range} F{data.weaponLevels[weapon].form}</small>}</span>) : <em>{label("Armas não registradas neste ranking antigo.", "Weapons were not recorded in this older ranking.")}</em>}</div>
+      <div>{weapons.length ? weapons.map((weapon, index) => <span key={`${weapon}-${index}`} className={index === data.activeSlot ? "is-active" : ""}><WeaponPreview weapon={weapon} form={data.weaponLevels?.[weapon]?.form ?? 0} scale={1} />{localizedWeapon(language, weapon)?.[0] ?? WEAPON_NAMES[weapon]}{data.weaponLevels && <small>D{data.weaponLevels[weapon].damage} V{data.weaponLevels[weapon].speed} A{data.weaponLevels[weapon].range} E{data.weaponLevels[weapon].form}</small>}</span>) : <em>{label("Armas não registradas neste ranking antigo.", "Weapons were not recorded in this older ranking.")}</em>}</div>
     </div>
 
     {effects.length > 0 && <div className="character-effects"><strong>{label("EFEITOS ATIVOS", "ACTIVE EFFECTS")}</strong>{effects.map((effect) => <span key={effect}>{effect}</span>)}</div>}
 
     <div className="character-lore-grid">
       <article style={{ borderColor: perk?.accent ?? "#6c3a42" }}>
-        <strong>PERK · {perk?.name ?? label("SEM PERK", "NO PERK")}</strong>
-        <p>{perk?.description ?? label("Nenhuma perk foi registrada para esta run.", "No perk was recorded for this run.")}</p>
+        <strong>PERK · {perkText?.[0] ?? perk?.name ?? label("SEM PERK", "NO PERK")}</strong>
+        <p>{perkText?.[1] ?? perk?.description ?? label("Nenhuma perk foi registrada para esta run.", "No perk was recorded for this run.")}</p>
       </article>
       <article style={{ borderColor: race?.color ?? "#6c3a42" }}>
         <strong>{label("RAÇA", "RACE")} · {race?.name ?? label("NÃO REGISTRADA", "NOT RECORDED")}</strong>

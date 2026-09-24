@@ -177,7 +177,7 @@ export function startMusic() {
   musicTimer = window.setInterval(tick, 100);
 }
 
-export type Weapon = "katana" | "bow" | "hammer" | "shield" | "mine" | "book" | "staff" | "harp" | "godslayer";
+export type Weapon = "katana" | "bow" | "hammer" | "shield" | "mine" | "book" | "staff" | "harp" | "godslayer" | "boomerang" | "shuriken" | "spear";
 
 export const Sfx = {
   // A crisp metallic "shing" for the katana; heavier thumps/twangs for other weapons.
@@ -194,6 +194,12 @@ export const Sfx = {
     } else if (weapon === "harp") {
       tone("sine", 540, 1080, 0.18, 0.14);
       tone("triangle", 880, 440, 0.22, 0.09, 0.04);
+    } else if (weapon === "boomerang" || weapon === "shuriken") {
+      noise(0.08, 0.18, 3200, 700, 1.7);
+      tone("triangle", weapon === "shuriken" ? 1100 : 720, 360, 0.09, 0.12);
+    } else if (weapon === "spear") {
+      noise(0.12, 0.22, 2100, 500, 1.4);
+      tone("sawtooth", 360, 120, 0.13, 0.14);
     } else if (weapon === "godslayer") {
       noise(0.16, 0.3, 4200, 500, 1.5);
       tone("sawtooth", 260, 1900, 0.16, 0.16);

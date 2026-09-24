@@ -10,6 +10,7 @@ import { useMenuNavigation } from "./useMenuNavigation";
 import CharacterDetails from "./CharacterDetails";
 import { PERKS } from "../game/perks";
 import { formatTime } from "../game/storage";
+import { MENU_UI, PERK_TEXT } from "../game/localizedContent";
 
 export interface UiOpts {
   sound: boolean;
@@ -85,6 +86,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
     setInstallPrompt(null);
   };
   const t = I18N[opts.language];
+  const menuText = MENU_UI[opts.language];
 
   useEffect(() => {
     if (openAccount) setTab("account");
@@ -148,8 +150,8 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
                 <strong>{selectedRanking.name}</strong>
                 <span>SCORE {selectedRanking.score.toLocaleString()}</span>
                 <span>WAVE {selectedRanking.wave}</span>
-                <span>{selectedRanking.kills} ABATES</span>
-                <span>{selectedRanking.coins ?? "—"} MOEDAS</span>
+                <span>{selectedRanking.kills} {labels.kills}</span>
+                <span>{selectedRanking.coins ?? "—"} {labels.coins}</span>
                 <span>{formatTime(selectedRanking.time)}</span>
               </div>
               <CharacterDetails data={{
@@ -179,10 +181,10 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
     const available = difficulty === "hard" ? PERKS.filter((perk) => !["bladeMonk", "bloodContract", "sharpGlass", "lastBullet"].includes(perk.id)) : PERKS;
     return (
       <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
-        <PxFrame title={opts.language === "pt" ? "ESCOLHA SEU PERK" : "CHOOSE YOUR PERK"} className="anim-pop w-full max-w-5xl p-4 sm:p-6 lg:p-8">
-          <div className="mb-4 text-center font-pixel text-[8px] leading-5 text-[#91b9b5] sm:text-[9px]">{opts.language === "pt" ? "Escolha uma vantagem para esta partida." : "Choose one advantage for this run."}</div>
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">{available.map((perk) => <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPlayStep(null); onStart(difficulty); }} className="min-h-28 flex-col items-start gap-3 p-4 text-left sm:min-h-32 sm:p-5"><strong className="font-pixel text-[9px] leading-5 text-[#ffd44a] sm:text-[10px]">{perk.name}</strong><span className="font-pixel text-[7px] leading-5 text-[#a9c3be] sm:text-[8px] sm:leading-6">{perk.description}</span></PxButton>)}</div>
-          <PxButton tone="dark" onClick={() => setPlayStep("difficulty")} className="mt-4 w-full py-4 text-[9px] sm:text-[10px]">{opts.language === "pt" ? "VOLTAR" : "BACK"}</PxButton>
+        <PxFrame title={menuText.perkTitle} className="anim-pop w-full max-w-5xl p-4 sm:p-6 lg:p-8">
+          <div className="mb-4 text-center font-pixel text-[8px] leading-5 text-[#91b9b5] sm:text-[9px]">{menuText.perkLead}</div>
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">{available.map((perk) => { const text = PERK_TEXT[opts.language][perk.id]; return <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPlayStep(null); onStart(difficulty); }} className="min-h-28 flex-col items-start gap-3 p-4 text-left sm:min-h-32 sm:p-5"><strong className="font-pixel text-[9px] leading-5 text-[#ffd44a] sm:text-[10px]">{text[0]}</strong><span className="font-pixel text-[7px] leading-5 text-[#a9c3be] sm:text-[8px] sm:leading-6">{text[1]}</span></PxButton>; })}</div>
+          <PxButton tone="dark" onClick={() => setPlayStep("difficulty")} className="mt-4 w-full py-4 text-[9px] sm:text-[10px]">{menuText.back}</PxButton>
         </PxFrame>
       </div>
     );
@@ -215,10 +217,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   return (
     <div className="menu-arena absolute inset-0 z-20 overflow-y-auto">
       <div className="menu-grid mx-auto flex min-h-full w-full max-w-4xl flex-col items-center justify-center px-4 py-6 sm:px-8">
-        <header className="menu-title-panel w-full text-center">
-          <div className="font-pixel text-[8px] tracking-[0.35em] text-[#e6535c]">KYU</div>
-          <h1 className="font-pixel mt-3 text-[28px] leading-none text-[#f4e4cf] sm:text-[46px]">KYU<span className="text-[#e6535c]">-ARENA</span></h1>
-        </header>
+        <header className="menu-title-panel w-full text-center"><img src={`${import.meta.env.BASE_URL}kyu-arena-logo.png`} alt="KYU ARENA" className="mx-auto max-h-[38dvh] w-auto max-w-[min(76vw,430px)] object-contain drop-shadow-[0_0_22px_rgba(224,68,77,.35)]" /></header>
 
         <main className="menu-actions flex w-full max-w-sm flex-col items-center gap-3 py-6">
           <button onClick={() => setPlayStep("difficulty")} className="menu-play group w-full">
@@ -227,7 +226,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
           <button
             onClick={() => {
               if (!profile) {
-                setAccountNotice("Faça login ou crie uma conta para jogar no modo cooperativo.");
+                setAccountNotice(menuText.loginCoop);
                 setTab("account");
               } else if (onOpenCoop) {
                 onOpenCoop();
@@ -236,7 +235,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
             className="menu-play group w-full border-[#38bdf8] hover:border-[#7dd3fc] bg-gradient-to-r from-[#0c4a6e]/70 via-[#075985]/60 to-[#0c4a6e]/70 shadow-[0_0_15px_rgba(56,189,248,0.2)]"
           >
             <span className="font-pixel text-[13px] sm:text-[16px] text-[#7dd3fc] flex items-center justify-center gap-2">
-                👥 COOPERATIVO
+                👥 {menuText.coop}
             </span>
           </button>
         </main>
@@ -246,7 +245,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
           <PxButton tone="menu" onClick={() => setTab("controls")} className="justify-center text-[8px]"><PixelSprite name="icoBook" scale={1} />{labels.controls}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("language")} className="justify-center text-[8px]"><PixelSprite name="icoGlobe" scale={1} />{t.language}</PxButton>
           <PxButton tone="menu" onClick={() => setTab("ranking")} className="justify-center text-[8px]"><PixelSprite name="icoTrophy" scale={1} />{t.ranking}</PxButton>
-          <PxButton tone="menu" onClick={() => setTab("account")} className="min-w-0 justify-center overflow-hidden text-[8px]"><PixelSprite name="player" scale={1} /><span className="min-w-0 max-w-full truncate">{profile ? profile.username : "PERFIL"}</span></PxButton>
+          <PxButton tone="menu" onClick={() => setTab("account")} className="min-w-0 justify-center overflow-hidden text-[8px]"><PixelSprite name="player" scale={1} /><span className="min-w-0 max-w-full truncate">{profile ? profile.username : menuText.profile}</span></PxButton>
           <PxButton tone="gold" onClick={() => void installGame()} disabled={!installPrompt} className="menu-install justify-center text-[8px]">↓ {t.install}</PxButton>
         </footer>
       </div>

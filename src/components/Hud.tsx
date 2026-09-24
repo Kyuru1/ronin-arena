@@ -3,6 +3,7 @@ import { GAMEPLAY_TEXT } from "../game/gameplayText";
 import type { HudStats } from "../game/engine";
 import { RACE_CONFIG } from "../game/races";
 import type { Language, Strings } from "../game/i18n";
+import { localizedWeapon } from "../game/localizedContent";
 import { formatTime } from "../game/storage";
 import PixelSprite from "./PixelSprite";
 import WeaponPreview from "./WeaponPreview";
@@ -89,7 +90,14 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
   const waveProgress = stats.waveTotal ? 1 - stats.waveLeft / stats.waveTotal : 0;
   const healthSegments = Math.min(20, Math.max(1, Math.ceil(stats.maxHp)));
   const filledHeartSegments = Math.ceil((stats.hp / stats.maxHp) * healthSegments);
-  const potionNames = { health: "VIDA", strength: "FORCA", speed: "VELOCIDADE", agility: "AGILIDADE" } as const;
+  const potionText = {
+    pt:{health:"VIDA",strength:"FORÇA",speed:"VELOCIDADE",agility:"AGILIDADE",title:"POÇÕES · EFEITOS",healthDesc:"VIDA: RECUPERA 2 CORAÇÕES",strengthDesc:"FORÇA: +50% DANO · 8S",speedDesc:"VELOCIDADE: +45% MOVIMENTO · 8S",agilityDesc:"AGILIDADE: -50% RECARGA DO DASH · 8S",ok:"ENTENDI",hide:"ENTENDI E NÃO MOSTRAR NOVAMENTE"},
+    en:{health:"HEALTH",strength:"STRENGTH",speed:"SPEED",agility:"AGILITY",title:"POTIONS · EFFECTS",healthDesc:"HEALTH: RESTORES 2 HEARTS",strengthDesc:"STRENGTH: +50% DAMAGE · 8S",speedDesc:"SPEED: +45% MOVEMENT · 8S",agilityDesc:"AGILITY: -50% DASH COOLDOWN · 8S",ok:"GOT IT",hide:"GOT IT · DO NOT SHOW AGAIN"},
+    fr:{health:"VIE",strength:"FORCE",speed:"VITESSE",agility:"AGILITÉ",title:"POTIONS · EFFETS",healthDesc:"VIE : RÉCUPÈRE 2 CŒURS",strengthDesc:"FORCE : +50% DÉGÂTS · 8S",speedDesc:"VITESSE : +45% MOUVEMENT · 8S",agilityDesc:"AGILITÉ : -50% RECHARGE DASH · 8S",ok:"COMPRIS",hide:"COMPRIS · NE PLUS AFFICHER"},
+    de:{health:"LEBEN",strength:"STÄRKE",speed:"TEMPO",agility:"AGILITÄT",title:"TRÄNKE · EFFEKTE",healthDesc:"LEBEN: STELLT 2 HERZEN HER",strengthDesc:"STÄRKE: +50% SCHADEN · 8S",speedDesc:"TEMPO: +45% BEWEGUNG · 8S",agilityDesc:"AGILITÄT: -50% DASH-AUFLADUNG · 8S",ok:"VERSTANDEN",hide:"VERSTANDEN · NICHT MEHR ZEIGEN"},
+    zh:{health:"生命",strength:"力量",speed:"速度",agility:"敏捷",title:"药水·效果",healthDesc:"生命：恢复2颗心",strengthDesc:"力量：伤害+50%·8秒",speedDesc:"速度：移动+45%·8秒",agilityDesc:"敏捷：冲刺冷却-50%·8秒",ok:"知道了",hide:"知道了·不再显示"},
+  }[language];
+  const potionNames = potionText;
   const potionSprites = { health: "potionHealth", strength: "potionStrength", speed: "potionSpeed", agility: "potionAgility" } as const;
   const race = RACE_CONFIG[stats.raceId];
   const raceAbilityReady = stats.raceAbilityCd <= 0 && stats.raceAbilityT <= 0 && !stats.isSpectating;
@@ -127,7 +135,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
       {stats.combo > 1 && <div key={stats.combo} className="combat-combo anim-pop absolute left-1/2 top-24 -translate-x-1/2"><strong className="font-pixel text-shadow-pix">COMBO x{comboMult.toFixed(1)}</strong><span className="font-pixel">{stats.combo} {t.kills}</span><div className="combat-combo-track"><i style={{ width: `${stats.comboP * 100}%` }} /></div></div>}
 
       {stats.potionTutorial && <div className="potion-tutorial-backdrop pointer-events-auto"><div className="potion-tutorial">
-        <strong>POCOES · EFEITOS</strong><span className="potion-health">VIDA: RECUPERA 2 CORACOES</span><span className="potion-strength">FORCA: +50% DANO · 8S</span><span className="potion-speed">VELOCIDADE: +45% MOVIMENTO · 8S</span><span className="potion-agility">AGILIDADE: -50% RECARGA DO DASH · 8S</span><div className="potion-tutorial-actions"><button onClick={() => onPotionDismiss(false)}>ENTENDI</button><button onClick={() => onPotionDismiss(true)}>ENTENDI E NAO MOSTRAR NOVAMENTE</button></div>
+        <strong>{potionText.title}</strong><span className="potion-health">{potionText.healthDesc}</span><span className="potion-strength">{potionText.strengthDesc}</span><span className="potion-speed">{potionText.speedDesc}</span><span className="potion-agility">{potionText.agilityDesc}</span><div className="potion-tutorial-actions"><button onClick={() => onPotionDismiss(false)}>{potionText.ok}</button><button onClick={() => onPotionDismiss(true)}>{potionText.hide}</button></div>
       </div></div>}
       {stats.mineTutorial && <div className="font-pixel absolute bottom-28 left-1/2 w-[min(90%,460px)] -translate-x-1/2 border-4 border-[#070305] bg-[#10282b]/95 px-4 py-3 text-center text-[7px] leading-5 text-[#ffd44a] shadow-[0_5px_0_#070305]">{t.mineTutorial}</div>}
 
@@ -144,7 +152,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
           if (!weapon) return <div key={index} className="weapon-slot is-empty"><span>{index + 1}</span></div>;
           const levels = stats.weaponLevels[weapon];
           const totalLevel = levels.damage + levels.speed + levels.range + levels.form;
-          const label = weapon === "harp" ? "ARPA DIVINA" : weapon === "godslayer" ? "GODSLAYER" : weapon === "book" ? g.book : weapon === "bow" && levels.form > 0 ? g.automaticPistol : weapon === "hammer" && levels.form > 0 ? g.titanHammer : weapon === "staff" && levels.form > 0 ? g.necromancerStaff : weapon === "staff" ? g.staff : (t[weapon] as string);
+          const label = localizedWeapon(language, weapon)?.[0] ?? (weapon === "book" ? g.book : weapon === "bow" && levels.form > 0 ? g.automaticPistol : weapon === "hammer" && levels.form > 0 ? g.titanHammer : weapon === "staff" && levels.form > 0 ? g.necromancerStaff : weapon === "staff" ? g.staff : (t[weapon as keyof Strings] as string));
           return <button key={index} onClick={() => onSelectSlot(index)} className={`weapon-slot ${active ? "is-active" : ""}`} title={label}>
             <span className="slot-key">{index + 1}</span><WeaponPreview weapon={weapon} form={levels.form} scale={active ? 2 : 1} className="weapon-slot-preview" /><span className="slot-name">{label}</span><span className="slot-level">{g.level}{totalLevel}{weapon === "book" ? ` · ${g[stats.magicType]}` : ""}</span>
           </button>;

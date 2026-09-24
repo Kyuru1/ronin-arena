@@ -1,6 +1,6 @@
 import { SPR, buildSprites, type Sprite } from "./sprites";
 import { Sfx, unlockAudio, setVolume, type Weapon } from "./audio";
-import { drawWeaponArt } from "./weaponArt";
+import { drawWeaponArt, WEAPON_REST_LEN } from "./weaponArt";
 import { I18N, type Language } from "./i18n";
 import type { AvatarId } from "./auth";
 import { RACE_CONFIG, isRaceId, rollRace, type RaceId } from "./races";
@@ -217,6 +217,8 @@ interface Enemy {
   freezeT: number;
   freezeImmune: number;
   slowT: number;
+  bleedStacks?: number;
+  bleedTick?: number;
 }
 
 interface Particle {
@@ -269,6 +271,12 @@ interface PlayerArrow {
   rot: number;
   dmg: number;
   hitSet: Set<Enemy>;
+  weapon?: Weapon;
+  evolved?: boolean;
+  returning?: boolean;
+  guideHits?: number;
+  target?: Enemy | null;
+  explode?: boolean;
 }
 
 interface Shockwave {
@@ -374,6 +382,9 @@ const WEAPON_CONFIG: Record<
   staff: { wind: 0.12, strike: 0.12, rec: 0.18, cd: 0.55, arc: 1.2, range: 42, dmg: 2, kb: 110 },
   harp: { wind: 0.08, strike: 0.2, rec: 0.18, cd: 1.54, arc: 1.1, range: 58, dmg: 12, kb: 190 },
   godslayer: { wind: 0.13, strike: 0.22, rec: 0.2, cd: 0.42, arc: 2.3, range: 58, dmg: 18, kb: 420 },
+  boomerang: { wind: 0, strike: 0, rec: 0, cd: 0.75, arc: 0, range: 220, dmg: 4, kb: 90 },
+  shuriken: { wind: 0, strike: 0, rec: 0, cd: 0.32, arc: 0, range: 390, dmg: 2, kb: 70 },
+  spear: { wind: 0.22, strike: 0.16, rec: 0.28, cd: 0.42, arc: 0.25, range: 62, dmg: 11, kb: 290 },
 };
 
 const createWeaponLevels = (): WeaponLevels => ({
@@ -386,6 +397,9 @@ const createWeaponLevels = (): WeaponLevels => ({
   staff: { damage: 0, speed: 0, range: 0, form: 0 },
   harp: { damage: 0, speed: 0, range: 0, form: 0 },
   godslayer: { damage: 0, speed: 0, range: 0, form: 0 },
+  boomerang: { damage: 0, speed: 0, range: 0, form: 0 },
+  shuriken: { damage: 0, speed: 0, range: 0, form: 0 },
+  spear: { damage: 0, speed: 0, range: 0, form: 0 },
 });
 
 export class Game {
@@ -2175,6 +2189,8 @@ export class Game {
     } else if (this.currentWeapon === "mine") {
       if (wantAttack && !this.mineHeld && this.atkCd <= 0 && this.dashT <= 0) this.placeMine();
       this.mineHeld = wantAttack;
+    } else if (this.currentWeapon === "boomerang" || this.currentWeapon === "shuriken") {
+      if (wantAttack && this.atkCd <= 0 && this.dashT <= 0) this.throwWeapon(this.currentWeapon);
     } else {
       const busy = this.atkWind > 0 || this.atkT > 0 || this.atkCd > 0;
       if (wantAttack && !busy && this.dashT <= 0) this.startAttack();
@@ -2351,7 +2367,7 @@ export class Game {
     const weapon = this.currentWeapon;
     const base = WEAPON_CONFIG[weapon] ?? WEAPON_CONFIG.katana;
     const levels = this.weaponLevels[weapon];
-    const speed = (1 + levels.speed * 0.14) * this.attackSpeedMultiplier();
+    const speed = (1 + levels.speed * 0.14) * this.attackSpeedMultiplier() * (weapon === "spear" && levels.form > 0 ? 1.45 : 1);
     const evolvedHammer = weapon === "hammer" && levels.form > 0;
     const evolvedKatana = weapon === "katana" && levels.form > 0;
     return {
@@ -2364,6 +2380,7 @@ export class Game {
         base.range +
         levels.range * 5 +
         (weapon === "staff" && levels.form > 0 ? 28 : 0) +
+        (weapon === "spear" && levels.form > 0 ? 22 : 0) +
         (evolvedHammer ? 28 : 0) +
         (evolvedKatana ? 24 : 0),
       dmg:
@@ -2432,7 +2449,8 @@ export class Game {
       return t.range * (1 - 0.45 * p);
     }
     const evolvedKatana = this.currentWeapon === "katana" && this.weaponLevels.katana.form > 0;
-    return (evolvedKatana ? 28 : 16) + Math.abs(Math.sin(this.idleT * 2.1)) * 1.5;
+    const rest = evolvedKatana ? 28 : WEAPON_REST_LEN[this.currentWeapon] ?? 16;
+    return rest + Math.abs(Math.sin(this.idleT * 2.1)) * 1.5;
   }
 
   /* ------------------- special attack actions ------------------- */
@@ -2774,13 +2792,24 @@ export class Game {
       const d = Math.hypot(dx, dy);
       if (d > range + e.r) continue;
       const ang = Math.atan2(dy, dx);
+      if (this.currentWeapon === "spear") {
+        const forward = dx * Math.cos(this.atkAngle) + dy * Math.sin(this.atkAngle);
+        const side = Math.abs(-dx * Math.sin(this.atkAngle) + dy * Math.cos(this.atkAngle));
+        const tipReach = range * (.72 + .28 * Math.sin(p * Math.PI));
+        if (forward < tipReach - 13 - e.r || forward > tipReach + 9 + e.r || side > 5 + e.r) continue;
+      }
       const sideHit = this.currentWeapon === "harp" && (
         Math.abs(angDiff(ang, this.atkAngle + Math.PI / 2)) <= arcHalf * 0.7 ||
         Math.abs(angDiff(ang, this.atkAngle - Math.PI / 2)) <= arcHalf * 0.7
       );
-      if (!sideHit && Math.abs(angDiff(ang, cur)) > arcHalf * 0.6 && Math.abs(angDiff(ang, this.atkAngle)) > arcHalf) continue;
+      if (this.currentWeapon !== "spear" && !sideHit && Math.abs(angDiff(ang, cur)) > arcHalf * 0.6 && Math.abs(angDiff(ang, this.atkAngle)) > arcHalf) continue;
       this.hitSet.add(e);
       killedThisFrame = this.damageEnemy(e, t.dmg, ang) || killedThisFrame;
+      if (this.currentWeapon === "spear" && this.weaponLevels.spear.form > 0 && this.enemies.includes(e)) {
+        e.bleedStacks = (e.bleedStacks ?? 0) + 1;
+        e.bleedTick = Math.min(e.bleedTick ?? .7, .7);
+        this.addScore(0, e.x, e.y - e.r, `SANGRAMENTO x${e.bleedStacks}`, "#ff5361");
+      }
       hitsThisFrame++;
     }
 
@@ -2919,6 +2948,13 @@ export class Game {
           return false;
       }
     }
+    if ((e.bleedStacks ?? 0) > 0) {
+      e.bleedTick = (e.bleedTick ?? .7) - dt;
+      if (e.bleedTick <= 0) {
+        e.bleedTick = .7;
+        if (!this.statusDamage(e, this.playerDamage(e.bleedStacks ?? 1), "#ff5361")) return false;
+      }
+    }
     return true;
   }
 
@@ -2956,7 +2992,7 @@ export class Game {
   }
 
   private playerDamage(dmg: number): number {
-    const ranged = ["bow", "book", "staff", "harp"].includes(this.currentWeapon) ? (RACE_CONFIG[this.raceId].rangedDamage ?? 1) : 1;
+    const ranged = ["bow", "book", "staff", "harp", "boomerang", "shuriken"].includes(this.currentWeapon) ? (RACE_CONFIG[this.raceId].rangedDamage ?? 1) : 1;
     return dmg * ranged * this.perkDamageMultiplier() * (this.strengthT > 0 ? 1.5 : 1) * this.raceDamageMultiplier();
   }
 
@@ -4037,9 +4073,37 @@ export class Game {
   private updatePlayerProjectiles(dt: number) {
     for (let i = this.arrows.length - 1; i >= 0; i--) {
       const a = this.arrows[i];
+      if (a.weapon === "boomerang") {
+        if (!a.returning && (!a.target || !this.enemies.includes(a.target) || a.hitSet.has(a.target))) {
+          a.target = this.enemies.filter((enemy) => !a.hitSet.has(enemy)).sort((left, right) =>
+            Math.hypot(left.x - a.x, left.y - a.y) - Math.hypot(right.x - a.x, right.y - a.y))[0] ?? null;
+          if (!a.target || (a.guideHits ?? 0) >= 5) a.returning = true;
+        }
+        const targetX = a.returning ? this.px : a.target?.x ?? this.px;
+        const targetY = a.returning ? this.py : a.target?.y ?? this.py;
+        const desired = Math.atan2(targetY - a.y, targetX - a.x);
+        a.rot += angDiff(desired, a.rot) * Math.min(1, dt * 9);
+        const speed = a.evolved ? 330 : 285;
+        a.vx = Math.cos(a.rot) * speed; a.vy = Math.sin(a.rot) * speed;
+        if (a.returning && Math.hypot(a.x - this.px, a.y - this.py) < 14) {
+          this.burst(a.x, a.y, 8, "#ffb35c", 80); this.arrows.splice(i, 1); continue;
+        }
+      }
       a.x += a.vx * dt;
       a.y += a.vy * dt;
       a.life -= dt;
+
+      const outside = a.x < 8 || a.y < 8 || a.x > this.worldW - 8 || a.y > this.worldH - 8;
+      if (a.weapon === "shuriken" && a.explode && (a.life <= 0 || outside)) {
+        this.burst(a.x, a.y, 24, "#dbe8ee", 150);
+        this.shockwaves.push({ x: a.x, y: a.y, r: 4, maxR: 42, life: .35, maxLife: .35, color: "#c9d8e2" });
+        for (let ray = 0; ray < 8; ray++) {
+          const angle = ray / 8 * TAU;
+          this.arrows.push({ x: a.x, y: a.y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520,
+            life: .65, pierce: 1, rot: angle, dmg: Math.max(1, a.dmg * .7), hitSet: new Set(), weapon: "shuriken" });
+        }
+        this.arrows.splice(i, 1); continue;
+      }
 
       if (Math.random() < dt * 45) {
         this.parts.push({
@@ -4059,17 +4123,25 @@ export class Game {
       // Check hit against enemies
       for (const e of this.enemies) {
         if (a.hitSet.has(e)) continue;
+        if (a.weapon === "boomerang" && !a.evolved && e !== a.target) continue;
         const d = Math.hypot(e.x - a.x, e.y - a.y);
-        if (d < e.r + 6) {
+        const projectileRadius = a.weapon === "boomerang" ? (a.evolved ? 17 : 9) : a.weapon === "shuriken" && a.evolved ? 17 : 6;
+        if (d < e.r + projectileRadius) {
           a.hitSet.add(e);
-          a.pierce -= 1;
           this.damageEnemy(e, a.dmg, a.rot);
-          this.burst(a.x, a.y, 6, "#ffd0a2", 90);
+          this.burst(a.x, a.y, 6, a.weapon === "boomerang" ? "#ffb35c" : "#dbe8ee", 90);
+          if (a.weapon === "boomerang") {
+            a.guideHits = (a.guideHits ?? 0) + 1; a.target = null;
+            if ((a.guideHits ?? 0) >= 5) a.returning = true;
+          } else a.pierce -= 1;
           if (a.pierce <= 0) break;
         }
       }
 
-      if (a.pierce <= 0 || a.life <= 0 || a.x < 8 || a.y < 8 || a.x > this.worldW - 8 || a.y > this.worldH - 8) {
+      if (a.weapon === "boomerang" && (a.life <= 0 || outside)) {
+        a.returning = true; a.life = Math.max(a.life, 1); continue;
+      }
+      if (a.pierce <= 0 || a.life <= 0 || outside) {
         this.burst(a.x, a.y, 5, "#ffd0a2", 70);
         this.arrows.splice(i, 1);
       }
@@ -4096,7 +4168,7 @@ export class Game {
       this.props.splice(i, 1);
       if (prop.kind === "tree") Sfx.treeBreak();
       else Sfx.crateBreak();
-      const potion: PotionType = pick(["health", "strength", "speed", "agility"]);
+      const potion: PotionType = prop.kind === "tree" ? "health" : pick(["strength", "speed", "agility"]);
       // Drop pessoal de prop: coletado apenas pelo dono, fora do sync coop.
       this.pickups.push({
         id: this.nextPickupId++,
@@ -4692,13 +4764,9 @@ export class Game {
     for (const a of this.arrows) {
       ctx.save();
       ctx.translate(a.x, a.y);
-      ctx.rotate(a.rot);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(-6, -1, 12, 2);
-      ctx.fillStyle = "#d9343f";
-      ctx.fillRect(4, -2, 4, 4);
-      ctx.fillStyle = "#8a242d";
-      ctx.fillRect(-8, -2, 3, 4);
+      ctx.rotate(a.weapon === "boomerang" || a.weapon === "shuriken" ? this.elapsed * 16 : a.rot);
+      if (a.weapon === "boomerang" || a.weapon === "shuriken") drawWeaponArt(ctx, a.weapon, { len: 20, form: a.evolved ? 1 : 0 });
+      else { ctx.fillStyle = "#ffffff"; ctx.fillRect(-6, -1, 12, 2); ctx.fillStyle = "#d9343f"; ctx.fillRect(4, -2, 4, 4); ctx.fillStyle = "#8a242d"; ctx.fillRect(-8, -2, 3, 4); }
       ctx.restore();
     }
 
@@ -5113,7 +5181,9 @@ export class Game {
       this.currentWeapon === "shield" ||
       this.currentWeapon === "mine" ||
       this.currentWeapon === "book" ||
-      this.currentWeapon === "staff"
+      this.currentWeapon === "staff" ||
+      this.currentWeapon === "boomerang" ||
+      this.currentWeapon === "shuriken"
         ? this.aimAngle()
         : this.swingAngleNow();
     this.drawWeapon(weaponAngle, this.bladeLen(), 1);
@@ -5353,7 +5423,7 @@ export class Game {
             : this.swingAngleNow(),
         attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0 || this.magicFxT > 0,
         bowCharge: this.bowCharge,
-        arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
+        arrows: this.arrows.map(({ x, y, rot, weapon, evolved }) => ({ x, y, rot, weapon, evolved })),
         atkPhase: this.atkPhase(),
         atkAngle: this.atkAngle,
         isDashing: this.dashT > 0,
@@ -5423,7 +5493,7 @@ export class Game {
             : this.swingAngleNow(),
         attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0 || this.magicFxT > 0,
         bowCharge: this.bowCharge,
-        arrows: this.arrows.map(({ x, y, rot }) => ({ x, y, rot })),
+        arrows: this.arrows.map(({ x, y, rot, weapon, evolved }) => ({ x, y, rot, weapon, evolved })),
         atkAngle: this.atkAngle,
         isDashing: this.dashT > 0,
         perk: this.perk,
@@ -5456,6 +5526,27 @@ export class Game {
   private normalizePeerPosition(peer: PeerRoninState): PeerRoninState {
     if (!peer.worldW || !peer.worldH) return peer;
     return { ...peer, px: peer.px * this.worldW / peer.worldW, py: peer.py * this.worldH / peer.worldH, worldW: this.worldW, worldH: this.worldH };
+  }
+
+  private throwWeapon(weapon: "boomerang" | "shuriken") {
+    const levels = this.weaponLevels[weapon];
+    const evolved = levels.form > 0;
+    const angle = this.aimAngle();
+    const speed = weapon === "shuriken" ? 620 : 285;
+    const damage = (WEAPON_CONFIG[weapon].dmg + levels.damage) * this.consumeAttackBonus();
+    this.arrows.push({
+      x: this.px + Math.cos(angle) * 14, y: this.py + Math.sin(angle) * 14,
+      vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      life: weapon === "shuriken" ? 0.72 + levels.range * 0.1 : 4.5,
+      pierce: weapon === "boomerang" ? 99 : 1, rot: angle, dmg: damage,
+      hitSet: new Set(), weapon, evolved, guideHits: 0, returning: false,
+      explode: weapon === "shuriken" && evolved,
+    });
+    const speedLevel = (1 + levels.speed * 0.14) * this.attackSpeedMultiplier();
+    this.atkCd = (weapon === "shuriken" && evolved ? 1.5 : WEAPON_CONFIG[weapon].cd) / speedLevel;
+    this.atkAngle = angle; this.glint = 1;
+    this.burst(this.px + Math.cos(angle) * 14, this.py + Math.sin(angle) * 14, 7, weapon === "shuriken" ? "#dbe8ee" : "#ffb35c", 90);
+    Sfx.swing(weapon);
   }
   public applyPeerPacket(packet: GamePacket, senderId = "") {
     if (!this.isCoop) return;
@@ -5680,7 +5771,9 @@ export class Game {
 
     const ctx = this.ctx;
     const px = Math.round(peer.px);
-    const py = Math.round(peer.py);
+    const walkPhase = this.elapsed * (peer.walk ? 13 : 2.4) + (playerId.length * 0.7);
+    const py = Math.round(peer.py - Math.sin(walkPhase) * (peer.walk ? 1.35 : 0.32));
+    const peerSquash = peer.attacking ? 1.06 : peer.isDashing ? 0.84 : peer.walk ? 1 + Math.sin(walkPhase * 1.6) * 0.06 : 1 + Math.sin(walkPhase) * 0.025;
 
     ctx.save();
 
@@ -5721,7 +5814,7 @@ export class Game {
     const sprite = SPR[spriteName] || SPR.player;
     const face = peer.face || 1;
 
-    this.blit(sprite, px, py, face, 0, 1);
+    this.blit(sprite, px, py, face, peer.attacking ? 1 : 0, peerSquash);
 
     // 3.5. Arma e carga do arco do aliado
     ctx.save();
@@ -5791,13 +5884,9 @@ export class Game {
     for (const arrow of peer.arrows ?? []) {
       ctx.save();
       ctx.translate(arrow.x, arrow.y);
-      ctx.rotate(arrow.rot);
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(-6, -1, 12, 2);
-      ctx.fillStyle = "#d9343f";
-      ctx.fillRect(4, -2, 4, 4);
-      ctx.fillStyle = "#8a242d";
-      ctx.fillRect(-8, -2, 3, 4);
+      ctx.rotate(arrow.weapon === "boomerang" || arrow.weapon === "shuriken" ? this.elapsed * 16 : arrow.rot);
+      if (arrow.weapon === "boomerang" || arrow.weapon === "shuriken") drawWeaponArt(ctx, arrow.weapon, { len: 20, form: arrow.evolved ? 1 : 0 });
+      else { ctx.fillStyle = "#ffffff"; ctx.fillRect(-6, -1, 12, 2); ctx.fillStyle = "#d9343f"; ctx.fillRect(4, -2, 4, 4); ctx.fillStyle = "#8a242d"; ctx.fillRect(-8, -2, 3, 4); }
       ctx.restore();
     }
     ctx.restore();
