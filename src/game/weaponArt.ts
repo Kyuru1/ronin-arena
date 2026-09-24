@@ -93,7 +93,8 @@ function drawShuriken(ctx: CanvasRenderingContext2D, form: number) {
 }
 function drawSpear(ctx: CanvasRenderingContext2D, L: number, form: number) {
   const length = L + (form > 0 ? 18 : 0);
-  ctx.fillStyle = "#080608"; ctx.fillRect(-12, -3, length + 12, 7);
+  const shaftWidth = form > 0 ? 3 : 2;
+  ctx.fillStyle = "#080608"; ctx.fillRect(-12, -shaftWidth, length + 12, shaftWidth * 2 + 1);
   ctx.fillStyle = form > 0 ? "#6f2d55" : "#774523"; ctx.fillRect(-10, -1, length + 8, 3);
   ctx.fillStyle = "#d19a52"; for (let x = -8; x < length - 4; x += 8) ctx.fillRect(x, -2, 2, 5);
   ctx.fillStyle = "#09080b"; ctx.fillRect(length - 3, -7, 12, 15);

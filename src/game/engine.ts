@@ -2416,6 +2416,13 @@ export class Game {
 
   private swingAngleNow(): number {
     const t = this.swingData();
+    if (this.currentWeapon === "spear") {
+      if (this.atkWind <= 0 && this.atkT <= 0 && this.atkRec <= 0) return this.restAngle();
+      const p = clamp(this.phaseProgress(), 0, 1);
+      if (this.atkWind > 0) return this.atkAngle - this.atkDir * 0.18 * (1 - p);
+      if (this.atkT > 0) return this.atkAngle + Math.sin(p * Math.PI) * 0.04;
+      return this.atkAngle + this.atkDir * 0.1 * (1 - p);
+    }
     const arc = t.arc;
     const back = arc / 2 + 1.15;
     if (this.atkWind <= 0 && this.atkT <= 0 && this.atkRec <= 0) return this.restAngle();
@@ -2801,8 +2808,10 @@ export class Game {
       if (this.currentWeapon === "spear") {
         const forward = dx * Math.cos(this.atkAngle) + dy * Math.sin(this.atkAngle);
         const side = Math.abs(-dx * Math.sin(this.atkAngle) + dy * Math.cos(this.atkAngle));
-        const tipReach = range * (.72 + .28 * Math.sin(p * Math.PI));
-        if (forward < tipReach - 13 - e.r || forward > tipReach + 9 + e.r || side > 5 + e.r) continue;
+        const shaftStart = range * 0.38;
+        const tipReach = range * (.78 + .22 * Math.sin(p * Math.PI));
+        // Thin forward segment: from the middle of the shaft to the spear tip.
+        if (forward < shaftStart - e.r || forward > tipReach + e.r || side > 3 + e.r) continue;
       }
       const sideHit = this.currentWeapon === "harp" && (
         Math.abs(angDiff(ang, this.atkAngle + Math.PI / 2)) <= arcHalf * 0.7 ||

@@ -111,3 +111,29 @@
 - Ranking continua desativado no cooperativo enquanto o modo online passa por testes de estabilidade.
 
 
+
+## 2026-09-24 — Novas armas, evoluções e raridades
+
+### Novas armas
+
+- **Bumerangue:** é lançado, percorre até cinco inimigos próximos e retorna ao jogador.
+- **Shuriken:** projétil rápido, de baixo dano e longo alcance, com recarga base curta.
+- **Lança:** estocada lenta e poderosa; a colisão é uma faixa fina que começa no meio do cabo e segue até a ponta.
+
+### Evoluções
+
+- **Bumerangue Colossal:** fica maior e passa a causar dano em todos os inimigos atravessados pelo sprite.
+- **Shuriken Gigante:** fica maior, explode ao fim do alcance e lança oito shurikens radiais; recarga de 1,5 segundo.
+- **Lança Sangrenta:** aumenta o tamanho e a velocidade, aplicando sangramento cumulativo que dura até o inimigo morrer.
+
+### Raridades de raças
+
+- **Divine — 0,1%:** branco forte e brilhante.
+- **Mythic — 0,9%:** vermelho chama.
+- **Lendária — 4%:** amarelo.
+- **Épica — 12%:** roxo.
+- **Azul — 17%:** ciano fraco.
+- **Incomum — 28%:** verde claro fraco.
+- **Comum — 40%:** branco/cinza fraco.
+
+As raridades também controlam a cor da habilidade, do nome e dos efeitos visuais da raça.
