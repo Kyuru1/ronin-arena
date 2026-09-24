@@ -802,3 +802,10 @@ html { scroll-behavior: smooth; }
 
 /* menu layout repair */
 }
+
+/* Clean HUD: keep gameplay information readable without black panels. */
+.combat-topbar { filter: none; }
+.combat-panel, .combat-wave, .weapon-rail, .weapon-slot, .weapon-slot.is-active { border-color: transparent; background: transparent; box-shadow: none; }
+.combat-panel, .combat-wave { text-shadow: 1px 1px 0 rgba(7,3,5,.72); }
+.weapon-slot, .weapon-slot.is-active { filter: drop-shadow(0 1px 0 rgba(7,3,5,.5)); }
+.weapon-slot.is-empty { background: transparent; border-color: rgba(125,183,177,.2); }

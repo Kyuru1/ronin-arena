@@ -1,7 +1,5 @@
 # Raças do jogo
 
-> Documento completo para copiar. Os pesos abaixo somam 100% e representam a chance relativa de sorteio em cada nova run.
-
 ## Como funciona
 
 - A raça é sorteada no início de cada run.
@@ -175,3 +173,45 @@ As raças adicionadas antes da expansão principal permanecem no sorteio e estã
 | Survivor | 3% |
 
 **Total:** 100%
+
+## Raridades oficiais
+
+As raças são exibidas e sorteadas por estas faixas, em ordem de raridade:
+
+| Raridade | Cor | Chance |
+|---|---|---:|
+| Divine | Branco forte e brilhante | 0,1% |
+| Mythic | Vermelho chama | 0,9% |
+| Lendária | Amarela | 4% |
+| Épica | Roxa | 12% |
+| Azul | Ciano fraco | 17% |
+| Incomum | Verde claro e fraco | 28% |
+| Comum | Branco/cinza fraco | 40% |
+
+### Divine
+- Divinity / God — 0,1%
+
+### Mythic
+- Caçador de Deuses — 0,9%
+
+### Lendária
+- Dracônico — 4%
+
+### Épica
+- Oni — 4%
+- Gigante — 4%
+- Sangue Oni — 4%
+
+### Azul
+- Elfo — 8%
+- Herdeiro Espiritual — 9%
+
+### Incomum
+- Anão — 17%
+- Orc — 11%
+
+### Comum
+- Humano — 10%
+- Goblin — 12%
+- Ronin — 4%
+- Sobrevivente — 14%

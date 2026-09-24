@@ -1297,7 +1297,10 @@ export class Game {
       weapon !== "bow" &&
       weapon !== "hammer" &&
       weapon !== "book" &&
-      weapon !== "staff"
+      weapon !== "staff" &&
+      weapon !== "boomerang" &&
+      weapon !== "shuriken" &&
+      weapon !== "spear"
     )
       return false;
     this.coins = Math.max(0, Math.round(this.coins - cost));
@@ -2165,8 +2168,11 @@ export class Game {
         this.currentWeapon !== "bow" &&
         this.currentWeapon !== "mine" &&
         this.currentWeapon !== "book" &&
-        this.currentWeapon !== "staff"
-      ) {
+        this.currentweapon !== "staff" &&
+      weapon !== "boomerang" &&
+      weapon !== "shuriken" &&
+      weapon !== "spear"
+    ) {
         this.doSwingHits();
       }
       if (this.atkT <= 0) {
@@ -4765,7 +4771,7 @@ export class Game {
       ctx.save();
       ctx.translate(a.x, a.y);
       ctx.rotate(a.weapon === "boomerang" || a.weapon === "shuriken" ? this.elapsed * 16 : a.rot);
-      if (a.weapon === "boomerang" || a.weapon === "shuriken") drawWeaponArt(ctx, a.weapon, { len: 20, form: a.evolved ? 1 : 0 });
+      if (a.weapon === "boomerang" || a.weapon === "shuriken") drawWeaponArt(ctx, a.weapon, { len: a.weapon === "boomerang" || a.weapon === "shuriken" ? 14 : 20, form: a.evolved ? 1 : 0 });
       else { ctx.fillStyle = "#ffffff"; ctx.fillRect(-6, -1, 12, 2); ctx.fillStyle = "#d9343f"; ctx.fillRect(4, -2, 4, 4); ctx.fillStyle = "#8a242d"; ctx.fillRect(-8, -2, 3, 4); }
       ctx.restore();
     }
@@ -5885,7 +5891,7 @@ export class Game {
       ctx.save();
       ctx.translate(arrow.x, arrow.y);
       ctx.rotate(arrow.weapon === "boomerang" || arrow.weapon === "shuriken" ? this.elapsed * 16 : arrow.rot);
-      if (arrow.weapon === "boomerang" || arrow.weapon === "shuriken") drawWeaponArt(ctx, arrow.weapon, { len: 20, form: arrow.evolved ? 1 : 0 });
+      if (arrow.weapon === "boomerang" || arrow.weapon === "shuriken") drawWeaponArt(ctx, arrow.weapon, { len: arrow.weapon === "boomerang" || arrow.weapon === "shuriken" ? 14 : 20, form: arrow.evolved ? 1 : 0 });
       else { ctx.fillStyle = "#ffffff"; ctx.fillRect(-6, -1, 12, 2); ctx.fillStyle = "#d9343f"; ctx.fillRect(4, -2, 4, 4); ctx.fillStyle = "#8a242d"; ctx.fillRect(-8, -2, 3, 4); }
       ctx.restore();
     }
