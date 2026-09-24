@@ -80,10 +80,39 @@ function drawStaff(ctx: CanvasRenderingContext2D, L: number, form: number) {
 }
 
 function drawHarp(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle="#09060b"; ctx.fillRect(-3,-12,5,25); ctx.fillRect(1,-12,15,4); ctx.fillRect(1,9,15,4);
-  ctx.fillStyle="#d7a93d"; ctx.fillRect(-1,-10,3,21); ctx.fillRect(2,-10,12,2); ctx.fillRect(2,9,12,2);
-  ctx.fillStyle="#fff2a8"; for(let x=4;x<=13;x+=3) ctx.fillRect(x,-8,1,16);
-  ctx.fillStyle="#8cecff"; ctx.fillRect(14,-10,3,3); ctx.fillRect(14,8,3,3);
+  // A compact gold concert harp: heavy pillar, curved neck and a broad sound box.
+  ctx.fillStyle = "#080608";
+  ctx.fillRect(-7, -17, 5, 35);
+  ctx.fillRect(-9, 15, 26, 5);
+  ctx.fillRect(13, -13, 5, 29);
+  ctx.fillStyle = "#713315";
+  ctx.fillRect(-6, -15, 3, 31);
+  ctx.fillRect(-8, 16, 22, 2);
+  ctx.fillRect(14, -11, 2, 25);
+  ctx.fillStyle = "#f0a329";
+  ctx.fillRect(-7, -17, 5, 3);
+  ctx.fillRect(-9, 15, 26, 3);
+  ctx.fillRect(-5, -14, 3, 29);
+  ctx.fillRect(-2, -17, 5, 3);
+  ctx.fillRect(1, -15, 8, 2);
+  ctx.fillRect(8, -13, 5, 2);
+  ctx.fillRect(12, -11, 4, 4);
+  ctx.fillRect(14, -8, 3, 22);
+  ctx.fillRect(11, 13, 6, 3);
+  ctx.fillStyle = "#ffe166";
+  ctx.fillRect(-4, -15, 2, 28);
+  ctx.fillRect(0, -15, 2, 1);
+  ctx.fillRect(4, -14, 3, 1);
+  ctx.fillRect(15, -7, 1, 18);
+  ctx.fillStyle = "#f9f5df";
+  for (let x = 0; x <= 12; x += 2) {
+    const top = -14 + Math.floor(x / 3);
+    const bottom = 14 - Math.floor((12 - x) / 5);
+    ctx.fillRect(x, top, 1, bottom - top);
+  }
+  ctx.fillStyle = "#d5ecff";
+  ctx.fillRect(2, -12, 1, 22);
+  ctx.fillRect(8, -10, 1, 21);
 }
 function drawGodslayer(ctx: CanvasRenderingContext2D, L:number) {
   ctx.fillStyle="#070508"; ctx.fillRect(-11,-3,14,7); ctx.fillRect(2,-6,L+8,12);
