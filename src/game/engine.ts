@@ -2805,14 +2805,12 @@ export class Game {
       const d = Math.hypot(dx, dy);
       if (d > range + e.r) continue;
       const ang = Math.atan2(dy, dx);
-      if (this.currentWeapon === "spear" || this.currentWeapon === "katana") {
+      if (this.currentWeapon === "spear") {
         const forward = dx * Math.cos(this.atkAngle) + dy * Math.sin(this.atkAngle);
         const side = Math.abs(-dx * Math.sin(this.atkAngle) + dy * Math.cos(this.atkAngle));
-        const shaftStart = this.currentWeapon === "spear" ? range * 0.38 : 5;
-        const tipReach = this.currentWeapon === "spear" ? range * (.78 + .22 * Math.sin(p * Math.PI)) : range;
-        const thickness = this.currentWeapon === "spear" ? 3 : 9;
-        // Narrow forward segment for the spear and katana blade.
-        if (forward < shaftStart - e.r || forward > tipReach + e.r || side > thickness + e.r) continue;
+        const shaftStart = range * 0.38;
+        const tipReach = range * (.78 + .22 * Math.sin(p * Math.PI));
+        if (forward < shaftStart - e.r || forward > tipReach + e.r || side > 3 + e.r) continue;
       }
       const sideHit = this.currentWeapon === "harp" && (
         Math.abs(angDiff(ang, this.atkAngle + Math.PI / 2)) <= arcHalf * 0.7 ||
