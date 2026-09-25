@@ -95,6 +95,7 @@ const defaultOpts: UiOpts = {
   soundEffects: true,
   music: true,
   showHitboxes: false,
+  arenaTheme: "crimson",
   shake: true,
   flash: true,
   volume: 0.45,
@@ -634,6 +635,7 @@ export default function App() {
         soundEffects: next.soundEffects,
         music: next.music,
         showHitboxes: next.showHitboxes,
+        arenaTheme: next.arenaTheme,
         quality: next.quality,
         vsync: next.vsync,
       });
@@ -671,6 +673,7 @@ export default function App() {
       soundEffects: opts.soundEffects,
       music: opts.music,
       showHitboxes: opts.showHitboxes,
+      arenaTheme: opts.arenaTheme,
       keyboardBindings: opts.keyboardBindings,
       inputMode,
     });

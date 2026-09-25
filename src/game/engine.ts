@@ -122,6 +122,8 @@ export interface HudStats {
   perkEchoReady: boolean;
 }
 
+export type ArenaTheme = "crimson" | "azure" | "violet";
+
 export interface GameOpts {
   shake: number;
   flash: number;
@@ -129,6 +131,7 @@ export interface GameOpts {
   soundEffects?: boolean;
   music?: boolean;
   showHitboxes?: boolean;
+  arenaTheme?: ArenaTheme;
   quality: "high" | "low";
   vsync: boolean;
   language: Language;
@@ -410,10 +413,10 @@ export class Game {
   ctx: CanvasRenderingContext2D;
   W = 480;
   H = 270;
-  worldW = 720;
-  worldH = 405;
-  cameraX = 120;
-  cameraY = 67;
+  worldW = 1080;
+  worldH = 608;
+  cameraX = 300;
+  cameraY = 169;
   phase: Phase = "menu";
 
   private floor!: HTMLCanvasElement;
@@ -581,6 +584,7 @@ export class Game {
     soundEffects: true,
     music: true,
     showHitboxes: false,
+    arenaTheme: "crimson",
     quality: "high",
     vsync: true,
     language: "pt",
@@ -875,7 +879,9 @@ export class Game {
 
   setOpts(o: Partial<GameOpts>) {
     if (o.inputMode && o.inputMode !== this.opts.inputMode) this.clearPointerInput();
+    const themeChanged = o.arenaTheme && o.arenaTheme !== this.opts.arenaTheme;
     Object.assign(this.opts, o);
+    if (themeChanged && this.floor) this.buildFloor();
     if (this.opts.keyboardOnly) {
       this.mouseActive = false;
       this.attackHeld = false;
@@ -909,8 +915,9 @@ export class Game {
     h = Math.max(220, Math.min(620, h - (h % 2)));
     this.W = w;
     this.H = h;
-    this.worldW = Math.round(w * 1.5);
-    this.worldH = Math.round(h * 1.5);
+    // The arena is 50% wider and taller than the previous 1.5x world.
+    this.worldW = Math.round(w * 2.25);
+    this.worldH = Math.round(h * 2.25);
     this.canvas.width = w;
     this.canvas.height = h;
     this.ctx.imageSmoothingEnabled = false;
@@ -928,13 +935,18 @@ export class Game {
     f.width = W;
     f.height = H;
     const c = f.getContext("2d")!;
-    c.fillStyle = "#1b0a11";
+    const theme = this.opts.arenaTheme === "azure"
+      ? { base: "#07131b", tileA: "#123b4d", tileB: "#0c2938", seal: "rgba(80,210,255,0.22)", accent: "#8de9ff", border: "#1e6f8d" }
+      : this.opts.arenaTheme === "violet"
+        ? { base: "#11091b", tileA: "#382050", tileB: "#251537", seal: "rgba(184,105,255,0.22)", accent: "#d5a0ff", border: "#773ca1" }
+        : { base: "#1b0a11", tileA: "#35121e", tileB: "#270d17", seal: "rgba(220,45,60,0.22)", accent: "#ff727e", border: "#8c2835" };
+    c.fillStyle = theme.base;
     c.fillRect(0, 0, W, H);
     const T = 24;
     for (let y = 0; y < H; y += T) {
       for (let x = 0; x < W; x += T) {
         const odd = ((x / T + y / T) | 0) % 2 === 0;
-        c.fillStyle = odd ? "#35121e" : "#270d17";
+        c.fillStyle = odd ? theme.tileA : theme.tileB;
         c.fillRect(x, y, T, T);
         c.fillStyle = "rgba(0,0,0,0.22)";
         c.fillRect(x, y + T - 1, T, 1);
@@ -960,7 +972,7 @@ export class Game {
     // Glowing arena seal
     const cx = W / 2;
     const cy = H / 2;
-    c.strokeStyle = "rgba(220,45,60,0.14)";
+    c.strokeStyle = theme.seal;
     c.lineWidth = 2;
     c.beginPath();
     c.arc(cx, cy, Math.min(W, H) * 0.3, 0, TAU);
@@ -968,7 +980,7 @@ export class Game {
     c.beginPath();
     c.arc(cx, cy, Math.min(W, H) * 0.22, 0, TAU);
     c.stroke();
-    c.strokeStyle = "rgba(255,141,80,0.08)";
+    c.strokeStyle = theme.accent;
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * TAU;
       c.beginPath();
@@ -1005,7 +1017,7 @@ export class Game {
     c.fillRect(0, H - B, W, B);
     c.fillRect(0, 0, B, H);
     c.fillRect(W - B, 0, B, H);
-    c.fillStyle = "#491320";
+    c.fillStyle = theme.border;
     for (let x = 0; x < W; x += 16) {
       c.fillRect(x + 1, B - 3, 14, 3);
       c.fillRect(x + 1, H - B, 14, 3);
@@ -1016,11 +1028,11 @@ export class Game {
     }
     c.fillStyle = "rgba(0,0,0,0.4)";
     c.fillRect(0, B, W, 4);
-    c.fillStyle = "#8c2835";
+    c.fillStyle = theme.border;
     c.fillRect(B - 1, B - 1, W - B * 2 + 2, 1);
     c.fillRect(B - 1, H - B, W - B * 2 + 2, 1);
     // Stepped corner brackets
-    c.strokeStyle = "rgba(255, 212, 74, 0.42)";
+    c.strokeStyle = theme.accent;
     c.lineWidth = 2;
     const bracket = 18;
     for (const [x, y, sx, sy] of [

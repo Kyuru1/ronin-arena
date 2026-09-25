@@ -923,3 +923,34 @@ html { scroll-behavior: smooth; }
     height: 22px;
   }
 }
+
+/* Kyu Arena identity: sumi ink, crimson brushwork and katana highlights. */
+:root{--ink:#050204;--wood0:#0b0407;--wood1:#13060b;--wood2:#210910;--edge0:#3b0b15;--edge1:#8f1428;--edge2:#f02b43;--paper:#f4dfd5;--gold:#ff5965;--gold2:#9d2635;--red:#e71938}
+.menu-arena,.px-backdrop{background-color:#050204;background-image:radial-gradient(circle at 50% 42%,transparent 0 19%,rgba(226,23,54,.18) 19.5% 20%,transparent 20.7% 29%,rgba(110,10,29,.15) 29.5% 30.2%,transparent 31%),linear-gradient(90deg,transparent 49.75%,rgba(255,52,69,.16) 50%,transparent 50.25%),repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 4px),radial-gradient(ellipse at 50% 44%,#260914 0,#0d0308 48%,#030102 100%)}
+.menu-grid::before{display:block;content:"";position:absolute;left:50%;top:48%;width:min(78vw,690px);aspect-ratio:1;transform:translate(-50%,-50%) rotate(-8deg);border:clamp(8px,1.5vw,18px) solid rgba(225,22,51,.2);border-left-color:rgba(255,47,67,.5);border-bottom-color:rgba(92,7,23,.16);border-radius:48% 52% 46% 54%;box-shadow:0 0 40px rgba(164,11,35,.16),inset 0 0 32px rgba(164,11,35,.11);pointer-events:none}
+.px-frame{border-width:8px;border-image:none;border-color:#090305 #5e0d1c #d9233b #260711;background:linear-gradient(90deg,transparent 49.7%,rgba(255,49,68,.13) 50%,transparent 50.3%),repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 4px),linear-gradient(145deg,rgba(40,8,17,.98),rgba(7,2,5,.99) 58%);box-shadow:0 0 0 2px #050204,0 0 0 4px rgba(151,16,39,.48),0 12px 30px rgba(0,0,0,.72),0 0 24px rgba(207,18,48,.14)}
+.px-frame::before{background-image:linear-gradient(110deg,transparent 0 44%,rgba(238,35,61,.055) 45% 46%,transparent 47%),repeating-linear-gradient(0deg,rgba(255,255,255,.02) 0 1px,transparent 1px 4px)}
+.px-ribbon{border:2px solid #090305;border-left-color:#f02b43;border-right-color:#f02b43;background:linear-gradient(180deg,#310b16,#0b0307);color:#f5ded5;box-shadow:0 3px 0 #050204,0 0 12px rgba(231,25,56,.28);letter-spacing:.14em}
+.px-ribbon::before,.px-ribbon::after{background:#5e0d1c;border-color:#050204}
+.px-inset,.menu-options,.ranking-modal-summary>*{border-color:#080204;background:linear-gradient(135deg,rgba(25,6,12,.96),rgba(7,2,5,.96));box-shadow:inset 0 0 0 1px rgba(221,31,58,.32),inset 4px 0 0 rgba(126,12,31,.24)}
+.pxb,.shop-tab,.ranking-details-button{border-color:#080204;background:linear-gradient(180deg,#32101a,#13060b);box-shadow:inset 0 1px 0 rgba(255,102,112,.18),0 3px 0 #050204}
+.pxb:hover:not(:disabled),.shop-tab:hover,.ranking-details-button:hover{border-color:#e71938;background:linear-gradient(180deg,#621426,#220811);box-shadow:inset 0 1px 0 rgba(255,130,135,.25),0 0 14px rgba(231,25,56,.28),0 3px 0 #050204}
+.pxb-red,.pxchip.is-on,.shop-tab.is-active,.menu-play{background:linear-gradient(180deg,#f23449,#9e1029 68%,#620919);color:#fff1e8;text-shadow:2px 2px 0 #3a0610}
+.pxb-gold{background:linear-gradient(180deg,#ff6670,#a8142c);color:#fff1e8}.pxb-green{background:linear-gradient(180deg,#592031,#1c0910);color:#f4dfd5}.pxchip{border-width:2px;background:#0d0408;color:#9f5b67}.pxchip.is-on{border-color:#ff5363;box-shadow:0 0 9px rgba(231,25,56,.38)}
+.px-divider{height:2px;background:linear-gradient(90deg,#e71938,rgba(231,25,56,.08));box-shadow:0 0 7px rgba(231,25,56,.35)}.controls-title{color:#ff5965}
+.shop-category,.shop-intro-category,.magic-option,.stat-readout{border-color:#090305;border-left-color:#c71835;background:linear-gradient(135deg,#1c0710,#080305);box-shadow:inset 3px 0 0 rgba(231,25,56,.18),0 4px 0 rgba(0,0,0,.5)}
+.shop-category:hover,.shop-category:focus-visible{background:linear-gradient(135deg,#451020,#13050b);outline-color:#ff5363}.shop-category strong,.shop-intro-category strong,.ranking-row.is-top{color:#ff5965}
+.ranking-head{border-bottom-color:#c71835;background:#17050b;color:#ff5965}.ranking-row{border-left:2px solid transparent;background:rgba(7,2,5,.88)}.ranking-row:nth-child(even){background:rgba(29,6,13,.88)}.ranking-row:hover{border-left-color:#e71938;background:#310b17}.ranking-modal-backdrop{background:radial-gradient(circle at center,rgba(59,7,19,.4),rgba(2,1,2,.96) 70%)}
+.scrollbar-thin,.character-details,.ranking-modal{scrollbar-color:#d51c38 #090305}.scrollbar-thin::-webkit-scrollbar-thumb,.character-details::-webkit-scrollbar-thumb,.ranking-modal::-webkit-scrollbar-thumb{background:#d51c38;border:2px solid #090305}
+@media(max-width:640px){.menu-grid::before{width:112vw;opacity:.75}.px-frame{border-width:5px;box-shadow:0 0 0 2px #050204,0 0 0 3px rgba(151,16,39,.42),0 8px 20px rgba(0,0,0,.7)}.px-ribbon{letter-spacing:.07em}}
+/* Transparent menu stage: keep the live arena visible behind the menu. */
+.menu-arena{background:linear-gradient(180deg,rgba(5,2,4,.24),rgba(5,2,4,.52)),repeating-linear-gradient(0deg,rgba(255,255,255,.018) 0 1px,transparent 1px 4px);backdrop-filter:brightness(.72) saturate(1.16)}
+.menu-arena .menu-grid{z-index:1}
+/* Dash and racial ability controls share the red seal language of the logo. */
+.hud-race-ability{border-color:#6e1020!important;background:radial-gradient(circle at 50% 38%,rgba(224,37,62,.3),rgba(8,3,7,.96) 67%)!important;box-shadow:0 0 0 2px #080204,0 0 0 4px rgba(209,24,53,.4),0 0 18px rgba(231,25,56,.28),0 5px 0 #050204!important}
+.hud-race-ability::before{content:"";position:absolute;inset:-7px;border:2px solid rgba(238,43,67,.58);border-left-color:transparent;border-radius:48% 52% 45% 55%;transform:rotate(-17deg);pointer-events:none}
+.hud-race-ability:hover:not(:disabled){filter:brightness(1.22);box-shadow:0 0 0 2px #080204,0 0 0 4px #e71938,0 0 26px rgba(231,25,56,.55),0 5px 0 #050204!important}
+.desktop-dash-button,.mobile-dash-button{border:2px solid #781326!important;border-radius:50%;background:radial-gradient(circle at 50% 42%,rgba(228,38,61,.32),rgba(7,3,7,.98) 68%)!important;box-shadow:0 0 0 2px #080204,0 0 0 4px rgba(209,24,53,.36),0 0 16px rgba(231,25,56,.24)!important}
+.desktop-dash-button::before,.mobile-dash-button::before{content:"";position:absolute;inset:-6px;border:2px solid rgba(238,43,67,.65);border-top-color:transparent;border-radius:52% 48% 54% 46%;transform:rotate(24deg);pointer-events:none}
+.desktop-dash-button.is-ready,.mobile-dash-button.is-ready{box-shadow:0 0 0 2px #080204,0 0 0 4px #e71938,0 0 22px rgba(231,25,56,.48)!important}
+@media(max-width:640px){.hud-race-ability{height:62px!important;width:82px!important;left:8px!important;bottom:8px!important}.desktop-dash-button{display:none}.mobile-dash-button{right:12px!important}}

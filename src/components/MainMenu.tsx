@@ -18,6 +18,7 @@ export interface UiOpts {
   soundEffects: boolean;
   music: boolean;
   showHitboxes: boolean;
+  arenaTheme: "crimson" | "azure" | "violet";
   volume: number;
   shake: boolean;
   flash: boolean;
@@ -108,6 +109,7 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
               <PxRow label={t.screenShake}><PxChip on={opts.shake} onClick={() => onOpts({ shake: !opts.shake })}>{opts.shake ? t.on : t.off}</PxChip></PxRow>
               <PxRow label={t.screenFlash}><PxChip on={opts.flash} onClick={() => onOpts({ flash: !opts.flash })}>{opts.flash ? t.on : t.off}</PxChip></PxRow>
               <PxRow label="TRYHARD · HITBOXES"><PxChip on={opts.showHitboxes} onClick={() => onOpts({ showHitboxes: !opts.showHitboxes })}>{opts.showHitboxes ? t.on : t.off}</PxChip></PxRow>
+              <PxRow label="COR DO MAPA"><div className="flex flex-wrap justify-end gap-1"><PxChip on={opts.arenaTheme === "crimson"} onClick={() => onOpts({ arenaTheme: "crimson" })}>CARMESIM</PxChip><PxChip on={opts.arenaTheme === "azure"} onClick={() => onOpts({ arenaTheme: "azure" })}>AZUL</PxChip><PxChip on={opts.arenaTheme === "violet"} onClick={() => onOpts({ arenaTheme: "violet" })}>ROXO</PxChip></div></PxRow>
               <PxRow label={t.sound}><PxChip on={opts.sound} onClick={() => onOpts({ sound: !opts.sound })}>{opts.sound ? t.on : t.off}</PxChip></PxRow><PxRow label="EFEITOS SONOROS"><PxChip on={opts.soundEffects} onClick={() => onOpts({ soundEffects: !opts.soundEffects })}>{opts.soundEffects ? t.on : t.off}</PxChip></PxRow><PxRow label="MÚSICA"><PxChip on={opts.music} onClick={() => onOpts({ music: !opts.music })}>{opts.music ? t.on : t.off}</PxChip></PxRow>
               <PxRow label={t.fullscreen}><PxChip on onClick={onFullscreen}>{t.enter}</PxChip></PxRow>
             </div>
