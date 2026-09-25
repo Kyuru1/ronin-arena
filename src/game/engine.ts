@@ -578,6 +578,9 @@ export class Game {
     shake: 1,
     flash: 1,
     volume: 0.45,
+    soundEffects: true,
+    music: true,
+    showHitboxes: false,
     quality: "high",
     vsync: true,
     language: "pt",
@@ -5278,14 +5281,68 @@ export class Game {
     }
   }
   private drawDebugHitboxes(ctx: CanvasRenderingContext2D) {
-    ctx.save(); ctx.globalAlpha = 0.9; ctx.lineWidth = 1;
-    const circle = (x: number, y: number, r: number, color: string) => { ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(x, y, Math.max(1, r), 0, TAU); ctx.stroke(); };
-    if (this.hp > 0 && this.phase !== "dead") circle(this.px, this.py, this.playerRadius(), "#55eaff");
+    ctx.save();
+    ctx.globalAlpha = 0.92;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([5, 3]);
+
+    const circle = (x: number, y: number, r: number, color: string) => {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, Math.max(1, r), 0, TAU);
+      ctx.stroke();
+    };
+    const capsule = (x: number, y: number, a: number, len: number, halfWidth: number, color: string) => {
+      const end = Math.max(1, len);
+      const nx = -Math.sin(a) * halfWidth;
+      const ny = Math.cos(a) * halfWidth;
+      const sx = x;
+      const sy = y;
+      const ex = x + Math.cos(a) * end;
+      const ey = y + Math.sin(a) * end;
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(sx + nx, sy + ny);
+      ctx.lineTo(ex + nx, ey + ny);
+      ctx.arc(ex, ey, halfWidth, a + Math.PI / 2, a - Math.PI / 2);
+      ctx.lineTo(sx - nx, sy - ny);
+      ctx.arc(sx, sy, halfWidth, a - Math.PI / 2, a + Math.PI / 2);
+      ctx.closePath();
+      ctx.stroke();
+    };
+    const cone = (x: number, y: number, a: number, radius: number, arc: number, color: string) => {
+      ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.arc(x, y, radius, a - arc, a + arc);
+      ctx.closePath();
+      ctx.stroke();
+    };
+
+    if (this.hp > 0 && this.phase !== "dead") {
+      circle(this.px, this.py, this.playerRadius(), "#55eaff");
+      if (this.atkT > 0 && this.currentWeapon !== "bow" && this.currentWeapon !== "book") {
+        const t = this.swingData();
+        const p = clamp(this.phaseProgress(), 0, 1);
+        const reach = this.currentWeapon === "spear" ? this.bladeLen() * (0.78 + 0.22 * Math.sin(p * Math.PI)) : this.bladeLen();
+        if (this.currentWeapon === "spear") capsule(this.px, this.py, this.atkAngle, reach, 3, "#ffd44a");
+        else cone(this.px, this.py, this.swingAngleNow(), reach, t.arc / 2 + 0.25, "#ffd44a");
+      }
+    }
     for (const e of this.enemies) circle(e.x, e.y, e.r, "#ff4050");
-    for (const s of this.shots) { if (s.zone) { ctx.strokeStyle = "#ff9a38"; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r * 0.65, 0, 0, TAU); ctx.stroke(); } else circle(s.x, s.y, s.r, "#ff9a38"); }
+    for (const s of this.shots) {
+      if (s.zone) {
+        ctx.strokeStyle = "#ff9a38";
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, s.r, s.r * 0.65, 0, 0, TAU);
+        ctx.stroke();
+      } else circle(s.x, s.y, s.r, "#ff9a38");
+    }
     for (const a of this.arrows) circle(a.x, a.y, a.weapon === "boomerang" || (a.weapon === "shuriken" && a.evolved) ? 17 : 6, "#ffd44a");
+    for (const slash of this.dashSlashes) capsule(slash.x, slash.y, slash.a, 30, 7, "#ff6688");
     for (const sw of this.shockwaves) circle(sw.x, sw.y, sw.r, "#ffb35c");
     for (const zone of this.psychicZones) circle(zone.x, zone.y, zone.r, "#c48cff");
+    if (this.magicFxRadius > 0) circle(this.px, this.py, this.magicFxRadius, "#c48cff");
     for (const mine of this.mines) circle(mine.x, mine.y, 14, "#ff6688");
     ctx.restore();
   }

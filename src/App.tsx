@@ -668,6 +668,9 @@ export default function App() {
       vsync: opts.vsync,
       language: opts.language,
       keyboardOnly: opts.keyboardOnly,
+      soundEffects: opts.soundEffects,
+      music: opts.music,
+      showHitboxes: opts.showHitboxes,
       keyboardBindings: opts.keyboardBindings,
       inputMode,
     });
