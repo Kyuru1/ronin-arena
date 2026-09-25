@@ -651,6 +651,9 @@ input,
 /* Responsive controls and readable compact shop. */
 .dash-action { border: 0; background: transparent; padding: 0; pointer-events: auto; touch-action: none; cursor: pointer; }
 .dash-action.is-ready { filter: drop-shadow(0 0 4px rgba(255,212,74,.7)); }
+.desktop-dash-button { height: 70px; width: 70px; }
+.desktop-dash-button .dash-player-recharging, .mobile-dash-button .dash-player-recharging { filter: grayscale(calc(1 - var(--dash-progress, 0))) brightness(calc(.38 + var(--dash-progress, 0) * .62)); transition: filter .12s steps(3); }
+.desktop-dash-button:not(.is-ready), .mobile-dash-button:not(.is-ready) { filter: drop-shadow(0 0 3px rgba(224,68,77,.48)); }
 .dash-action:active { transform: scale(.92); }
 .weapon-slot-preview { max-height: 26px; max-width: 42px; object-fit: contain; }
 .weapon-slot.is-active .weapon-slot-preview { max-height: 34px; max-width: 54px; }

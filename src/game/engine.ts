@@ -5189,8 +5189,24 @@ export class Game {
       ctx.restore();
     }
 
+    if (this.dashT > 0) {
+      const pulse = 0.7 + Math.sin(performance.now() / 35) * 0.2;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#ffd44a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(this.px, this.py, 15 + Math.sin(performance.now() / 45) * 3, 0, TAU);
+      ctx.stroke();
+      ctx.restore();
+    }
+
     if (!blink && this.hp > 0) {
       const squash = this.atkT > 0 ? 1 + Math.sin(this.elapsed * 30) * 0.06 : this.dashT > 0 ? 0.85 : this.walkT > 0 ? 1 + Math.sin(this.walkT * 2) * 0.065 : 1 + Math.sin(this.elapsed * 3) * 0.025;
+      const dashReadyProgress = this.dashCd <= 0 ? 1 : clamp(1 - this.dashCd / Math.max(0.001, this.dashMax), 0, 1);
+      ctx.save();
+      if (this.dashCd > 0) ctx.filter = `grayscale(${1 - dashReadyProgress}) brightness(${0.38 + dashReadyProgress * 0.62})`;
       this.blit(
         this.localPlayerSprite(),
         bx,
@@ -5200,6 +5216,7 @@ export class Game {
         squash,
         (window.matchMedia?.("(max-width: 640px)").matches ? 1.22 : 1.08) * (RACE_CONFIG[this.raceId].playerScale ?? 1),
       );
+      ctx.restore();
       if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0)
         this.drawPsychicHands(this.aimAngle());
     }
