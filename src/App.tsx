@@ -94,6 +94,7 @@ const defaultOpts: UiOpts = {
   sound: true,
   soundEffects: true,
   music: true,
+  showHitboxes: false,
   shake: true,
   flash: true,
   volume: 0.45,
@@ -632,6 +633,7 @@ export default function App() {
         volume: next.volume,
         soundEffects: next.soundEffects,
         music: next.music,
+        showHitboxes: next.showHitboxes,
         quality: next.quality,
         vsync: next.vsync,
       });

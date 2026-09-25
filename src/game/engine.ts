@@ -126,6 +126,9 @@ export interface GameOpts {
   shake: number;
   flash: number;
   volume: number;
+  soundEffects?: boolean;
+  music?: boolean;
+  showHitboxes?: boolean;
   quality: "high" | "low";
   vsync: boolean;
   language: Language;
@@ -4905,6 +4908,8 @@ export class Game {
     }
     ctx.globalAlpha = 1;
 
+    if (this.opts.showHitboxes) this.drawDebugHitboxes(ctx);
+
     // Floating text numbers
     ctx.textAlign = "center";
     for (const t of this.texts) {
@@ -5271,6 +5276,18 @@ export class Game {
       ctx.fillRect(x + 3, y + 2, 2, 2);
       ctx.globalAlpha = 1;
     }
+  }
+  private drawDebugHitboxes(ctx: CanvasRenderingContext2D) {
+    ctx.save(); ctx.globalAlpha = 0.9; ctx.lineWidth = 1;
+    const circle = (x: number, y: number, r: number, color: string) => { ctx.strokeStyle = color; ctx.beginPath(); ctx.arc(x, y, Math.max(1, r), 0, TAU); ctx.stroke(); };
+    if (this.hp > 0 && this.phase !== "dead") circle(this.px, this.py, this.playerRadius(), "#55eaff");
+    for (const e of this.enemies) circle(e.x, e.y, e.r, "#ff4050");
+    for (const s of this.shots) { if (s.zone) { ctx.strokeStyle = "#ff9a38"; ctx.beginPath(); ctx.ellipse(s.x, s.y, s.r, s.r * 0.65, 0, 0, TAU); ctx.stroke(); } else circle(s.x, s.y, s.r, "#ff9a38"); }
+    for (const a of this.arrows) circle(a.x, a.y, a.weapon === "boomerang" || (a.weapon === "shuriken" && a.evolved) ? 17 : 6, "#ffd44a");
+    for (const sw of this.shockwaves) circle(sw.x, sw.y, sw.r, "#ffb35c");
+    for (const zone of this.psychicZones) circle(zone.x, zone.y, zone.r, "#c48cff");
+    for (const mine of this.mines) circle(mine.x, mine.y, 14, "#ff6688");
+    ctx.restore();
   }
   private drawWeapon(angle: number, len: number, alpha: number) {
     if (this.currentWeapon === "book" && this.weaponLevels.book.form > 0) return;
