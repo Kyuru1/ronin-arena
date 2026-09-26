@@ -27,6 +27,7 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
   hudScale: 0.65 | 0.85 | 1 | 1.25 | 1.5;
   language: Language;
   t: Strings;
+  isTouch: boolean;
 }) {
   type DashPosition = { x: number; y: number };
   const isTouchPointer = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches;

@@ -13,13 +13,14 @@ import TutorialScreen from "./components/TutorialScreen";
 import InputModeScreen from "./components/InputModeScreen";
 import CoopLobbyModal from "./components/CoopLobbyModal";
 import RaceReveal from "./components/RaceReveal";
+import StoryMode from "./story/StoryMode";
 import { coopNet } from "./game/coopNet";
 import type { RaceId } from "./game/races";
 
 import { supabase } from "./lib/supabase";
 import { loadProfile, type PlayerProfile } from "./game/auth";
 
-type UiPhase = "menu" | "input-select" | "tutorial" | "playing" | "paused" | "upgrade" | "dead";
+type UiPhase = "menu" | "input-select" | "tutorial" | "playing" | "paused" | "upgrade" | "dead" | "story";
 
 const emptyStats: HudStats = {
   hp: 5,
@@ -296,6 +297,13 @@ export default function App() {
 
   const handleOpenCoop = useCallback(() => {
     setCoopModalOpen(true);
+  }, []);
+
+  const handleStartStory = useCallback(() => {
+    unlockAudio();
+    setCoopModalOpen(false);
+    setMenuClosing(false);
+    setPhase("story");
   }, []);
 
   const handleStartCoop = useCallback((isHost: boolean, coopDifficulty: Difficulty) => {
@@ -758,7 +766,7 @@ export default function App() {
       </div>}
 
       <div ref={wrapRef} data-device={isTouch ? "mobile" : "desktop"} className="relative h-full w-full max-w-[1500px]">
-        {deviceChosen && isTouch && (phase !== "playing" || coopModalOpen) && <MobilePanelNavigation />}
+        {deviceChosen && isTouch && phase !== "story" && (phase !== "playing" || coopModalOpen) && <MobilePanelNavigation />}
         {!deviceChosen && <div className="absolute inset-0 z-[100] flex items-center justify-center bg-[#070305] p-4">
           <div className="flex w-full max-w-md flex-col gap-5 text-center font-pixel text-[#ffe2c4]">
             <h2 className="text-sm">{({ pt: "COMPUTADOR OU CELULAR?", en: "COMPUTER OR PHONE?", fr: "ORDINATEUR OU MOBILE ?", de: "COMPUTER ODER HANDY?", zh: "电脑还是手机？" })[opts.language]}</h2>
@@ -810,6 +818,7 @@ export default function App() {
               onProfile={setProfile}
               openAccount={pendingScore}
               onOpenCoop={handleOpenCoop}
+              onStory={handleStartStory}
             />
           </div>
         )}
@@ -826,6 +835,7 @@ export default function App() {
         )}
 
         {phase === "input-select" && <InputModeScreen language={opts.language} onSelect={chooseInputMode} />}
+        {phase === "story" && <StoryMode isTouch={isTouch} inputMode={inputMode} movementKeys={opts.keyboardBindings} onBack={toMenu} />}
         {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} inputMode={inputMode} onBegin={finishTutorial} />}
         {phase === "paused" && <PauseScreen stats={stats} avatarId={profile?.avatarId ?? "samurai"} waitingForHost={!!(gameRef.current?.isCoop && !gameRef.current.isHost && gameRef.current.pausedByHost)} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (

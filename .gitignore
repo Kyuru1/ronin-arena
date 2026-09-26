@@ -2,3 +2,5 @@
 node_modules/.vite/deps
 .env.local
 AGENTS.md
+# Browser binaries and screenshots used only for local visual QA
+.local/

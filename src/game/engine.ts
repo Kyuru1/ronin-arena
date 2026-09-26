@@ -915,9 +915,10 @@ export class Game {
     h = Math.max(220, Math.min(620, h - (h % 2)));
     this.W = w;
     this.H = h;
-    // The arena is 50% wider and taller than the previous 1.5x world.
-    this.worldW = Math.round(w * 2.25);
-    this.worldH = Math.round(h * 2.25);
+    // A coop room needs one authoritative coordinate space. Deriving it from
+    // each viewport made the bottom edge differ between clients.
+    this.worldW = 1080;
+    this.worldH = 608;
     this.canvas.width = w;
     this.canvas.height = h;
     this.ctx.imageSmoothingEnabled = false;
@@ -1886,7 +1887,7 @@ export class Game {
 
     if (this.isCoop) {
       this.netSyncTimer += realDt;
-      if (this.netSyncTimer >= 0.033) {
+      if (this.netSyncTimer >= 0.05) {
         this.netSyncTimer = 0;
         this.broadcastCoopSync();
       }
@@ -2039,7 +2040,7 @@ export class Game {
     if (this.dashT > 0) {
       this.dashT -= dt;
       const t = clamp(this.dashT / 0.17, 0, 1);
-      const sp = 300 * this.dashSpeedMult * (0.45 + t * 0.85);
+      const sp = 435 * this.dashSpeedMult * (0.45 + t * 0.85);
       this.pvx = this.dashDx * sp;
       this.pvy = this.dashDy * sp;
       if (Math.random() < dt * 90) this.afterimages.push({ x: this.px, y: this.py, life: 1 });
@@ -3256,9 +3257,9 @@ export class Game {
         return { hp: 24 + hpB * 3, r: 13, speed: 28 + spB * 0.35, score: 120, dmg: enemyDamage };
       case "boss":
         return {
-          hp: 68 + w * 8,
+          hp: (68 + w * 8) / 2,
           r: 18,
-          speed: 34 + w * 0.7,
+          speed: (34 + w * 0.7) * 1.35,
           score: 1500,
           dmg:
             this.difficulty === "hard"
@@ -3279,8 +3280,8 @@ export class Game {
       y,
       vx: 0,
       vy: 0,
-      hp: type === "boss" ? Math.max(600, 220 + this.wave * 35) : s.hp,
-      maxHp: type === "boss" ? Math.max(600, 220 + this.wave * 35) : s.hp,
+      hp: type === "boss" ? Math.max(300, (220 + this.wave * 35) / 2) : s.hp,
+      maxHp: type === "boss" ? Math.max(300, (220 + this.wave * 35) / 2) : s.hp,
       r: s.r,
       speed: s.speed,
       flash: 0,
@@ -3428,6 +3429,12 @@ export class Game {
         this.marks.splice(i, 1);
         this.spawnEnemy(m.type, m.x, m.y);
       }
+    }
+
+    // Recover immediately if a delayed spawn marker was lost. This keeps long
+    // waves from silently stalling after a reconnect or a frame hitch.
+    if (this.waveSpawned < this.waveTotal && this.enemies.length === 0 && this.marks.length === 0) {
+      this.spawnTimer = Math.min(this.spawnTimer, 0.05);
     }
 
     // trickle the remaining quota in while the arena isn't over capacity
@@ -5593,8 +5600,9 @@ export class Game {
             color: s.color,
             explosive: s.explosive, zone: s.zone, warmup: s.warmup,
           })),
-          particles: this.parts.slice(-180).map((p): CoopParticleState => ({ ...p })),
-          impacts: this.impacts.slice(-48).map((impact): CoopImpactState => ({ ...impact })),
+          // Effects are capped so gameplay packets stay small on busy waves.
+          particles: this.parts.slice(-48).map((p): CoopParticleState => ({ ...p })),
+          impacts: this.impacts.slice(-20).map((impact): CoopImpactState => ({ ...impact })),
           paused: this.phase === "paused",
           hostRonin,
         },
@@ -5656,7 +5664,13 @@ export class Game {
 
   private normalizePeerPosition(peer: PeerRoninState): PeerRoninState {
     if (!peer.worldW || !peer.worldH) return peer;
-    return { ...peer, px: peer.px * this.worldW / peer.worldW, py: peer.py * this.worldH / peer.worldH, worldW: this.worldW, worldH: this.worldH };
+    return {
+      ...peer,
+      px: clamp(peer.px * this.worldW / peer.worldW, 14, this.worldW - 14),
+      py: clamp(peer.py * this.worldH / peer.worldH, 18, this.worldH - 14),
+      worldW: this.worldW,
+      worldH: this.worldH,
+    };
   }
 
   private throwWeapon(weapon: "boomerang" | "shuriken") {
@@ -5688,7 +5702,7 @@ export class Game {
       const playerId = senderId || packet.payload.playerId;
       if (!playerId || playerId === this.localPlayerId) return;
       const existing = this.peerRonins[playerId];
-      this.peerRonins[playerId] = existing ? Object.assign(existing, normalizedGuest, { px: existing.px + (normalizedGuest.px - existing.px) * 0.45, py: existing.py + (normalizedGuest.py - existing.py) * 0.45 }) : normalizedGuest;
+      this.peerRonins[playerId] = existing ? Object.assign(existing, normalizedGuest, { px: existing.px + (normalizedGuest.px - existing.px) * 0.7, py: existing.py + (normalizedGuest.py - existing.py) * 0.7 }) : normalizedGuest;
       this.peerRonin = this.spectatorTargetId
         ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[playerId]
         : Object.values(this.peerRonins)[0] ?? null;
@@ -5710,13 +5724,13 @@ export class Game {
       const existingHost = this.peerRonins[hostId];
       const normalizedHost = this.normalizePeerPosition(hostRonin);
       this.peerRonins[hostId] = existingHost
-        ? Object.assign(existingHost, normalizedHost, { px: existingHost.px + (normalizedHost.px - existingHost.px) * 0.45, py: existingHost.py + (normalizedHost.py - existingHost.py) * 0.45 })
+        ? Object.assign(existingHost, normalizedHost, { px: existingHost.px + (normalizedHost.px - existingHost.px) * 0.7, py: existingHost.py + (normalizedHost.py - existingHost.py) * 0.7 })
         : normalizedHost;
       for (const [playerId, ronin] of Object.entries(ronins ?? {})) {
         if (playerId === this.localPlayerId) continue;
         const existing = this.peerRonins[playerId];
         const normalizedRonin = this.normalizePeerPosition(ronin);
-        this.peerRonins[playerId] = existing ? Object.assign(existing, normalizedRonin, { px: existing.px + (normalizedRonin.px - existing.px) * 0.45, py: existing.py + (normalizedRonin.py - existing.py) * 0.45 }) : normalizedRonin;
+        this.peerRonins[playerId] = existing ? Object.assign(existing, normalizedRonin, { px: existing.px + (normalizedRonin.px - existing.px) * 0.7, py: existing.py + (normalizedRonin.py - existing.py) * 0.7 }) : normalizedRonin;
       }
       this.peerRonin = this.spectatorTargetId
         ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[hostId]
@@ -5786,8 +5800,8 @@ export class Game {
             slowT: 0,
           };
         } else {
-          existing.x += (syncE.x - existing.x) * 0.45;
-          existing.y += (syncE.y - existing.y) * 0.45;
+          existing.x += (syncE.x - existing.x) * 0.7;
+          existing.y += (syncE.y - existing.y) * 0.7;
           existing.hp = syncE.hp;
           existing.face = syncE.face;
           existing.state = Number(syncE.state) || 0;

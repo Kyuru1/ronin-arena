@@ -38,8 +38,9 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }> ;
 }
 
-export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile, openAccount, onOpenCoop }: {
+export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile, openAccount, onOpenCoop }: {
   onStart: (difficulty?: Difficulty) => void;
+  onStory: () => void;
   onPerk: (perk: Perk | null) => void;
 
   difficulty: Difficulty;
@@ -53,6 +54,8 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
   openAccount: boolean;
   onOpenCoop?: () => void;
 }) {
+  // Kept wired for when the temporary development gate is removed.
+  void onStory;
   useMenuNavigation();
   const [tab, setTab] = useState<MenuTab>("main");
   const [accountNotice, setAccountNotice] = useState<string | null>(null);
@@ -229,6 +232,16 @@ export default function MainMenu({ onStart, onPerk, difficulty, onDifficulty, sc
         <main className="menu-actions flex w-full max-w-sm flex-col items-center gap-3 py-6">
           <button onClick={() => setPlayStep("difficulty")} className="menu-play group w-full">
             <span className="font-pixel text-[16px] sm:text-[22px]">▶ {t.play}</span>
+          </button>
+          <button
+            disabled
+            aria-label="Modo História em desenvolvimento"
+            className="menu-play story-menu-button group w-full cursor-not-allowed border-[#6b6350] bg-gradient-to-r from-[#1b2522]/90 via-[#29342d]/90 to-[#1b2522]/90 opacity-65"
+          >
+            <span className="flex items-center justify-center gap-3 font-pixel text-[13px] text-[#fff0bd] sm:text-[17px]">
+              <span aria-hidden="true">◆</span> HISTÓRIA
+            </span>
+            <small className="mt-1 block font-pixel text-[6px] text-[#d7c889]">EM DESENVOLVIMENTO</small>
           </button>
           <button
             onClick={() => {
