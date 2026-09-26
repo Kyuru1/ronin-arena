@@ -389,7 +389,7 @@ const WEAPON_CONFIG: Record<
   harp: { wind: 0.08, strike: 0.2, rec: 0.18, cd: 1.54, arc: 1.1, range: 58, dmg: 12, kb: 190 },
   godslayer: { wind: 0.13, strike: 0.22, rec: 0.2, cd: 0.42, arc: 2.3, range: 58, dmg: 18, kb: 420 },
   boomerang: { wind: 0, strike: 0, rec: 0, cd: 0.75, arc: 0, range: 220, dmg: 4, kb: 90 },
-  shuriken: { wind: 0, strike: 0, rec: 0, cd: 0.32, arc: 0, range: 390, dmg: 2, kb: 70 },
+  shuriken: { wind: 0, strike: 0, rec: 0, cd: 0.82, arc: 0, range: 390, dmg: 2, kb: 70 },
   spear: { wind: 0.22, strike: 0.16, rec: 0.28, cd: 0.42, arc: 0.25, range: 62, dmg: 11, kb: 290 },
 };
 
