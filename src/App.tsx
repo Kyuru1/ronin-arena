@@ -22,6 +22,8 @@ import { loadProfile, type PlayerProfile } from "./game/auth";
 
 type UiPhase = "menu" | "input-select" | "tutorial" | "playing" | "paused" | "upgrade" | "dead" | "story";
 
+const STORY_MODE_ENABLED = false;
+
 const emptyStats: HudStats = {
   hp: 5,
   maxHp: 5,
@@ -300,13 +302,14 @@ export default function App() {
   }, []);
 
   const handleStartStory = useCallback(() => {
+    if (!STORY_MODE_ENABLED) return;
     unlockAudio();
     setCoopModalOpen(false);
     setMenuClosing(false);
     setPhase("story");
   }, []);
 
-  const handleStartCoop = useCallback((isHost: boolean, coopDifficulty: Difficulty) => {
+  const handleStartCoop = useCallback((isHost: boolean, coopDifficulty: Difficulty, sessionId: number) => {
     const game = gameRef.current;
     if (!game) return;
     const roomPlayers = coopNet.roomPlayers();
@@ -315,12 +318,13 @@ export default function App() {
     game.setOpts({ inputMode });
     game.isHost = isHost;
     game.setDifficulty(coopDifficulty);
+    game.setCoopSession(sessionId);
     selectedPerk.current = coopNet.roomState?.players[profileRef.current?.id ?? coopNet.playerId ?? ""]?.perk ?? null;
     game.setPlayerAvatar(profileRef.current?.avatarId ?? "samurai");
     game.setCoopPlayers(profileRef.current?.id ?? coopNet.playerId ?? "", profileRef.current?.username ?? "RONIN", roomPlayers);
     game.onGamePacketOut = (packet) => coopNet.sendPacket(packet);
     coopNet.onGamePacket = (packet, senderId) => gameRef.current?.applyPeerPacket(packet, senderId);
-    coopNet.onPeerLeft = () => gameRef.current?.coopPeerLeft();
+    coopNet.onPeerLeft = (_message, playerId) => gameRef.current?.coopPeerLeft(playerId, playerId === coopNet.roomState?.hostId);
     coopNet.onRematchUpdate = (votes) => {
       setRematchVotes(Object.keys(votes).length);
       setRematchWaiting(!!votes[coopNet.playerId ?? ""]);
@@ -690,12 +694,20 @@ export default function App() {
   /* hotkeys */
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const target = e.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement ||
+        (target instanceof HTMLElement && target.isContentEditable)
+      ) return;
+
       const k = e.key.toLowerCase();
       const g = gameRef.current;
       if (!g) return;
-      if (k === opts.keyboardBindings.pause || k === "p") {
+      if ((k === opts.keyboardBindings.pause || k === "p") && (g.phase === "playing" || g.phase === "paused")) {
         e.preventDefault();
-        if (g.phase === "playing" || g.phase === "paused") togglePause();
+        togglePause();
       } else if (k === "m") {
         toggleMute();
       }
@@ -835,7 +847,7 @@ export default function App() {
         )}
 
         {phase === "input-select" && <InputModeScreen language={opts.language} onSelect={chooseInputMode} />}
-        {phase === "story" && <StoryMode isTouch={isTouch} inputMode={inputMode} movementKeys={opts.keyboardBindings} onBack={toMenu} />}
+        {STORY_MODE_ENABLED && phase === "story" && <StoryMode isTouch={isTouch} inputMode={inputMode} movementKeys={opts.keyboardBindings} onBack={toMenu} />}
         {phase === "tutorial" && <TutorialScreen language={opts.language} isTouch={isTouch} inputMode={inputMode} onBegin={finishTutorial} />}
         {phase === "paused" && <PauseScreen stats={stats} avatarId={profile?.avatarId ?? "samurai"} waitingForHost={!!(gameRef.current?.isCoop && !gameRef.current.isHost && gameRef.current.pausedByHost)} onResume={togglePause} onSave={saveRun} onQuit={toMenu} t={t} opts={opts} onOpts={applyOpts} onFullscreen={toggleFullscreen} />}
         {phase === "dead" && (

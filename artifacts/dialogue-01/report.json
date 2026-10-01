@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "Ketlin proximity starts conversation with two native portraits",
+    "Movement blocked during conversation",
+    "Double click reveals without skipping the current line",
+    "Pause suspends typing and input, resume continues",
+    "Mobile, landscape and window layouts fit the viewport",
+    "Fullscreen preserves active conversation",
+    "Conversation removes its box and restores movement",
+    "Completed conversation does not reopen on proximity",
+    "Three-person cast and idempotent completion",
+    "Empty sequence completes without a crash",
+    "Existing intro completes through shared controller"
+  ],
+  "errors": []
+}

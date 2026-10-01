@@ -1,0 +1,14 @@
+<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#192b2c}canvas{display:block;image-rendering:pixelated;width:100vw;height:100vh}</style></head><body><canvas id="scene"></canvas><script type="module">
+import {loadKyunethArt} from '/src/story/world/referenceArt.ts';
+import {WorldRenderer} from '/src/story/world/WorldRenderer.ts';
+import {KYUNETH} from '/src/story/world/maps.ts';
+import {viewport} from '/src/story/world/Camera.ts';
+import {createStoryPlayer} from '/src/story/storyPlayer.ts';
+await loadKyunethArt();
+const params=new URLSearchParams(location.search),canvas=document.querySelector('canvas'),ctx=canvas.getContext('2d');
+const player=createStoryPlayer('Viajante');player.x=Number(params.get('x')||400);player.y=Number(params.get('y')||373);player.direction='down';
+const renderer=new WorldRenderer(KYUNETH);renderer.time=2;
+const view=viewport(innerWidth,innerHeight,devicePixelRatio);canvas.width=view.physicalW;canvas.height=view.physicalH;ctx.imageSmoothingEnabled=false;ctx.scale(view.scale,view.scale);
+renderer.draw(ctx,player,view.w,view.h,0);window.ready=true;window.preview={renderer,player,view};
+</script></body></html>
+

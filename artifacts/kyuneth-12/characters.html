@@ -1,0 +1,12 @@
+<!doctype html><html><body style="margin:0;background:#bbb77d"><canvas id="sheet" width="1000" height="660" style="image-rendering:pixelated"></canvas><script type="module">
+import {loadKyunethArt,residentSprite,travelerFrame} from '/src/story/world/referenceArt.ts';
+await loadKyunethArt();const c=document.querySelector('canvas').getContext('2d');c.imageSmoothingEnabled=false;
+const roles=['player','jeff','ketlin','shorum','kuon','mikah','jangi','mibah'];
+for(const [row,direction] of ['down','up','left','right'].entries())for(const [col,role] of roles.entries()){
+ const s=residentSprite(role,direction);c.save();c.translate(40+col*120,110+row*120);if(direction==='left')c.scale(-1,1);c.drawImage(s,-s.width, -s.height*2,s.width*2,s.height*2);c.restore();
+}
+for(const [row,direction] of ['down','up','left','right'].entries())for(let frame=0;frame<4;frame++){
+ const s=travelerFrame(direction,frame);c.drawImage(s,20+row*240+frame*55,530,s.width*2,s.height*2);
+}
+window.ready=true;
+</script></body></html>

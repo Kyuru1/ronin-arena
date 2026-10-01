@@ -1,0 +1,27 @@
+<!doctype html><html><body><pre id="result"></pre><script type="module">
+import {loadKyunethArt,artReady,residentSprite,travelerFrame} from '/src/story/world/referenceArt.ts';
+import {AssetManager} from '/src/story/world/AssetManager.ts';
+import {KYUNETH,canOccupy} from '/src/story/world/maps.ts';
+import {viewport} from '/src/story/world/Camera.ts';
+import {createStoryPlayer,moveStoryPlayer} from '/src/story/storyPlayer.ts';
+await loadKyunethArt();const errors=[],check=(ok,label)=>{if(!ok)errors.push(label);};
+check(artReady(),'atlas decoding');const assets=new AssetManager();let sprites=0;
+for(const o of KYUNETH.objects){
+ const asset=assets.get(o.kind,o.variant),data=asset.image.getContext('2d').getImageData(0,0,asset.image.width,asset.image.height).data;
+ let opaque=0,partial=0;for(let i=3;i<data.length;i+=4){if(data[i])opaque++;if(data[i]>0&&data[i]<255)partial++;}
+ check(opaque>0,`empty ${o.id}`);check(partial===0,`blur ${o.id}`);sprites++;
+}
+for(const role of ['player','jeff','ketlin','shorum','kuon','mikah','jangi','mibah'])for(const dir of ['down','up','left','right'])check(residentSprite(role,dir).height>40,`resident ${role} ${dir}`);
+for(const dir of ['down','up','left','right']){const frames=[0,1,2,3].map(n=>travelerFrame(dir,n));check(new Set(frames.map(f=>f.toDataURL())).size>1,`walk ${dir}`);}
+const views=[];for(const [width,height,dpr] of [[1366,768,1],[1920,1080,1],[3440,1440,1],[390,844,1],[390,844,3],[844,390,3]]){
+ const v=viewport(width,height,dpr);check(v.scale%2===0,'integer art scale');check(v.w<=800&&v.h<=864,'viewport bounds');check(v.left<=0&&v.top<=0,'no letterbox');views.push(v);
+}
+// The main path, shore and each civic destination must remain reachable by a radius-five player.
+const start={x:400,y:536},queue=[start],seen=new Set([`${start.x}:${start.y}`]);
+for(let i=0;i<queue.length;i++){const p=queue[i];for(const [dx,dy] of [[4,0],[-4,0],[0,4],[0,-4]]){
+ const x=p.x+dx,y=p.y+dy,key=`${x}:${y}`;if(seen.has(key)||!canOccupy(KYUNETH,x,y,5))continue;seen.add(key);queue.push({x,y});
+}}
+for(const [x,y,name] of [[400,380,'plaza'],[400,268,'hall'],[568,380,'forge'],[176,400,'beach']])check(queue.some(p=>Math.hypot(p.x-x,p.y-y)<12),`unreachable ${name}`);
+const player=createStoryPlayer('QA');moveStoryPlayer(player,0,-1,1,(x,y)=>canOccupy(KYUNETH,x,y));check(player.y<536&&player.walking,'movement');
+window.report={errors,sprites,views:views.length,reachableCells:queue.length};document.querySelector('#result').textContent=JSON.stringify(window.report);window.ready=true;
+</script></body></html>

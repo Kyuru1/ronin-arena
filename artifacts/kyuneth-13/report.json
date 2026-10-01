@@ -1,0 +1,211 @@
+{
+  "characters": 10,
+  "directions": 4,
+  "stats": [
+    {
+      "role": "player",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "player",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "player",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "player",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "jeff",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "jeff",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "jeff",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "jeff",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "ketlin",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "ketlin",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "ketlin",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "ketlin",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "shorum",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "shorum",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "shorum",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "shorum",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "kuon",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "kuon",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "kuon",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "kuon",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "mikah",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "mikah",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "mikah",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "mikah",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "jangi",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "jangi",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "jangi",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "jangi",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "mibah",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "mibah",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "mibah",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "mibah",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "dog",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "dog",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "dog",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "dog",
+      "dir": "right",
+      "distinct": 4
+    },
+    {
+      "role": "chicken",
+      "dir": "down",
+      "distinct": 4
+    },
+    {
+      "role": "chicken",
+      "dir": "up",
+      "distinct": 4
+    },
+    {
+      "role": "chicken",
+      "dir": "left",
+      "distinct": 4
+    },
+    {
+      "role": "chicken",
+      "dir": "right",
+      "distinct": 4
+    }
+  ],
+  "errors": [],
+  "controls": {
+    "gazeChangesFrame": true,
+    "partOverrideChangesFrame": true
+  }
+}

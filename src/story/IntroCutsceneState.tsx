@@ -5,12 +5,11 @@ import type { StoryPlayerEntity } from './storyPlayer';
 import GameCanvas from './world/GameCanvas';
 export default function IntroCutsceneState({player,onComplete,onBack}:{player:StoryPlayerEntity;onComplete:()=>void;onBack:()=>void}){
  const [line,setLine]=useState(0);
- const dialogue=useMemo(()=>createIntroDialogue(player.name).map(l=>({...l,speaker:player.name})),[player.name]);
- const target={x:400,y:640-line*20};
+ const dialogue=useMemo(()=>({id:'arrival-monologue',participants:[{id:'player',name:player.name,portrait:'player'}],lines:createIntroDialogue(player.name).map(l=>({...l,speaker:'player'}))}),[player.name]);
+ const target={x:400,y:520-line*12};
  return <div className="story-intro-state"><GameCanvas player={player} mode="intro" target={target} onBack={onBack}>
   {paused=><>
-   <div className="story-chapter-card"><span>PRÓLOGO · CAMINHO COSTEIRO</span><strong>O CAMINHO PARA KYUNETH</strong></div>
-   <div hidden={paused}><DialogueController lines={dialogue} paused={paused} onLineChange={setLine} onComplete={onComplete} onBack={onBack}/></div>
+   <div hidden={paused}><DialogueController dialogue={dialogue} paused={paused} onLineChange={setLine} onComplete={onComplete}/></div>
   </>}
  </GameCanvas></div>;
 }

@@ -1,0 +1,58 @@
+/* Kyuneth: paper, aged wood and a quiet burgundy thread from the Arena. */
+.travel-journal {
+  position:absolute; top:24px; left:20px; width:228px; padding:19px 16px 14px 20px;
+  color:#493d32; background:#e2cfa0; border:3px solid #79583e;
+  box-shadow:inset 4px 0 #af8454,inset 0 2px #f0ddb0,inset -2px -2px #cbb888,4px 5px 0 #293e3533;
+  clip-path:polygon(0 4px,4px 4px,4px 0,calc(100% - 5px) 0,calc(100% - 5px) 3px,100% 3px,100% calc(100% - 7px),calc(100% - 4px) calc(100% - 7px),calc(100% - 4px) 100%,7px 100%,7px calc(100% - 3px),0 calc(100% - 3px));
+  pointer-events:auto; animation:journal-arrive .45s steps(9) both;
+}
+.journal-tack {position:absolute;top:5px;left:50%;width:5px;height:5px;background:#827048;box-shadow:1px 1px #43392c,inset 1px 1px #e8d498;}
+.journal-heading {display:flex;justify-content:space-between;gap:15px;width:100%;padding:0;border:0;background:none;font:inherit;font-size:7px;color:#695333;letter-spacing:.03em;margin-bottom:12px;cursor:pointer;text-align:left;line-height:1.8;}
+.journal-heading:focus-visible {outline:2px solid #79583e;outline-offset:4px;}
+.journal-heading span {font-size:10px;}
+.journal-entry[hidden] {display:none;}
+.travel-journal.is-compact {width:190px;padding-block:15px 9px;}
+.travel-journal.is-compact .journal-heading {margin-bottom:0;}
+.journal-entry {display:flex;gap:9px;animation:journal-entry .4s steps(8) both;}
+.journal-mark {color:#977442;font-size:12px;line-height:1.5;}
+.journal-entry strong {display:block;font-size:8px;line-height:1.9;font-weight:400;}
+.journal-entry p {margin:7px 0 0;font-size:6px;line-height:1.9;color:#7b6b48;}
+.travel-journal.is-complete {background:#d7d5a6;transition:background .25s;}
+.travel-journal.is-complete .journal-mark {color:#4b704f;animation:journal-check .35s steps(5);}
+.village-location {position:absolute;bottom:24px;left:50%;transform:translateX(-50%);text-align:center;pointer-events:none;color:#ead6a4;opacity:0;transition:opacity .5s; background:#493d32; border:2px solid #79583e; padding:10px 20px; box-shadow:inset 0 2px #af8454,3px 4px #293e3533;clip-path:polygon(0 3px,3px 3px,3px 0,calc(100% - 3px) 0,calc(100% - 3px) 3px,100% 3px,100% calc(100% - 3px),calc(100% - 3px) calc(100% - 3px),calc(100% - 3px) 100%,3px 100%,3px calc(100% - 3px),0 calc(100% - 3px));}
+.village-location.is-visible {opacity:1;}
+.village-location span {display:block;font-size:6px;letter-spacing:.16em;margin-bottom:8px;color:#e4cd94;}
+.village-location strong {font-size:9px;line-height:1.8;font-weight:400;text-transform:capitalize;}
+.story-mode .world-pause-button {top:18px;right:18px;bottom:auto;min-width:38px;min-height:36px;padding:7px;border:2px solid #877450;background:#263c35d9;color:#e8d7a7;font-size:15px;box-shadow:inset 0 2px #b19a6544,3px 3px #18342c33;}
+.story-dialogue-box {left:clamp(16px,9vw,140px);right:clamp(16px,9vw,140px);bottom:26px;max-width:810px;min-height:142px;padding:22px 28px 17px;border:3px solid #302d29;outline:2px solid #aa8c59;background:#202b29ed;box-shadow:inset 0 0 0 2px #56614c,inset 0 4px #ddc88b26,5px 6px #192b2b55;animation:journal-arrive .35s steps(7) both;}
+.story-dialogue-box::before,.story-dialogue-box::after {width:14px;height:3px;background:#9c5650;box-shadow:none;}
+.story-dialogue-meta {margin-bottom:14px;color:#ead094;font-size:9px;line-height:1.6;}
+.story-dialogue-meta strong {font-weight:400;}
+.story-dialogue-box p {font-size:clamp(9px,1.1vw,12px);line-height:2.1;color:#f0e7cf;min-height:44px;text-shadow:1px 1px #142722;animation:journal-entry .2s steps(4);}
+.story-caret {width:3px;height:9px;background:#bfad78;}
+.story-advance-hint {min-height:15px;opacity:0;color:#ddc997;font-size:6px;}
+.story-advance-hint.is-ready {opacity:1;animation:none;color:#ddc997;}
+.dialogue-next {margin-left:5px;font-size:8px;animation:story-blink 1.4s steps(2) infinite;}
+.story-mode .world-pause-card {background:#263b34;border-color:#a48b5e;outline-color:#192a25;}
+.story-mode .world-pause-card button {background:#354d3f;border-color:#7f7955;}
+.world-control-help {color:#c8c7a4;line-height:2.2;}
+.story-debug {position:absolute;bottom:10px;left:10px;padding:8px;background:#181a23;color:#fff;font:10px monospace;pointer-events:none;}
+@keyframes journal-arrive {from{opacity:0;translate:0 -8px;}to{opacity:1;translate:0 0;}}
+@keyframes journal-entry {from{opacity:0;}to{opacity:1;}}
+@keyframes journal-check {50%{translate:0 -3px;}}
+@media(pointer:coarse){.dialogue-input-hint {display:none;}}
+@media(max-width:700px){
+ .travel-journal {top:15px;left:12px;width:190px;padding:17px 11px 11px 16px;}
+ .journal-entry strong {font-size:7px;}.journal-entry p {font-size:5px;}
+ .village-location {bottom:24px;max-width:48%;left:auto;right:12px;transform:none;}
+ .village-location strong {font-size:7px;}
+ .story-dialogue-box {left:14px;right:14px;bottom:20px;min-height:160px;padding:18px;}
+ .story-dialogue-meta {font-size:8px;}.story-dialogue-box p {font-size:9px;}
+}
+@media(max-height:480px){
+ .travel-journal {top:12px;padding-block:13px 10px;}.journal-heading{margin-bottom:6px;}
+ .story-dialogue-box {bottom:12px;min-height:108px;padding:13px 20px;}
+ .story-dialogue-meta{margin-bottom:7px;font-size:7px;}.story-dialogue-box p {min-height:26px;font-size:8px;line-height:1.9;}
+ .story-advance-hint {margin-top:4px;}
+}
+@media(prefers-reduced-motion:reduce){.travel-journal,.journal-entry,.journal-mark,.story-dialogue-box,.story-dialogue-box p,.dialogue-next {animation:none!important;}.village-location{transition:none;}}

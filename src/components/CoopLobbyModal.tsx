@@ -6,7 +6,7 @@ import { PxButton, PxChip, PxFrame, PxHeading } from "./PixelUi";
 import { PERKS } from "../game/perks";
 import PixelSprite from "./PixelSprite";
 
-interface CoopLobbyModalProps { profile: PlayerProfile; onClose: () => void; onStartCoop: (isHost: boolean, difficulty: Difficulty) => void; }
+interface CoopLobbyModalProps { profile: PlayerProfile; onClose: () => void; onStartCoop: (isHost: boolean, difficulty: Difficulty, sessionId: number) => void; }
 const spriteName = (avatarId: string) => avatarId === "samurai" ? "player" : avatarId;
 
 export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLobbyModalProps) {
@@ -21,7 +21,7 @@ export default function CoopLobbyModal({ profile, onClose, onStartCoop }: CoopLo
   useEffect(() => {
     const handleRoomUpdate = (next: CoopRoomState) => { setRoom(next); setBusy(false); setMessage(""); };
     const handleError = (error: string) => { setBusy(false); setMessage(error); };
-    const handleGameStart = (nextDifficulty: Difficulty) => onStartCoop(coopNet.isHost(), nextDifficulty);
+    const handleGameStart = (nextDifficulty: Difficulty, sessionId: number) => onStartCoop(coopNet.isHost(), nextDifficulty, sessionId);
     const handlePeerLeft = (text: string) => { setMessage(text); if (!coopNet.roomState?.started) setRoom(coopNet.roomState); };
     const handleKicked = (text: string) => { setRoom(null); setBusy(false); setMessage(text); };
     coopNet.onRoomUpdate = handleRoomUpdate;

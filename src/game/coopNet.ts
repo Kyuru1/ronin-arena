@@ -1,4 +1,4 @@
-import type { Difficulty, Weapon, Perk, WeaponLevels, MagicType } from "./engine";
+import type { Difficulty, Weapon, Perk, WeaponLevels, MagicType, EnemyType } from "./engine";
 import type { PlayerProfile } from "./auth";
 import type { RaceId } from "./races";
 import { supabase } from "../lib/supabase";
@@ -9,13 +9,15 @@ export interface CoopArrowState { x: number; y: number; rot: number; weapon?: We
 export interface CoopShotState { x: number; y: number; vx: number; vy: number; life: number; r: number; dmg: number; color?: string; explosive?: boolean; zone?: "fire" | "poison"; warmup?: number; }
 export interface CoopParticleState { x: number; y: number; vx: number; vy: number; life: number; max: number; size: number; color: string; drag: number; kind: 0 | 1 | 2 | 3; rot?: number; }
 export interface CoopImpactState { x: number; y: number; a: number; life: number; max: number; heavy: boolean; }
+export interface CoopSummonState { x: number; y: number; vx: number; vy: number; r: number; life: number; maxLife: number; kind: "summoned" | "revived"; type: EnemyType; attackCd: number; flash: number; }
 export interface PeerRoninState {
-  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; raceId: RaceId; worldW?: number; worldH?: number; raceAbilityT: number; raceAbilityCd: number; coins: number; score: number; kills: number; magicType: MagicType; magicFxT: number; magicFxX: number; magicFxY: number; magicFxRadius: number; magicFxForm: number; username?: string; avatarId?: string;
+  px: number; py: number; face: number; walk: boolean; hp: number; maxHp: number; weapon: Weapon; weapons: Weapon[]; activeSlot: number; weaponLevels: WeaponLevels; atkPhase: number; atkAngle: number; weaponAngle: number; attacking: boolean; bowCharge: number; arrows: CoopArrowState[]; isDashing: boolean; perk: Perk | null; raceId: RaceId; worldW?: number; worldH?: number; raceAbilityT: number; raceAbilityCd: number; coins: number; score: number; kills: number; magicType: MagicType; magicFxT: number; magicFxX: number; magicFxY: number; magicFxRadius: number; magicFxForm: number; summons?: CoopSummonState[]; username?: string; avatarId?: string;
 }
 export interface CoopEnemyState { id: number; type: string; x: number; y: number; hp: number; maxHp: number; face: number; atkAngle: number; state: string; animTimer: number; flash: number; }
 export interface CoopPickupState { id: number; kind: "coin" | "heart" | "potion"; potion?: string; x: number; y: number; credited: boolean; }
-export interface CoopHostSyncData { wave: number; waveTotal: number; waveLeft: number; enemies: CoopEnemyState[]; pickups: CoopPickupState[]; hostRonin: PeerRoninState; ronins?: Record<string, PeerRoninState>; splitCoinsEarned?: number; waveCompleted?: boolean; paused: boolean; shots: CoopShotState[]; particles: CoopParticleState[]; impacts: CoopImpactState[]; }
-export interface CoopGuestSyncData { playerId: string; guestRonin: PeerRoninState; hits: Array<{ enemyId: number; dmg: number; crit?: boolean; kx?: number; ky?: number }>; collectedPickupIds?: number[]; shopReady?: boolean; }
+export interface CoopHostSyncData { sessionId: number; sequence: number; wave: number; waveTotal: number; waveLeft: number; enemies: CoopEnemyState[]; pickups: CoopPickupState[]; hostRonin: PeerRoninState; ronins?: Record<string, PeerRoninState>; readyPlayerIds?: string[]; paused: boolean; shots: CoopShotState[]; particles?: CoopParticleState[]; impacts?: CoopImpactState[]; }
+export interface CoopGuestHit { hitId: number; enemyId: number; dmg: number; crit?: boolean; kx?: number; ky?: number; }
+export interface CoopGuestSyncData { sessionId: number; sequence: number; playerId: string; guestRonin: PeerRoninState; hits: CoopGuestHit[]; collectedPickupIds?: number[]; shopReady?: boolean; }
 export type GamePacket =
   | { type: "HOST_SYNC"; payload: CoopHostSyncData }
   | { type: "GUEST_SYNC"; payload: CoopGuestSyncData }
@@ -43,17 +45,23 @@ export class CoopNetwork {
   public onRoomUpdate?: (room: CoopRoomState) => void;
   public onGameStart?: (difficulty: Difficulty, seed: number) => void;
   public onGamePacket?: (packet: GamePacket, senderId: string) => void;
-  public onPeerLeft?: (message: string) => void;
+  public onPeerLeft?: (message: string, playerId?: string) => void;
   public onKicked?: (message: string) => void;
   public onRematchUpdate?: (votes: Record<string, boolean>) => void;
   public onRematchLobby?: () => void;
   public onError?: (message: string) => void;
   public onStatusChange?: (connected: boolean) => void;
+  private pendingSync: Extract<GamePacket, { type: "HOST_SYNC" | "GUEST_SYNC" }> | null = null;
+  private syncSending = false;
 
   public isConnected() { return this.channel !== null; }
   public roomPlayers(room = this.roomState) { return room ? Object.entries(room.players) : []; }
   public isHost() { return this.role === "host"; }
-  private publish(type: string, payload?: unknown) { void this.channel?.send({ type: "broadcast", event: "coop", payload: { type, payload } satisfies WireMessage }); }
+  private publish(type: string, payload?: unknown) { void this.publishAsync(type, payload); }
+  private async publishAsync(type: string, payload?: unknown) {
+    if (!this.channel) return "error" as const;
+    return this.channel.send({ type: "broadcast", event: "coop", payload: { type, payload } satisfies WireMessage });
+  }
   private updateRoom(room: CoopRoomState, announce = true) { this.roomState = room; this.onRoomUpdate?.(room); if (announce) this.publish("ROOM_UPDATE", room); }
 
   private async open(code: string) {
@@ -125,9 +133,45 @@ export class CoopNetwork {
     this.onRematchLobby?.();
     this.publish("REMATCH_LOBBY", lobbyRoom);
   }
-  sendPacket(packet: GamePacket) { if (this.playerId) this.publish("GAME_PACKET", { senderId: this.playerId, packet }); }
+  sendPacket(packet: GamePacket) {
+    if (!this.playerId) return;
+    if (packet.type !== "HOST_SYNC" && packet.type !== "GUEST_SYNC") {
+      this.publish("GAME_PACKET", { senderId: this.playerId, packet });
+      return;
+    }
+    if (packet.type === "GUEST_SYNC" && this.pendingSync?.type === "GUEST_SYNC") {
+      packet = { ...packet, payload: { ...packet.payload, hits: [...this.pendingSync.payload.hits, ...packet.payload.hits] } };
+    }
+    this.pendingSync = packet;
+    void this.flushSync();
+  }
+
+  private async flushSync() {
+    if (this.syncSending || !this.playerId) return;
+    this.syncSending = true;
+    let retryDelay = 0;
+    try {
+      while (this.pendingSync && this.playerId) {
+        const packet = this.pendingSync;
+        this.pendingSync = null;
+        const senderId = this.playerId;
+        const status = await this.publishAsync("GAME_PACKET", { senderId, packet });
+        if (status !== "ok") {
+          const queued = this.pendingSync as Extract<GamePacket, { type: "HOST_SYNC" | "GUEST_SYNC" }> | null;
+          if (packet.type === "GUEST_SYNC" && queued?.type === "GUEST_SYNC") {
+            this.pendingSync = { ...queued, payload: { ...queued.payload, hits: [...packet.payload.hits, ...queued.payload.hits] } };
+          } else if (!queued) this.pendingSync = packet;
+          retryDelay = 120;
+          break;
+        }
+      }
+    } finally {
+      this.syncSending = false;
+      if (this.pendingSync) window.setTimeout(() => void this.flushSync(), retryDelay);
+    }
+  }
   leaveRoom() { if (this.playerId) this.publish("PLAYER_LEFT", this.playerId); this.disconnect(); }
-  disconnect() { if (this.channel && supabase) void supabase.removeChannel(this.channel); this.channel = null; this.roomCode = null; this.role = null; this.playerId = null; this.roomState = null; this.onStatusChange?.(false); }
+  disconnect() { if (this.channel && supabase) void supabase.removeChannel(this.channel); this.channel = null; this.roomCode = null; this.role = null; this.playerId = null; this.roomState = null; this.pendingSync = null; this.syncSending = false; this.onStatusChange?.(false); }
 
   private receive(message: WireMessage) {
     switch (message.type) {
@@ -169,9 +213,9 @@ export class CoopNetwork {
       case "GAME_PACKET": { const payload = message.payload as { senderId: string; packet: GamePacket }; if (payload.senderId !== this.playerId) this.onGamePacket?.(payload.packet, payload.senderId); break; }
       case "PLAYER_LEFT": {
         const playerId = String(message.payload ?? ""); if (!playerId || !this.roomState) return;
-        if (playerId === this.roomState.hostId) { this.onPeerLeft?.("O anfitrião saiu da sala."); return; }
+        if (playerId === this.roomState.hostId) { this.onPeerLeft?.("O anfitrião saiu da sala.", playerId); return; }
         if (this.isHost()) { const players = { ...this.roomState.players }; delete players[playerId]; this.updateRoom({ ...this.roomState, players }); }
-        this.onPeerLeft?.("Um parceiro saiu da sala."); break;
+        this.onPeerLeft?.("Um parceiro saiu da sala.", playerId); break;
       }
       case "ERROR": this.onError?.(String(message.payload)); break;
     }

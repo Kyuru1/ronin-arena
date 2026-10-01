@@ -154,7 +154,7 @@ export type KeyboardAction =
 export type KeyboardBindings = Record<KeyboardAction, string>;
 export type InputMode = "keyboard" | "keyboardMouse" | "gamepad" | "touch";
 
-type EnemyType =
+export type EnemyType =
   | "grunt"
   | "bat"
   | "spitter"
@@ -440,12 +440,19 @@ export class Game {
   private peerIframes: Record<string, number> = {};
   private peerDamageRemainders: Record<string, number> = {};
   private pendingGuestHits: Array<{
+    hitId: number;
     enemyId: number;
     dmg: number;
     crit?: boolean;
     kx?: number;
     ky?: number;
   }> = [];
+  private coopSessionId = 0;
+  private coopSyncSequence = 0;
+  private lastHostSyncSequence = -1;
+  private lastGuestSyncSequence: Record<string, number> = {};
+  private nextGuestHitId = 1;
+  private processedGuestHitIds: Record<string, Set<number>> = {};
 
   // Player stats & inventory
   px = 0;
@@ -650,6 +657,9 @@ export class Game {
   setPlayerAvatar(avatarId: AvatarId) {
     this.playerAvatar = avatarId;
   }
+  setCoopSession(sessionId: number) {
+    this.coopSessionId = sessionId;
+  }
   setCoopPlayers(
     localId: string,
     localUsername: string,
@@ -661,6 +671,11 @@ export class Game {
     this.shopReadyPlayerIds.clear();
     this.peerIframes = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id]) => [id, 0]));
     this.peerDamageRemainders = Object.fromEntries(players.filter(([id]) => id !== localId).map(([id]) => [id, 0]));
+    this.lastGuestSyncSequence = {};
+    this.processedGuestHitIds = {};
+    this.lastHostSyncSequence = -1;
+    this.coopSyncSequence = 0;
+    this.nextGuestHitId = 1;
     this.peerRonins = Object.fromEntries(
       players
         .filter(([id]) => id !== localId)
@@ -1887,7 +1902,9 @@ export class Game {
 
     if (this.isCoop) {
       this.netSyncTimer += realDt;
-      if (this.netSyncTimer >= 0.05) {
+      // Guests keep sending movement at 30 Hz. Full authoritative snapshots
+      // are heavier and run at 12.5 Hz; interpolation keeps their motion smooth.
+      if (this.netSyncTimer >= (this.isHost ? 0.08 : 0.033)) {
         this.netSyncTimer = 0;
         this.broadcastCoopSync();
       }
@@ -2993,7 +3010,7 @@ export class Game {
   private statusDamage(e: Enemy, damage: number, color: string): boolean {
     if (!this.enemies.includes(e)) return false;
     e.hp -= damage;
-    if (this.isCoop && !this.isHost) this.pendingGuestHits.push({ enemyId: e.id, dmg: damage });
+    if (this.isCoop && !this.isHost) this.pendingGuestHits.push({ hitId: this.nextGuestHitId++, enemyId: e.id, dmg: damage });
     e.flash = 0.12;
     this.burst(e.x, e.y, 4, color, 70);
     if (e.hp <= 0) {
@@ -3043,6 +3060,7 @@ export class Game {
 
     if (this.isCoop && !this.isHost) {
       this.pendingGuestHits.push({
+        hitId: this.nextGuestHitId++,
         enemyId: e.id,
         dmg,
         crit: false,
@@ -3422,6 +3440,13 @@ export class Game {
   }
 
   private updateSpawns(dt: number) {
+    // Invalid authoritative enemies must never hold a wave forever.
+    for (let i = this.enemies.length - 1; i >= 0; i--) {
+      const enemy = this.enemies[i];
+      if (Number.isFinite(enemy.x) && Number.isFinite(enemy.y) && Number.isFinite(enemy.hp) && enemy.hp > 0) continue;
+      this.enemies.splice(i, 1);
+    }
+
     for (let i = this.marks.length - 1; i >= 0; i--) {
       const m = this.marks[i];
       m.t -= dt;
@@ -3601,7 +3626,18 @@ export class Game {
   }
 
   private updateEnemies(dt: number) {
-    if (this.isCoop && !this.isHost) return;
+    if (this.isCoop && !this.isHost) {
+      // Guests extrapolate only the visual position between authoritative
+      // snapshots. Damage, AI and wave completion remain entirely on the host.
+      for (const enemy of this.enemies) {
+        enemy.x = clamp(enemy.x + enemy.vx * dt, -64, this.worldW + 64);
+        enemy.y = clamp(enemy.y + enemy.vy * dt, -64, this.worldH + 64);
+        enemy.t += dt;
+        enemy.flash = Math.max(0, enemy.flash - dt);
+        enemy.scaleY += (1 - enemy.scaleY) * Math.min(1, dt * 12);
+      }
+      return;
+    }
     const arr = this.enemies;
     for (let i = arr.length - 1; i >= 0; i--) {
       const e = arr[i];
@@ -4028,6 +4064,17 @@ export class Game {
   }
 
   private updateShots(dt: number) {
+    // Enemy shots belong to the host. Guests only advance their copied visuals;
+    // collision/damage here previously let a delayed snapshot hit a guest from
+    // an old position and made each screen disagree about the result.
+    if (this.isCoop && !this.isHost) {
+      for (const s of this.shots) {
+        s.x += s.vx * dt;
+        s.y += s.vy * dt;
+        s.life -= dt;
+      }
+      return;
+    }
     for (let i = this.shots.length - 1; i >= 0; i--) {
       const s = this.shots[i];
       s.x += s.vx * dt;
@@ -4462,12 +4509,35 @@ export class Game {
     });
   }
 
-  /** O parceiro caiu da sessao no meio da partida: encerra a run coop. */
-  public coopPeerLeft() {
+  /** Remove um parceiro desconectado e só encerra quando a partida não tem mais autoridade ou aliados. */
+  public coopPeerLeft(playerId = "", hostLeft = false) {
     if (!this.isCoop || this.phase === "dying" || this.phase === "dead" || this.phase === "menu")
       return;
-    if (this.spectatorTargetId && !this.peerRonins[this.spectatorTargetId]) this.spectatorTargetId = null;
-    this.banner = "O PARCEIRO SAIU DA PARTIDA";
+
+    if (playerId) {
+      delete this.peerRonins[playerId];
+      delete this.peerIframes[playerId];
+      delete this.peerDamageRemainders[playerId];
+      delete this.lastGuestSyncSequence[playerId];
+      delete this.processedGuestHitIds[playerId];
+      this.coopPlayerIds.delete(playerId);
+      this.shopReadyPlayerIds.delete(playerId);
+      if (this.spectatorTargetId === playerId) this.spectatorTargetId = null;
+      this.peerRonin = this.spectatorTargetId
+        ? this.peerRonins[this.spectatorTargetId] ?? null
+        : Object.values(this.peerRonins)[0] ?? null;
+
+      const canContinue = !hostLeft && (!this.isHost || this.remoteRonins().length > 0);
+      if (canContinue) {
+        this.banner = "UM PARCEIRO SAIU DA PARTIDA";
+        this.bannerT = 2.5;
+        if (this.shopPending && this.shopLocalDone && this.allCoopPlayersReadyForNextWave()) this.leaveShop();
+        this.pushStats(true);
+        return;
+      }
+    }
+
+    this.banner = hostLeft ? "O ANFITRIÃO SAIU DA PARTIDA" : "O PARCEIRO SAIU DA PARTIDA";
     this.bannerT = 2.5;
     this.beginDeath();
   }
@@ -5513,6 +5583,7 @@ export class Game {
     if (!this.isCoop) return;
 
     if (this.isHost) {
+      const sequence = ++this.coopSyncSequence;
       const enemies: CoopEnemyState[] = this.enemies.map((e) => ({
         id: e.id,
         type: e.type,
@@ -5562,6 +5633,9 @@ export class Game {
         attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0 || this.magicFxT > 0,
         bowCharge: this.bowCharge,
         arrows: this.arrows.map(({ x, y, rot, weapon, evolved }) => ({ x, y, rot, weapon, evolved })),
+        summons: this.summons.map(({ x, y, vx, vy, r, life, maxLife, kind, type, attackCd, flash }) => ({
+          x, y, vx, vy, r, life, maxLife, kind, type, attackCd, flash,
+        })),
         atkPhase: this.atkPhase(),
         atkAngle: this.atkAngle,
         isDashing: this.dashT > 0,
@@ -5583,12 +5657,15 @@ export class Game {
       this.onGamePacketOut?.({
         type: "HOST_SYNC",
         payload: {
+          sessionId: this.coopSessionId,
+          sequence,
           wave: this.wave,
           waveTotal: this.waveTotal,
           waveLeft: this.waveLeft,
           enemies,
           pickups,
           ronins: this.peerRonins,
+          readyPlayerIds: [...this.shopReadyPlayerIds],
           shots: this.shots.map((s) => ({
             x: s.x,
             y: s.y,
@@ -5601,8 +5678,8 @@ export class Game {
             explosive: s.explosive, zone: s.zone, warmup: s.warmup,
           })),
           // Effects are capped so gameplay packets stay small on busy waves.
-          particles: this.parts.slice(-48).map((p): CoopParticleState => ({ ...p })),
-          impacts: this.impacts.slice(-20).map((impact): CoopImpactState => ({ ...impact })),
+          particles: sequence % 3 === 0 ? this.parts.slice(-20).map((p): CoopParticleState => ({ ...p })) : undefined,
+          impacts: sequence % 3 === 0 ? this.impacts.slice(-8).map((impact): CoopImpactState => ({ ...impact })) : undefined,
           paused: this.phase === "paused",
           hostRonin,
         },
@@ -5633,6 +5710,9 @@ export class Game {
         attacking: this.atkWind > 0 || this.atkT > 0 || this.bowHolding || this.bowReleasing > 0 || this.magicFxT > 0,
         bowCharge: this.bowCharge,
         arrows: this.arrows.map(({ x, y, rot, weapon, evolved }) => ({ x, y, rot, weapon, evolved })),
+        summons: this.summons.map(({ x, y, vx, vy, r, life, maxLife, kind, type, attackCd, flash }) => ({
+          x, y, vx, vy, r, life, maxLife, kind, type, attackCd, flash,
+        })),
         atkAngle: this.atkAngle,
         isDashing: this.dashT > 0,
         perk: this.perk,
@@ -5651,12 +5731,16 @@ export class Game {
       };
 
       const hits = this.pendingGuestHits.splice(0);
+      const sequence = ++this.coopSyncSequence;
       this.onGamePacketOut?.({
         type: "GUEST_SYNC",
         payload: {
+          sessionId: this.coopSessionId,
+          sequence,
           guestRonin,
           hits,
           playerId: this.localPlayerId,
+          shopReady: this.shopLocalDone,
         },
       });
     }
@@ -5697,10 +5781,13 @@ export class Game {
     if (!this.isCoop) return;
 
     if (packet.type === "GUEST_SYNC") {
+      if (packet.payload.sessionId !== this.coopSessionId) return;
       const { guestRonin, hits } = packet.payload;
       const normalizedGuest = this.normalizePeerPosition(guestRonin);
       const playerId = senderId || packet.payload.playerId;
       if (!playerId || playerId === this.localPlayerId) return;
+      if (packet.payload.sequence <= (this.lastGuestSyncSequence[playerId] ?? -1)) return;
+      this.lastGuestSyncSequence[playerId] = packet.payload.sequence;
       const existing = this.peerRonins[playerId];
       this.peerRonins[playerId] = existing ? Object.assign(existing, normalizedGuest, { px: existing.px + (normalizedGuest.px - existing.px) * 0.7, py: existing.py + (normalizedGuest.py - existing.py) * 0.7 }) : normalizedGuest;
       this.peerRonin = this.spectatorTargetId
@@ -5708,7 +5795,10 @@ export class Game {
         : Object.values(this.peerRonins)[0] ?? null;
 
       if (this.isHost && hits && hits.length > 0) {
+        const processed = this.processedGuestHitIds[playerId] ??= new Set<number>();
         for (const hit of hits) {
+          if (processed.has(hit.hitId)) continue;
+          processed.add(hit.hitId);
           const enemy = this.enemies.find((e) => e.id === hit.enemyId);
           if (enemy && enemy.hp > 0) {
             const ang =
@@ -5716,9 +5806,24 @@ export class Game {
             this.damageEnemy(enemy, hit.dmg, ang, true);
           }
         }
+        if (processed.size > 2048) {
+          const newest = [...processed].sort((a, b) => b - a).slice(0, 1024);
+          this.processedGuestHitIds[playerId] = new Set(newest);
+        }
+      }
+      if (this.isHost && packet.payload.shopReady && this.shopPending) {
+        this.shopReadyPlayerIds.add(playerId);
+        if (this.shopLocalDone && this.allCoopPlayersReadyForNextWave()) this.leaveShop();
       }
     } else if (packet.type === "HOST_SYNC" && !this.isHost) {
-      const { hostRonin, ronins, enemies, pickups, wave, waveTotal, waveLeft, paused, shots, particles, impacts } =
+      if (packet.payload.sessionId !== this.coopSessionId) return;
+      if (packet.payload.sequence <= this.lastHostSyncSequence) return;
+      const previousHostSyncSequence = this.lastHostSyncSequence;
+      this.lastHostSyncSequence = packet.payload.sequence;
+      const snapshotSeconds = previousHostSyncSequence < 0
+        ? 0.08
+        : clamp((packet.payload.sequence - previousHostSyncSequence) * 0.08, 0.08, 0.32);
+      const { hostRonin, ronins, enemies, pickups, wave, waveTotal, waveLeft, readyPlayerIds, paused, shots, particles, impacts } =
         packet.payload;
       const hostId = senderId || "host";
       const existingHost = this.peerRonins[hostId];
@@ -5736,9 +5841,23 @@ export class Game {
         ? this.peerRonins[this.spectatorTargetId] ?? this.peerRonins[hostId]
         : Object.values(this.peerRonins)[0] ?? null;
 
+      const hostAdvancedWave = wave > this.wave;
       this.wave = wave;
       this.waveTotal = waveTotal;
       this.waveLeft = waveLeft;
+      if (this.shopPending && readyPlayerIds) {
+        this.shopReadyPlayerIds = new Set(readyPlayerIds);
+        if (this.shopLocalDone) this.shopReadyPlayerIds.add(this.localPlayerId);
+      }
+      if (hostAdvancedWave && this.shopPending) {
+        this.shopPending = false;
+        this.shopLocalDone = false;
+        this.shopPeerDone = false;
+        this.shopReadyPlayerIds.clear();
+        this.phase = "playing";
+        this.last = performance.now();
+        this.iframe = Math.max(this.iframe, 0.4);
+      }
 
       // Update pause state from host
       if (paused) {
@@ -5747,8 +5866,8 @@ export class Game {
         this.resume(true);
       }
 
-      this.parts = (particles ?? []).map((p) => ({ ...p }));
-      this.impacts = (impacts ?? []).map((impact) => ({ ...impact }));
+      if (particles) this.parts = particles.map((p) => ({ ...p }));
+      if (impacts) this.impacts = impacts.map((impact) => ({ ...impact }));
       this.shots = (shots ?? []).map((s) => ({
         x: s.x,
         y: s.y,
@@ -5800,8 +5919,13 @@ export class Game {
             slowT: 0,
           };
         } else {
-          existing.x += (syncE.x - existing.x) * 0.7;
-          existing.y += (syncE.y - existing.y) * 0.7;
+          const correctionX = syncE.x - existing.x;
+          const correctionY = syncE.y - existing.y;
+          const maxVisualSpeed = Math.max(180, existing.speed * 4);
+          existing.vx = clamp(correctionX / snapshotSeconds, -maxVisualSpeed, maxVisualSpeed);
+          existing.vy = clamp(correctionY / snapshotSeconds, -maxVisualSpeed, maxVisualSpeed);
+          existing.x += correctionX * 0.65;
+          existing.y += correctionY * 0.65;
           existing.hp = syncE.hp;
           existing.face = syncE.face;
           existing.state = Number(syncE.state) || 0;
@@ -5960,6 +6084,7 @@ export class Game {
     const face = peer.face || 1;
 
     this.blit(sprite, px, py, face, peer.attacking ? 1 : 0, peerSquash);
+    for (const summon of peer.summons ?? []) this.drawSummon(summon);
 
     // 3.5. Arma e carga do arco do aliado
     ctx.save();

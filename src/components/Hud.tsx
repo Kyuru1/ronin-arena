@@ -34,20 +34,16 @@ export default function Hud({ stats, best, onPause, onSelectSlot, onDash, onRace
   const clampDashPosition = (x: number, y: number): DashPosition => ({ x: Math.max(8, Math.min(window.innerWidth - 76, x)), y: Math.max(70, Math.min(window.innerHeight - 84, y)) });
   const defaultDashPosition = (): DashPosition => clampDashPosition(window.innerWidth - 84, window.innerHeight - 100);
   const [dashPos, setDashPos] = useState<DashPosition | null>(() => {
-    if (typeof window === "undefined") return null;
-    try {
-      const saved = JSON.parse(localStorage.getItem("ronin.dash.position") ?? "null") as DashPosition | null;
-      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) return clampDashPosition(saved.x, saved.y);
-    } catch { /* use mobile default below */ }
-    return window.matchMedia?.("(pointer: coarse)").matches ? defaultDashPosition() : null;
+    if (typeof window === "undefined" || !window.matchMedia?.("(pointer: coarse)").matches) return null;
+    return defaultDashPosition();
   });
   const dashWasDragged = useRef(false);
   useEffect(() => {
     if (!isTouchPointer) return;
-    const clamp = () => setDashPos((current) => clampDashPosition(current?.x ?? defaultDashPosition().x, current?.y ?? defaultDashPosition().y));
-    clamp();
-    window.addEventListener("resize", clamp);
-    return () => window.removeEventListener("resize", clamp);
+    const placeOnRight = () => setDashPos(defaultDashPosition());
+    placeOnRight();
+    window.addEventListener("resize", placeOnRight);
+    return () => window.removeEventListener("resize", placeOnRight);
   }, [isTouchPointer]);
   const moveDash = (event: React.PointerEvent<HTMLButtonElement>) => {
     if (event.pointerType !== "touch") return;

@@ -13,8 +13,9 @@ export class Camera {
 /** One logical pixel always occupies a whole number of physical display pixels. */
 export function viewport(width: number, height: number, dpr: number) {
   const physicalW = Math.max(1, Math.floor(width * dpr)), physicalH = Math.max(1, Math.floor(height * dpr));
-  const scale = Math.max(1, Math.floor(Math.min(physicalW / 400, physicalH / 240)));
-  const w = Math.min(560, Math.floor(physicalW / scale)), h = Math.min(physicalH > physicalW ? 640 : 350, Math.floor(physicalH / scale));
+  // Two art pixels per world unit; every art pixel fills an integer physical block.
+  const desired = Math.min(physicalW / (height > width ? 245 : 620), physicalH / (height > width ? 470 : 350));
+  const scale = Math.max(2, Math.round(desired / 2) * 2, Math.ceil(physicalW / 800 / 2) * 2, Math.ceil(physicalH / 864 / 2) * 2);
+  const w = Math.ceil(physicalW / scale), h = Math.ceil(physicalH / scale);
   return { w, h, scale, physicalW, physicalH, left: Math.floor((physicalW - w * scale) / 2), top: Math.floor((physicalH - h * scale) / 2) };
 }
-

@@ -13,7 +13,7 @@ export interface StoryPlayerEntity extends PlayerData {
   shirt: string;
 }
 
-export const STORY_SPAWN = { x: 400, y: 680 } as const;
+export const STORY_SPAWN = { x: 400, y: 536 } as const;
 export const STORY_MOVE_SPEED = 68;
 export const STORY_PLAYER_RADIUS = 5;
 

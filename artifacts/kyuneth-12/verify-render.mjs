@@ -1,0 +1,4 @@
+import fs from 'node:fs';import {createRequire} from 'node:module';
+const require=createRequire(import.meta.url),{chromium}=require('C:/Users/vitor/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright');
+const browser=await chromium.launch({headless:true,executablePath:'C:/Program Files/Google/Chrome/Application/chrome.exe'}),page=await browser.newPage();
+page.on('pageerror',e=>console.log('ERROR',e.message));await page.goto('http://127.0.0.1:5173/artifacts/kyuneth-12/verification.html');await page.waitForFunction(()=>window.ready);const report=await page.evaluate(()=>window.report);console.log(JSON.stringify(report));fs.writeFileSync('artifacts/kyuneth-12/render-report.json',JSON.stringify(report,null,2));await browser.close();if(report.errors.length)process.exitCode=1;

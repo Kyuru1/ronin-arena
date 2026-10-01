@@ -27,17 +27,18 @@ put('boat',137,422,0);put('net',164,414);put('crate',175,430);put('barrel',181,4
 
 for(const [x,y,v] of [[211,249,0],[204,338,1],[258,337,2],[527,235,1],[653,486,0],[213,482,1],[540,369,2],[493,357,1]] ) {put('barrel',x,y,v);put('crate',x+13,y+5,(v+1)%3);}
 for(const [x,y,v] of [[205,313,0],[263,313,1],[364,247,2],[444,247,1],[569,487,0],[638,486,1],[217,483,2],[281,483,0]])put('pot',x,y,v);
+put('dog',465,448);put('chicken',222,378);put('chicken',256,516,1);put('logs',650,331);
 put('laundry',263,537);put('laundry',617,540,1);put('steps',402,256);put('steps',247,489);
 for(const [x,y] of [[202,512],[234,512],[266,512],[534,262],[566,262],[598,262],[630,262],[340,601],[340,633],[461,615],[461,647]])put('fence',x,y);
-for(const [x,y,v] of [[196,208,0],[281,236,1],[483,219,2],[668,257,0],[309,429,1],[489,468,2],[205,556,0],[673,546,1],[306,624,2],[493,662,0],[329,176,1],[638,184,2],[334,329,2],[496,402,0]])put('tree',x,y,v);
+for(const [x,y,v] of [[196,208,0],[281,236,1],[483,219,2],[668,257,0],[309,447,1],[506,505,2],[205,556,0],[673,546,1],[306,624,2],[493,662,0],[329,176,1],[638,184,2],[331,315,2],[529,422,0]])put('tree',x,y,v);
 for(const [x,y,v] of [[149,226,0],[169,351,1],[148,579,2],[177,660,0],[710,443,1],[706,632,2]])put('palm',x,y,v);
 for(const [x,y] of [[326,295],[465,283],[345,415],[459,419],[288,498],[217,456],[660,466],[318,575],[479,565],[524,205]]){put('bush',x,y,objects.length%3);put('flowers',x+14,y+7,objects.length%3);put('flowers',x-11,y+12,objects.length%3);}
 for(const [x,y,v] of [[188,397,0],[172,518,1],[198,608,2],[727,291,1],[655,614,0],[358,689,1]])put('rock',x,y,v);
 // Southern verge also gives the dialogue camera room to frame the traveler above the overlay.
 for(const [x,y,v] of [[289,747,0],[519,770,1],[320,835,2],[630,741,0],[208,803,1]])put('tree',x,y,v);
 put('palm',155,753,1);put('bush',467,726,0);put('flowers',458,733,2);put('rock',346,783,1);
-export const KYUNETH:WorldScene={id:'kyuneth',width:W,height:H,spawn:{x:400,y:648},objects,npcs:[
-{id:'jeff',x:566,y:373,shirt:'#b8794d',direction:'up'}, {id:'ketlin',x:421,y:272,shirt:'#997caa',direction:'down'},
+export const KYUNETH:WorldScene={id:'kyuneth',width:W,height:H,spawn:{x:400,y:536},objects,npcs:[
+{id:'jeff',x:566,y:373,shirt:'#b8794d',direction:'down'}, {id:'ketlin',x:421,y:272,shirt:'#997caa',direction:'down'},
 {id:'shorum',x:511,y:278,shirt:'#646c67',direction:'left'}, {id:'kuon',x:354,y:344,shirt:'#648b94',direction:'right',route:[{x:354,y:344},{x:353,y:394}],speed:9},
 {id:'mikah',x:280,y:367,shirt:'#b28b77',direction:'right'}, {id:'jangi',x:427,y:426,shirt:'#c49a55',direction:'left',route:[{x:427,y:426},{x:458,y:441}],speed:12},
 {id:'mibah',x:451,y:446,shirt:'#a8789e',direction:'up'}],interactions:[{x:402,y:265,label:'PREFEITURA DE KETLIN',radius:56,available:false},{x:587,y:355,label:'FERRARIA DE JEFF',radius:64,available:false},{x:696,y:203,label:'CAMINHO DA ARENA · EM BREVE',radius:45,available:false}],tiles:Array.from({length:H/TILE_SIZE},(_,ty)=>Array.from({length:W/TILE_SIZE},(_,tx)=>({material:materialAt(tx*16+8,ty*16+8),variant:(tx*7+ty*11+(tx*ty)%7)%6}))) };

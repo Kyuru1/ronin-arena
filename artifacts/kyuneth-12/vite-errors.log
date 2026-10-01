@@ -1,0 +1,8 @@
+19:34:28 [vite] (client) Pre-transform error: Failed to resolve import "/ronin-arena/src/story/world/referenceArt.ts" from "artifacts/kyuneth-12/preview.html?html-proxy&index=0.js". Does the file exist?
+  Plugin: vite:import-analysis
+  File: D:/Estudo/programacao/PROJETOS EM DEV/pixel-art-sword-arena-game (2)/artifacts/kyuneth-12/preview.html?html-proxy&index=0.js:2:30
+  1  |  
+  2  |  import {loadKyunethArt} from '/ronin-arena/src/story/world/referenceArt.ts';
+     |                                ^
+  3  |  import {WorldRenderer} from '/ronin-arena/src/story/world/WorldRenderer.ts';
+  4  |  import {KYUNETH} from '/ronin-arena/src/story/world/maps.ts';

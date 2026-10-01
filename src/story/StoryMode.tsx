@@ -7,6 +7,7 @@ import { STORY_SESSION_KEY } from "./storyContent";
 import { createStoryPlayer, type StoryPlayerEntity } from "./storyPlayer";
 import type { PlayerData, StoryState } from "./types";
 import "./story.css";
+import "./visual-pass.css";
 
 function loadSessionPlayer(): PlayerData {
   try {

@@ -54,8 +54,6 @@ export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDiffi
   openAccount: boolean;
   onOpenCoop?: () => void;
 }) {
-  // Kept wired for when the temporary development gate is removed.
-  void onStory;
   useMenuNavigation();
   const [tab, setTab] = useState<MenuTab>("main");
   const [accountNotice, setAccountNotice] = useState<string | null>(null);
@@ -193,7 +191,7 @@ export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDiffi
       <div className="px-backdrop absolute inset-0 z-20 flex items-center justify-center overflow-y-auto p-3 sm:p-6">
         <PxFrame title={menuText.perkTitle} className="anim-pop w-full max-w-5xl p-4 sm:p-6 lg:p-8">
           <div className="mb-4 text-center font-pixel text-[8px] leading-5 text-[#91b9b5] sm:text-[9px]">{menuText.perkLead}</div>
-          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">{available.map((perk) => { const text = PERK_TEXT[opts.language][perk.id]; return <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPlayStep(null); onStart(difficulty); }} className="min-h-28 flex-col items-start gap-3 p-4 text-left sm:min-h-32 sm:p-5"><strong className="font-pixel text-[9px] leading-5 text-[#ffd44a] sm:text-[10px]">{text[0]}</strong><span className="font-pixel text-[7px] leading-5 text-[#a9c3be] sm:text-[8px] sm:leading-6">{text[1]}</span></PxButton>; })}</div>
+          <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">{available.map((perk) => { const text = PERK_TEXT[opts.language]?.[perk.id] ?? [perk.name, perk.description]; return <PxButton key={perk.id} tone="menu" onClick={() => { onPerk(perk.id); setPlayStep(null); onStart(difficulty); }} className="min-h-28 flex-col items-start gap-3 p-4 text-left sm:min-h-32 sm:p-5"><strong className="font-pixel text-[9px] leading-5 text-[#ffd44a] sm:text-[10px]">{text[0]}</strong><span className="font-pixel text-[7px] leading-5 text-[#a9c3be] sm:text-[8px] sm:leading-6">{text[1]}</span></PxButton>; })}</div>
           <PxButton tone="dark" onClick={() => setPlayStep("difficulty")} className="mt-4 w-full py-4 text-[9px] sm:text-[10px]">{menuText.back}</PxButton>
         </PxFrame>
       </div>
@@ -211,7 +209,7 @@ export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDiffi
               const titleKey = `difficulty${level[0].toUpperCase()}${level.slice(1)}` as "difficultyEasy" | "difficultyMedium" | "difficultyHard";
               const descKey = `${titleKey}Desc` as "difficultyEasyDesc" | "difficultyMediumDesc" | "difficultyHardDesc";
               return (
-                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => { onDifficulty(level); setPlayStep("perk"); }} className="min-h-32 flex-col items-center justify-center gap-3 px-3 py-4 text-center">
+                <PxButton key={level} tone="menu" active={difficulty === level} onClick={() => { setPlayStep("perk"); onDifficulty(level); }} className="min-h-32 flex-col items-center justify-center gap-3 px-3 py-4 text-center">
                   <strong className="font-pixel text-[9px]">{t[titleKey]}</strong>
                   <span className="font-pixel text-[5px] leading-4 text-[#a9c3be]">{t[descKey]}</span>
                 </PxButton>
@@ -234,14 +232,16 @@ export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDiffi
             <span className="font-pixel text-[16px] sm:text-[22px]">▶ {t.play}</span>
           </button>
           <button
+            onClick={onStory}
             disabled
-            aria-label="Modo História em desenvolvimento"
-            className="menu-play story-menu-button group w-full cursor-not-allowed border-[#6b6350] bg-gradient-to-r from-[#1b2522]/90 via-[#29342d]/90 to-[#1b2522]/90 opacity-65"
+            aria-disabled="true"
+            title="Modo História em desenvolvimento"
+            className="menu-play story-menu-button group w-full cursor-not-allowed border-[#6f765f] bg-gradient-to-r from-[#263a34]/90 via-[#344a3f]/90 to-[#263a34]/90 opacity-65 saturate-50"
           >
-            <span className="flex items-center justify-center gap-3 font-pixel text-[13px] text-[#fff0bd] sm:text-[17px]">
+            <span className="flex items-center justify-center gap-3 font-pixel text-[13px] text-[#d5d0ae] sm:text-[17px]">
               <span aria-hidden="true">◆</span> HISTÓRIA
             </span>
-            <small className="mt-1 block font-pixel text-[6px] text-[#d7c889]">EM DESENVOLVIMENTO</small>
+            <small className="mt-1 block font-pixel text-[6px] text-[#b6b99b]">EM DESENVOLVIMENTO</small>
           </button>
           <button
             onClick={() => {

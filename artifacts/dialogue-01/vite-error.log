@@ -1,0 +1,23 @@
+node:internal/fs/watchers:323
+    const error = new UVException({
+                  ^
+
+Error: EBUSY: resource busy or locked, watch 'D:\Estudo\programacao\PROJETOS EM DEV\pixel-art-sword-arena-game (2)\dist\kyu-arena-logo.png'
+    at FSWatcher.<computed> (node:internal/fs/watchers:323:19)
+    at Object.watch (node:fs:2609:36)
+    at createFsWatchInstance (file:///D:/Estudo/programacao/PROJETOS%20EM%20DEV/pixel-art-sword-arena-game%20(2)/node_modules/vite/dist/node/chunks/config.js:12942:16)
+    at setFsWatchListener (file:///D:/Estudo/programacao/PROJETOS%20EM%20DEV/pixel-art-sword-arena-game%20(2)/node_modules/vite/dist/node/chunks/config.js:12984:14)
+    at NodeFsHandler$1._watchWithNodeFs (file:///D:/Estudo/programacao/PROJETOS%20EM%20DEV/pixel-art-sword-arena-game%20(2)/node_modules/vite/dist/node/chunks/config.js:13098:20)
+    at NodeFsHandler$1._handleFile (file:///D:/Estudo/programacao/PROJETOS%20EM%20DEV/pixel-art-sword-arena-game%20(2)/node_modules/vite/dist/node/chunks/config.js:13142:24)
+    at NodeFsHandler$1._addToNodeFs (file:///D:/Estudo/programacao/PROJETOS%20EM%20DEV/pixel-art-sword-arena-game%20(2)/node_modules/vite/dist/node/chunks/config.js:13316:26)
+Emitted 'error' event on FSWatcher instance at:
+    at FSWatcher._handleError (file:///D:/Estudo/programacao/PROJETOS%20EM%20DEV/pixel-art-sword-arena-game%20(2)/node_modules/vite/dist/node/chunks/config.js:14117:148)
+    at NodeFsHandler$1._addToNodeFs (file:///D:/Estudo/programacao/PROJETOS%20EM%20DEV/pixel-art-sword-arena-game%20(2)/node_modules/vite/dist/node/chunks/config.js:13321:18) {
+  errno: -4082,
+  syscall: 'watch',
+  code: 'EBUSY',
+  path: 'D:\\Estudo\\programacao\\PROJETOS EM DEV\\pixel-art-sword-arena-game (2)\\dist\\kyu-arena-logo.png',
+  filename: 'D:\\Estudo\\programacao\\PROJETOS EM DEV\\pixel-art-sword-arena-game (2)\\dist\\kyu-arena-logo.png'
+}
+
+Node.js v24.20.0
