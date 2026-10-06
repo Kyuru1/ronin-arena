@@ -34,6 +34,8 @@ export default function WeaponPreview({
     ctx.drawImage(src, 0, 0);
     c.style.width = `${src.width}px`;
     c.style.height = `${src.height}px`;
+    c.style.setProperty("--sprite-width", `${src.width}px`);
+    c.style.setProperty("--sprite-height", `${src.height}px`);
   }, [weapon, scale, angle, form]);
 
   return <canvas ref={ref} className={`pixelated weapon-preview-${weapon} ${className}`} aria-hidden />;

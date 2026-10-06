@@ -1,0 +1,15 @@
+{
+  "checks": [
+    "Upgrade deducts exact cost, updates level, and Back returns to overview",
+    "Weapon purchase equips, selling requires confirmation and refunds correctly",
+    "Leaving with affordable options can be cancelled or confirmed",
+    "mobile: all five sections fit, with footer visible and no horizontal overflow",
+    "landscape: all five sections fit, with footer visible and no horizontal overflow",
+    "small: all five sections fit, with footer visible and no horizontal overflow",
+    "desktop: dash, ability and arsenal visible within viewport",
+    "mobile: dash, ability and arsenal visible within viewport",
+    "No unnecessary confirmation when no purchase is affordable",
+    "Story entry remains visible as in development and cannot be opened"
+  ],
+  "errors": []
+}

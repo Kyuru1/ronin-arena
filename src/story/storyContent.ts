@@ -45,11 +45,11 @@ export function createKetlinDialogue(playerName: string): import('./types').Dial
       { speaker: 'player', text: `Sou ${playerName}. Me disseram que talvez houvesse trabalho por aqui. Estou procurando um lugar para ficar.` },
       { speaker: 'ketlin', text: 'Eu sou Ketlin. Sempre há alguma coisa para fazer em Kyuneth. E ninguém precisa procurar casa de estômago vazio.' },
       { speaker: 'player', text: 'Faz tempo que ninguém me recebe assim. Obrigado.' },
-      { speaker: 'ketlin', text: 'Conheça a vila com calma. Só… se ouvir alguém falando da Arena, venha conversar comigo antes de ir até lá.' },
-      { speaker: 'player', text: 'Aconteceu alguma coisa?' },
-      { speaker: 'ketlin', text: 'Dois dos nossos guerreiros entraram lá e não voltaram. Ainda deixamos comida à espera deles.' },
-      { speaker: 'player', text: 'Não vou prometer o que não sei cumprir. Mas posso ouvir vocês e ajudar a descobrir o que aconteceu.' },
-      { speaker: 'ketlin', text: 'Por enquanto, isso já significa muito. Descanse. Depois conversamos melhor.' },
+      { speaker: 'ketlin', text: 'Jeff, nosso ferreiro, vive dizendo que faltam mãos na oficina. Posso apresentá-los.' },
+      { speaker: 'player', text: 'Eu sei trabalhar. E... há algum lugar onde eu possa ficar?' },
+      { speaker: 'ketlin', text: 'Há uma casa vazia perto da praça. Vamos conversar sobre ela quando você conhecer melhor a vila.' },
+      { speaker: 'player', text: 'Faz tempo que não penso em ficar num lugar. Obrigado.' },
+      { speaker: 'ketlin', text: 'Seja bem-vindo a Kyuneth. Por aqui, sempre há lugar para mais uma pessoa à mesa.' },
     ],
   };
 }

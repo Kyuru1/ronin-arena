@@ -122,6 +122,9 @@ export function PauseScreen({
             <PxRow label="MÚSICA"><PxChip on={opts.music} onClick={() => onOpts({ music: !opts.music })}>{opts.music ? t.on : t.off}</PxChip></PxRow>
             <PxRow label={t.keyboardOnly}><PxChip on={opts.keyboardOnly} onClick={() => onOpts({ keyboardOnly: !opts.keyboardOnly })}>{opts.keyboardOnly ? t.on : t.off}</PxChip></PxRow>
             <PxRow label={t.fullscreen}><PxChip on onClick={onFullscreen}>{t.enter}</PxChip></PxRow>
+            <PxRow label="MOVER BOTÕES DA HUD"><PxChip on={opts.hudEditMode} onClick={() => onOpts({ hudEditMode: !opts.hudEditMode })}>{opts.hudEditMode ? t.on : t.off}</PxChip></PxRow>
+            <PxRow label="DICAS DURANTE A PARTIDA"><PxChip on={opts.showContextHints} onClick={() => onOpts({ showContextHints: !opts.showContextHints })}>{opts.showContextHints ? t.on : t.off}</PxChip></PxRow>
+            <PxRow label="LAYOUT DA HUD"><div className="flex gap-1"><PxChip on={opts.hudDensity === "compact"} onClick={() => onOpts({ hudDensity: "compact" })}>COMPACTA</PxChip><PxChip on={opts.hudDensity === "expanded"} onClick={() => onOpts({ hudDensity: "expanded" })}>EXPANDIDA</PxChip></div></PxRow>
           </div>
           <div className="px-inset mt-3 p-3"><div className="mb-2 flex justify-between font-pixel text-[6px]"><span>{t.volume}</span><span className="text-[#ffd44a]">{Math.round(opts.volume * 100)}%</span></div><input type="range" min={0} max={100} value={Math.round(opts.volume * 100)} onChange={(event) => onOpts({ volume: Number(event.target.value) / 100 })} className="slider w-full" /></div>
           <div className="px-inset mt-3 p-3"><div className="mb-2 font-pixel text-[6px]">{t.textSize}</div><div className="flex flex-wrap gap-1">{([0.85, 1, 1.15] as const).map((size) => <PxChip key={size} on={opts.textScale === size} onClick={() => onOpts({ textScale: size })}>{size === 0.85 ? t.textSmall : size === 1 ? t.textNormal : t.textLarge}</PxChip>)}</div></div>

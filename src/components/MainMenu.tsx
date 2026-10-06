@@ -26,6 +26,9 @@ export interface UiOpts {
   vsync: boolean;
   language: Language;
   hudScale: 0.65 | 0.85 | 1 | 1.25 | 1.5;
+  hudEditMode: boolean;
+  showContextHints: boolean;
+  hudDensity: "compact" | "expanded";
   textScale: 0.85 | 1 | 1.15;
   keyboardOnly: boolean;
   keyboardBindings: KeyboardBindings;
@@ -38,9 +41,10 @@ interface InstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }> ;
 }
 
-export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile, openAccount, onOpenCoop }: {
+export default function MainMenu({ onStart, onStory, storyEnabled, onPerk, difficulty, onDifficulty, scores, opts, onOpts, onFullscreen, profile, onProfile, openAccount, onOpenCoop }: {
   onStart: (difficulty?: Difficulty) => void;
   onStory: () => void;
+  storyEnabled: boolean;
   onPerk: (perk: Perk | null) => void;
 
   difficulty: Difficulty;
@@ -113,6 +117,9 @@ export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDiffi
               <PxRow label="COR DO MAPA"><div className="flex flex-wrap justify-end gap-1"><PxChip on={opts.arenaTheme === "crimson"} onClick={() => onOpts({ arenaTheme: "crimson" })}>CARMESIM</PxChip><PxChip on={opts.arenaTheme === "azure"} onClick={() => onOpts({ arenaTheme: "azure" })}>AZUL</PxChip><PxChip on={opts.arenaTheme === "violet"} onClick={() => onOpts({ arenaTheme: "violet" })}>ROXO</PxChip></div></PxRow>
               <PxRow label={t.sound}><PxChip on={opts.sound} onClick={() => onOpts({ sound: !opts.sound })}>{opts.sound ? t.on : t.off}</PxChip></PxRow><PxRow label="EFEITOS SONOROS"><PxChip on={opts.soundEffects} onClick={() => onOpts({ soundEffects: !opts.soundEffects })}>{opts.soundEffects ? t.on : t.off}</PxChip></PxRow><PxRow label="MÚSICA"><PxChip on={opts.music} onClick={() => onOpts({ music: !opts.music })}>{opts.music ? t.on : t.off}</PxChip></PxRow>
               <PxRow label={t.fullscreen}><PxChip on onClick={onFullscreen}>{t.enter}</PxChip></PxRow>
+              <PxRow label="MOVER BOTÕES DA HUD"><PxChip on={opts.hudEditMode} onClick={() => onOpts({ hudEditMode: !opts.hudEditMode })}>{opts.hudEditMode ? t.on : t.off}</PxChip></PxRow>
+              <PxRow label="DICAS DURANTE A PARTIDA"><PxChip on={opts.showContextHints} onClick={() => onOpts({ showContextHints: !opts.showContextHints })}>{opts.showContextHints ? t.on : t.off}</PxChip></PxRow>
+              <PxRow label="LAYOUT DA HUD"><div className="flex gap-1"><PxChip on={opts.hudDensity === "compact"} onClick={() => onOpts({ hudDensity: "compact" })}>COMPACTA</PxChip><PxChip on={opts.hudDensity === "expanded"} onClick={() => onOpts({ hudDensity: "expanded" })}>EXPANDIDA</PxChip></div></PxRow>
             </div>
             <div className="px-inset p-3"><div className="mb-2 flex justify-between font-pixel text-[7px]"><span>{t.volume}</span><span className="text-[#ffd44a]">{Math.round(opts.volume * 100)}%</span></div><input type="range" min={0} max={100} value={Math.round(opts.volume * 100)} onChange={(event) => onOpts({ volume: Number(event.target.value) / 100 })} className="slider w-full" /></div>
             <div className="px-inset p-3"><div className="mb-2 font-pixel text-[7px]">{t.hudSize}</div><div className="flex flex-wrap gap-1">{([0.65, 0.85, 1, 1.25, 1.5] as const).map((size) => <PxChip key={size} on={opts.hudScale === size} onClick={() => onOpts({ hudScale: size })}>{size === 0.65 ? t.hudTiny : size === 0.85 ? t.hudSmall : size === 1 ? t.hudNormal : size === 1.25 ? t.hudLarge : t.hudHuge}</PxChip>)}</div></div><div className="px-inset p-3"><div className="mb-2 font-pixel text-[7px]">{t.textSize}</div><div className="flex flex-wrap gap-1">{([0.85, 1, 1.15] as const).map((size) => <PxChip key={size} on={opts.textScale === size} onClick={() => onOpts({ textScale: size })}>{size === 0.85 ? t.textSmall : size === 1 ? t.textNormal : t.textLarge}</PxChip>)}</div></div>
@@ -233,10 +240,9 @@ export default function MainMenu({ onStart, onStory, onPerk, difficulty, onDiffi
           </button>
           <button
             onClick={onStory}
-            disabled
-            aria-disabled="true"
+            disabled={!storyEnabled}
             title="Modo História em desenvolvimento"
-            className="menu-play story-menu-button group w-full cursor-not-allowed border-[#6f765f] bg-gradient-to-r from-[#263a34]/90 via-[#344a3f]/90 to-[#263a34]/90 opacity-65 saturate-50"
+            className="menu-play story-menu-button group w-full border-[#6f765f] bg-gradient-to-r from-[#263a34]/90 via-[#344a3f]/90 to-[#263a34]/90"
           >
             <span className="flex items-center justify-center gap-3 font-pixel text-[13px] text-[#d5d0ae] sm:text-[17px]">
               <span aria-hidden="true">◆</span> HISTÓRIA

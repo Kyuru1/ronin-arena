@@ -26,7 +26,7 @@
 [data-device="mobile"] .shop-category strong { font-size: 8px; }
 [data-device="mobile"] .shop-frame .grid { gap: 6px; }
 [data-device="mobile"] .shop-frame .grid:has(> .shop-category) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-[data-device="mobile"] .shop-layout { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 6px; }
+[data-device="mobile"] .shop-layout { display: grid; grid-template-columns: 1fr; gap: 8px; }
 [data-device="mobile"] .shop-layout > div:first-child { display: flex; flex-direction: column; }
 [data-device="mobile"] .shop-layout .min-h-40 { min-height: 80px; }
 [data-device="mobile"] .shop-layout .px-inset { padding: 7px; }

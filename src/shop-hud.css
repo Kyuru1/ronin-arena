@@ -1,0 +1,323 @@
+/* Original crimson pixel identity; larger type and one scrolling shop area. */
+.store-backdrop.px-backdrop {
+  display: flex; align-items: center; justify-content: center; padding: 18px;
+  background: repeating-linear-gradient(0deg, #ffffff04 0 1px, transparent 1px 4px), radial-gradient(ellipse at 50% 44%, #260914, #050204 75%);
+  font-family: "Press Start 2P", monospace;
+}
+.store-backdrop .store-frame.shop-frame {
+  --store-muted: #d8a9a0; --store-gold: #ffd44a;
+  display: flex; flex-direction: column; width: min(1240px, 100%) !important;
+  max-width: 1240px; height: min(850px, calc(100dvh - 36px)); max-height: calc(100dvh - 36px) !important;
+  padding: 0 !important; margin: 0; overflow: hidden; isolation: isolate;
+  border: 7px solid; border-color: #090305 #5e0d1c #d9233b #260711;
+  background: repeating-linear-gradient(0deg, #ffffff04 0 1px, transparent 1px 4px), linear-gradient(145deg, #280811fa, #070205fc 58%); color: #ffe2c4;
+  box-shadow: 0 24px 80px #0009, 0 0 0 5px #05020470;
+  font: 10px/1.8 "Press Start 2P", monospace;
+}
+.store-frame::before, .store-frame::after { display: none; }
+.store-frame > .absolute { top: 8px !important; translate: none !important; transform: translateX(-50%) !important; }
+.store-frame canvas, .arena-hud canvas { width: var(--sprite-width) !important; height: var(--sprite-height) !important; max-width: 100%; object-fit: contain; margin: 0 !important; flex-shrink: 0; }
+.store-frame * { min-width: 0; }
+.store-frame button { text-transform: uppercase; cursor: pointer; touch-action: manipulation; }
+.store-frame button:disabled { cursor: default; }
+.store-frame button:focus-visible, .arena-hud button:focus-visible { outline: 3px solid #ffd44a; outline-offset: 3px; }
+.store-frame button { scroll-margin-block: 16px; }
+.store-header { display: flex; flex-shrink: 0; align-items: center; gap: 24px; padding: 42px 22px 16px; background: linear-gradient(110deg, #310b16, #0b0307); }
+.store-back { display: flex; flex-shrink: 0; align-items: center; justify-content: center; gap: 12px; min-height: 48px; padding: 10px 16px; border: 1px solid #ffd44a; background: linear-gradient(180deg, #f23449, #9e1029 68%, #620919); color: #fff1e8; font-size: 11px; font-weight: 750; box-shadow: 0 3px 0 #070305; }
+.store-back > span { font-size: 15px; line-height: 1; }
+.store-back kbd { border: 1px solid #b45a65; padding: 1px 5px; font: 8px/1.8 "Press Start 2P", monospace; }
+.store-back:hover:not(:disabled) { background: #f23449; }
+.store-back:disabled { border-color: #632030; color: #b97886; background: #1b0810; box-shadow: none; }
+.store-heading { flex: 1; }
+.store-heading > span, .store-eyebrow { font: 8px/1.8 "Press Start 2P", monospace; color: #ffd44a; letter-spacing: .04em; }
+.store-heading h1 { margin: 4px 0 0; font-size: clamp(11px, 1.2vw, 15px); font-weight: 700; letter-spacing: 0; }
+.store-frame .px-coinbox { transform: none; display: flex; gap: 12px; min-height: 58px; padding: 10px 15px; border: 1px solid #b8862a; background: #291c08; box-shadow: none; }
+.store-frame .px-coinbox .font-pixel > div:first-child { color: #e6ba62; font: 8px/1.8 "Press Start 2P", monospace; letter-spacing: .12em; }
+.store-frame .px-coinbox .font-pixel > div:last-child { color: #ffd44a; font: bold 16px/1.8 "Press Start 2P", monospace; font-variant-numeric: tabular-nums; }
+.store-nav { display: flex; flex-shrink: 0; gap: 5px; padding: 0 26px; border-block: 1px solid #651326; background: #18060c; }
+.store-nav button { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; padding: 10px 17px; border-bottom: 3px solid transparent; color: #d8a9a0; font-size: 10px; font-weight: 650; }
+.store-nav button[aria-current] { border-bottom-color: #e71938; color: #ffe2c4; background: #e7193820; }
+.store-nav button:hover { color: #fff1e8; background: #ffffff08; }
+.store-nav button > span { min-width: 21px; padding: 1px 5px; background: #381219; color: #ffd44a; border-radius: 0; font-size: 8px; }
+.store-notice { flex-shrink: 0; min-height: 39px; padding: 9px 26px; border-bottom: 1px solid #45101e; color: #d8a9a0; background: #15070c; font-size: 9px; line-height: 1.5; }
+.shop-content { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; padding: 22px 26px 28px; scrollbar-gutter: stable; overscroll-behavior: contain; }
+.shop-section-title { margin: 0 0 18px; color: #ffe2c4; font-size: 12px; font-weight: 650; outline: none; }
+.store-welcome { display: grid; grid-template-columns: 1fr 220px; align-items: center; gap: 24px; min-height: 160px; border: 1px solid #8f1428; background: radial-gradient(ellipse at 100% 100%, #a7193024, transparent 70%), #18070d; padding: 26px; }
+.store-welcome h3 { max-width: 600px; margin: 10px 0; font-size: clamp(12px, 1.4vw, 16px); font-weight: 650; line-height: 1.25; letter-spacing: 0; }
+.store-welcome p { max-width: 550px; margin-bottom: 12px; color: #d8a9a0; font-size: 10px; }
+.store-text-link { min-height: 36px; color: #ffd44a; font-weight: 650; text-align: left; }
+.store-text-link:hover { color: #ffd44a; text-decoration: underline; }
+.store-text-link:disabled { opacity: .5; }
+.store-welcome-art { display: flex; min-height: 120px; flex-direction: column; align-items: center; justify-content: center; gap: 12px; background: radial-gradient(circle, #e7193814, transparent 65%); }
+.store-welcome-art > span { color: #b46975; font: 8px/1.8 "Press Start 2P", monospace; letter-spacing: .05em; }
+.store-categories { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.store-category { display: flex; flex-direction: column; gap: 12px; border: 1px solid #702032; background: #18070d; padding: 20px; text-align: left; transition: background .15s, border-color .15s; }
+.store-category:hover { border-color: #e71938; background: #310b16; }
+.store-category.is-recommended { border-top: 3px solid #e71938; padding-top: 18px; }
+.store-category-number { display: flex; justify-content: space-between; color: #ff5965; font: 8px/1.8 "Press Start 2P", monospace; }
+.store-category h3 { color: #ffd44a; font-size: 12px; font-weight: 700; }
+.store-category p { flex: 1; color: #d8a9a0; font-size: 10px; }
+.store-category-status { border-top: 1px solid #541426; padding-top: 12px; color: #ffd44a; font-size: 9px; }
+.store-workbench { display: grid; grid-template-columns: minmax(270px, .85fr) minmax(0, 1.4fr); gap: 24px; align-items: start; }
+.store-workbench.is-weapons { grid-template-columns: minmax(440px, 1fr) minmax(0, 1.1fr); gap: 18px; }
+.store-workbench.is-upgrades { grid-template-columns: minmax(190px, .48fr) minmax(0, 1.5fr); }
+.store-catalog, .store-selection { display: flex; flex-direction: column; gap: 14px; }
+.store-caption { color: #c9aaa9; font-size: 9px; line-height: 1.6; }
+.store-weapon-list { display: grid; gap: 7px; }
+.store-workbench.is-weapons .store-weapon-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+.store-workbench.is-weapons .store-weapon { min-height: 60px; gap: 7px; padding: 7px 9px; }
+.store-workbench.is-weapons .store-weapon > canvas { width: 32px !important; height: 32px !important; }
+.store-workbench.is-weapons .store-weapon strong { font-size: 9px; }
+.store-workbench.is-weapons .store-weapon small { font-size: 8px; line-height: 1.35; }
+.store-workbench.is-weapons .store-weapon > span:last-child:not(:nth-child(2)) { font-size: 9px; }
+.store-weapon { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 70px; border: 1px solid #591627; border-left: 3px solid #591627; padding: 10px 12px; background: #18070d; text-align: left; }
+.store-weapon > canvas { width: 44px !important; height: 44px !important; object-fit: contain; flex-shrink: 0; }
+.store-weapon > span:nth-child(2) { flex: 1; }
+.store-weapon strong { display: block; font-size: 10px; font-weight: 650; line-height: 1.35; }
+.store-weapon small { display: block; margin-top: 4px; color: #bd8d96; font-size: 9px; }
+.store-weapon > span:last-child:not(:nth-child(2)) { color: #ffd44a; font-weight: 750; font-size: 11px; white-space: nowrap; }
+.store-weapon.is-affordable { border-left-color: #ad3546; }
+.store-weapon.is-affordable small { color: #ffd44a; }
+.store-weapon.is-selected { border-color: #ffd44a; background: #310b16; box-shadow: inset 3px 0 #ffd44a; }
+.store-weapon:hover { background: #3b0c1b; }
+.store-weapon-hero { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 215px; border: 1px solid #80182c; padding: 24px; background: radial-gradient(ellipse at 90% 50%, #b7193220, transparent 65%), #1d080f; }
+.store-workbench.is-weapons .store-weapon-hero { min-height: 150px; gap: 14px; padding: 18px; }
+.store-workbench.is-weapons .store-weapon-hero > canvas { max-width: 25%; }
+.store-weapon-hero h3 { margin: 9px 0 12px; color: #ffd44a; font: 9px/1.8 "Press Start 2P", monospace; overflow-wrap: anywhere; }
+.store-weapon-hero p { color: #d8a9a0; font-size: 10px; }
+.store-weapon-hero > canvas { flex-shrink: 0; max-width: 38%; object-fit: contain; }
+.store-weapon-hero.is-compact { min-height: 140px; padding: 18px; }
+.store-workbench.is-upgrades .store-weapon-hero { min-height: 100px; padding: 12px 16px; }
+.store-workbench.is-upgrades .store-weapon-hero h3 { margin-block: 4px; }
+.store-workbench.is-upgrades .store-weapon-hero p { font-size: 9px; }
+.store-workbench.is-upgrades .store-weapon-hero > canvas { width: 64px !important; height: 64px !important; }
+.store-upgrades .store-card { gap: 8px; padding: 14px; }
+.store-upgrades .store-card > p { font-size: 9px; }
+.store-weapon-hero.is-compact > canvas { order: -1; }
+.store-ratings { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 15px 18px; border: 1px solid #591627; background: #16060c; }
+.store-ratings > div { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.store-ratings > div > span:first-child { width: 100%; color: #d8a9a0; font-size: 9px; }
+.store-ratings small { color: #d8a9a0; font-size: 9px; }
+.store-ratings i { height: 9px; width: 12px; border-width: 0; }
+.store-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 2px solid #080204; background: linear-gradient(135deg,#19060cf5,#070205f5); box-shadow: inset 0 0 0 1px #dd1f3a52; }
+.store-card.is-affordable { border-top: 2px solid #ad3546; padding-top: 19px; }
+.store-card-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.store-card-heading h3 { overflow-wrap: anywhere; }
+.store-card h3, .store-arsenal h3 { color: #ffe2c4; font-size: 11px; font-weight: 700; }
+.store-card h3 small, .store-arsenal h3 small { display: block; color: #b8818c; font-size: 8px; font-weight: 400; }
+.store-card p, .store-arsenal p { color: #d8a9a0; font-size: 10px; line-height: 1.55; }
+.store-card > p { flex: 1; }
+.store-badge { flex-shrink: 0; border: 1px solid #76313e; padding: 4px 7px; color: #ffd44a; font-size: 8px; }
+.store-comparison { color: #ffd44a; font-size: 14px; line-height: 1.3; font-weight: 650; font-variant-numeric: tabular-nums; }
+.store-levels { display: flex; gap: 5px; }
+.store-levels i { width: 24px; height: 5px; background: #45101e; }
+.store-levels .is-filled { background: #e71938; }
+.store-purchase { display: flex; flex-direction: column; gap: 10px; padding-top: 10px; border-top: 1px solid #591627; }
+.store-purchase > span { display: flex; justify-content: space-between; color: #d8a9a0; font-size: 9px; }
+.store-purchase > span > span { color: #ffd44a; font-size: 11px; font-weight: 700; }
+.store-frame .pxb { display: flex; justify-content: center; align-items: center; gap: 8px; min-height: 46px; padding: 11px 16px; border: 1px solid #090305; background: #310b16; color: #ffe2c4; font: 650 10px/1.8 "Press Start 2P", monospace; text-shadow: none; box-shadow: 0 3px 0 #050204; white-space: normal; }
+.store-frame .pxb-gold { border-color: #ff5363; background: linear-gradient(180deg, #f23449, #9e1029 68%, #620919); color: #fff1e8; }
+.store-frame .pxb:hover:not(:disabled) { background: #e72a45; color: #fff1e8; transform: none; }
+.store-frame .pxb:disabled { opacity: 1; border-color: #632030; background: #210910; color: #c4919d; box-shadow: none; filter: none; }
+.store-buy-box > .pxb { width: 100%; }
+.store-buy-box > .store-card-heading > span { font-size: 15px; font-weight: 700; color: #ffd44a; }
+.store-owned-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.store-sell { display: flex; align-items: center; justify-content: center; gap: 5px; min-height: 44px; color: #ff8991; font-size: 9px; text-decoration: underline; text-underline-offset: 4px; }
+.store-sell-confirm { border-top: 1px solid #8f1428; padding-top: 12px; }
+.store-sell-confirm button { min-height: 44px; margin: 8px 8px 0 0; padding: 8px 12px; border: 1px solid #ff5965; color: #ffe2c4; }
+.store-upgrades, .store-powerups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.store-arsenal { padding: 16px; border: 1px solid #64172b; background: #100509; }
+.store-arsenal p { margin: 10px 0; font-size: 9px; }
+.store-slots { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.store-slots > * { position: relative; display: flex; min-height: 82px; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px dashed #702032; color: #bd8d96; }
+.store-slots > button { border-style: solid; background: #310b16; }
+.store-slots > .is-active { border: 2px solid #ffd44a; color: #ffd44a; }
+.store-slots > .is-moving { outline: 3px solid #ffd44a; }
+.store-slots > * > span { position: absolute; top: 3px; left: 6px; font-size: 8px; }
+.store-slots small { font-size: 8px; }
+.store-stat-readouts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 18px 0; }
+.store-stat-readouts > div { padding: 15px; border-left: 2px solid #e71938; background: #210910; }
+.store-stat-readouts span { display: block; color: #d8a9a0; font-size: 9px; }
+.store-stat-readouts strong { display: block; margin-top: 6px; font-size: 14px; }
+.store-magic { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.store-magic button { padding: 12px; border: 1px solid #702032; text-align: left; }
+.store-magic button[aria-pressed=true] { border-color: #ffd44a; background: #310b16; }
+.store-magic strong, .store-magic span { display: block; }
+.store-magic span { margin-top: 5px; color: #d8a9a0; font-size: 9px; }
+.store-footer { display: flex; flex-shrink: 0; align-items: center; justify-content: space-between; gap: 18px; padding: 18px 26px; border-top: 1px solid #e71938; background: #19070e; }
+.store-footer-copy strong, .store-footer-copy span { display: block; }
+.store-footer-copy strong { color: #ffe2c4; font-size: 10px; font-weight: 600; }
+.store-footer-copy span { margin-top: 3px; color: #d8a9a0; font-size: 9px; }
+.store-footer > .pxb { flex-shrink: 0; min-width: 220px; min-height: 50px; font-size: 11px; }
+.store-leave-confirm { display: flex; width: 100%; gap: 16px; align-items: center; }
+.store-leave-confirm > div { flex: 1; }
+.store-leave-confirm strong { color: #ffd44a; }
+.store-leave-confirm p { margin-top: 4px; font-size: 9px; color: #d8a9a0; }
+.store-leave-confirm > button { min-height: 44px; padding: 10px; border: 1px solid #8f1428; font-size: 10px; }
+.store-frame .character-details { padding: 0; overflow: visible; max-height: none; }
+.store-frame .character-stat { min-height: 58px; padding: 13px; background: #19070e; border: 1px solid #591627; font-family: "Press Start 2P", monospace; }
+.store-frame .character-stat span, .store-frame .character-stat strong { font-size: 10px; }
+.store-frame .character-portrait { background: #210910; border-color: #8f1428; }
+.store-frame .character-portrait > strong, .store-frame .character-portrait > span, .store-frame .character-current-weapon, .store-frame .character-arsenal > strong, .store-frame .character-arsenal span, .store-frame .character-arsenal small { font: 9px/1.8 "Press Start 2P", monospace; }
+.store-frame .character-arsenal small { font-size: 8px; }
+.store-frame .character-lore-grid article { background: #1b070e; border-width: 1px; padding: 18px; }
+.store-frame .character-lore-grid article > strong, .store-frame .character-ability strong { font: 650 10px/1.8 "Press Start 2P", monospace; }
+.store-frame .character-lore-grid p { color: #d8a9a0; font: 10px/1.8 "Press Start 2P", monospace; }
+.store-frame .character-ability kbd { font: 9px/1.8 "Press Start 2P", monospace; }
+@media (max-width: 1000px) {
+  .store-header { gap: 16px; padding: 40px 20px 14px; }
+  .store-workbench { grid-template-columns: minmax(240px, .9fr) minmax(0, 1.2fr); gap: 16px; }
+  .store-workbench.is-weapons { grid-template-columns: 1fr; }
+  .store-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .store-upgrades { grid-template-columns: 1fr; }
+  .store-nav { padding-inline: 16px; }
+  .store-nav button { padding-inline: 12px; }
+}
+@media (max-width: 700px) {
+  .store-backdrop.px-backdrop { padding: 6px; }
+  .store-backdrop .store-frame.shop-frame { height: calc(100dvh - 12px); max-height: calc(100dvh - 12px) !important; width: 100% !important; }
+  .store-header { gap: 12px; padding: 36px 12px 12px; flex-wrap: wrap; }
+  .store-heading { order: 3; flex-basis: 100%; }
+  .store-heading h1 { font-size: 13px; }
+  .store-heading > span { font-size: 8px; }
+  .store-back { min-height: 44px; padding: 8px 12px; }
+  .store-frame .px-coinbox { margin-left: auto; min-height: 46px; padding: 7px 12px; }
+  .store-nav { display: grid; grid-template-columns: repeat(3, 1fr); padding: 0 8px; gap: 0; }
+  .store-nav button { min-height: 44px; padding: 6px 4px; font-size: 9px; gap: 5px; }
+  .store-nav button:nth-child(4), .store-nav button:nth-child(5) { grid-column: auto; }
+  .store-notice { padding: 8px 12px; min-height: 0; font-size: 9px; }
+  .shop-content { padding: 16px 12px 22px; }
+  .shop-section-title { font-size: 11px; margin-bottom: 14px; }
+  .store-welcome { grid-template-columns: 1fr; gap: 0; padding: 20px; }
+  .store-welcome-art { display: none; }
+  .store-welcome h3 { font-size: 15px; }
+  .store-eyebrow { font-size: 8px; }
+  .store-category { padding: 14px; gap: 10px; }
+  .store-category.is-recommended { padding-top: 12px; }
+  .store-category h3 { font-size: 11px; }
+  .store-category p { font-size: 9px; }
+  .store-workbench { grid-template-columns: 1fr; }
+  .store-workbench.is-upgrades { grid-template-columns: 1fr; }
+  .store-workbench.is-weapons .store-weapon-hero { min-height: 135px; }
+  .store-weapon-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .store-weapon { flex-wrap: wrap; gap: 7px; padding: 9px; }
+  .store-weapon > canvas { width: 32px !important; height: 32px !important; }
+  .store-weapon strong { font-size: 9px; }
+  .store-weapon small { font-size: 8px; }
+  .store-weapon > span:last-child:not(:nth-child(2)) { margin-left: auto; }
+  .store-weapon-hero { padding: 18px; min-height: 170px; gap: 14px; }
+  .store-weapon-hero h3 { font-size: 8px; }
+  .store-weapon-hero > canvas { max-width: 30%; }
+  .store-stat-readouts { grid-template-columns: repeat(2, 1fr); }
+  .store-powerups { grid-template-columns: 1fr; }
+  .store-footer { flex-wrap: wrap; gap: 10px; padding: 12px; }
+  .store-footer-copy strong { font-size: 9px; }
+  .store-footer-copy span { font-size: 8px; }
+  .store-footer > .pxb { width: 100%; min-height: 46px; }
+  .store-leave-confirm { flex-wrap: wrap; gap: 8px; }
+  .store-leave-confirm > div { flex-basis: 100%; }
+  .store-leave-confirm > button { flex: 1; }
+  .store-frame .character-stat { padding: 9px; }
+  .store-frame .character-stat span, .store-frame .character-stat strong { font-size: 9px; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .store-backdrop.px-backdrop { padding: 4px; }
+  .store-backdrop .store-frame.shop-frame { height: calc(100dvh - 8px); max-height: calc(100dvh - 8px) !important; }
+  .store-header { padding: 30px 14px 6px; gap: 14px; flex-wrap: nowrap; }
+  .store-heading { order: initial; flex-basis: auto; }
+  .store-heading h1 { font-size: 11px; }
+  .store-heading > span { font-size: 7px; }
+  .store-frame .px-coinbox { min-height: 42px; padding: 4px 12px; }
+  .store-nav { display: flex; padding: 0 10px; }
+  .store-nav button { min-height: 40px; font-size: 9px; padding: 7px 12px; }
+  .store-notice { padding: 4px 14px; font-size: 8px; }
+  .store-footer { padding: 8px 14px; flex-wrap: nowrap; }
+  .store-footer > .pxb { width: auto; min-height: 44px; font-size: 10px; }
+  .shop-content { padding-block: 12px; }
+}
+/* Combat: health, wave and currency outrank score; controls remain in the periphery. */
+.arena-hud .combat-panel, .arena-hud .combat-wave { padding: 6px; background: transparent; border: 0; box-shadow: none; text-shadow: 2px 2px #070305; }
+.arena-hud .combat-health { min-width: 130px; max-width: 240px; }
+.health-caption { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-bottom: 7px; font: 8px/1.8 "Press Start 2P", monospace; color: #d8a9a0; }
+.health-caption strong { color: #ffe2c4; font-size: 10px; font-variant-numeric: tabular-nums; }
+.health-hearts { display: flex; flex-wrap: wrap; gap: 5px; }
+.health-hearts svg { width: 25px; height: 22px; }
+.health-track { width: 145px; height: 12px; background: #2a0e13; }
+.health-track i { display: block; height: 100%; background: #ff4353; }
+.arena-hud .combat-wave { min-width: 195px; text-align: center; }
+.arena-hud .combat-wave > div:first-child { font-size: 8px; }
+.arena-hud .combat-wave > div:nth-child(2) { width: 100%; height: 8px; margin-block: 8px; }
+.arena-hud .combat-wave > div:last-child { font: 9px/1.8 "Press Start 2P", monospace; color: #ffe2c4; }
+.arena-hud .hud-wave-detail { display: flex; justify-content: center; flex-wrap: wrap; gap: 4px 12px; }
+.hud-wallet { display: flex; justify-content: flex-end; align-items: center; gap: 8px; color: #ffd44a; font: 8px/1.8 "Press Start 2P", monospace; }
+.hud-wallet strong { font-size: 15px; font-weight: 750; }
+.hud-score-line { margin-top: 3px; font: 9px/1.8 "Press Start 2P", monospace; color: #d8a9a0; }
+.hud-score-line > span { font-size: 8px; color: #b78c91; }
+.arena-hud .combat-kills { color: #d8a9a0; font: 8px/1.8 "Press Start 2P", monospace; }
+.arena-hud .hud-icon { width: 36px; height: 32px; border: 1px solid #8c2a35; background: #2a0e13; font-size: 11px; }
+.arena-hud .hud-context-hint { top: auto; bottom: 116px; padding: 9px 12px; max-width: min(440px, 70vw); border: 1px solid #ffd44a; background: #070205ed; box-shadow: none; color: #ffe2c4; font: 9px/1.8 "Press Start 2P", monospace; }
+.arena-hud .hud-context-hint button { min-width: 32px; min-height: 32px; border-color: #8c2a35; background: #310812; font-size: 13px; }
+.arena-hud .hud-race-ability { width: 116px !important; height: 90px !important; border-width: 2px; border-color: #6e1020 !important; background: radial-gradient(circle at 50% 38%, #e0253e4d, #080307f5 67%) !important; box-shadow: 0 3px 0 #050204 !important; gap: 4px; padding: 6px; }
+.arena-hud .hud-race-ability::before, .arena-hud .dash-action::before { display: block; }
+.arena-hud .hud-race-ability.is-ready { border-color: #e71938 !important; }
+.arena-hud .hud-race-ability > strong { font: 650 9px/1.8 "Press Start 2P", monospace; color: #ffe2c4 !important; }
+.arena-hud .hud-race-ability > span:nth-child(2) { font-size: 9px; }
+.arena-hud .hud-race-ability > span:nth-child(3) { color: #ffd44a; font: 700 9px/1.8 "Press Start 2P", monospace; }
+.arena-hud .hud-race-ability > span:last-child { color: #d8c2b8; font: 8px/1.8 "Press Start 2P", monospace; }
+.arena-hud .dash-action { position: fixed; border-color: #781326 !important; box-shadow: 0 2px 0 #050204 !important; }
+.arena-hud .dash-action strong { font: 700 8px/1.8 "Press Start 2P", monospace; padding: 4px; bottom: -4px; }
+.arena-hud .weapon-hud-group { gap: 10px; padding: 8px; background: #070305b0; border: 1px solid #65203080; }
+.arena-hud .active-weapon-readout { min-width: 112px; align-self: center; background: none; border-left: 2px solid #ffd44a; padding: 6px 10px; }
+.arena-hud .active-weapon-readout span, .arena-hud .active-weapon-readout small { font: 8px/1.8 "Press Start 2P", monospace; color: #c9aaa9; }
+.arena-hud .active-weapon-readout strong { font: 700 9px/1.8 "Press Start 2P", monospace; color: #ffd44a; }
+.arena-hud .weapon-rail { gap: 7px; }
+.arena-hud .weapon-slot, .arena-hud.hud-compact .weapon-slot { width: 58px; height: 64px; border: 1px solid #702032; background: #1b0710; }
+.arena-hud .weapon-slot.is-active, .arena-hud.hud-compact .weapon-slot.is-active { width: 64px; height: 70px; border: 2px solid #e71938; background: #310b16; box-shadow: none; }
+.arena-hud .weapon-slot.is-empty { color: #a87982; border-style: dashed; background: #100509; }
+.arena-hud .slot-key { font: 8px/1.8 "Press Start 2P", monospace; color: #ffe2c4; }
+.arena-hud .slot-name { font: 8px/1.8 "Press Start 2P", monospace; color: #ffe2c4; bottom: 13px; }
+.arena-hud .slot-level { font: 8px/1.8 "Press Start 2P", monospace; color: #ffd44a; bottom: 2px; }
+@media (max-width: 700px) {
+  .arena-hud .combat-topbar { gap: 5px; grid-template-columns: 1fr auto 1fr; }
+  .arena-hud .combat-panel, .arena-hud .combat-wave { padding: 6px; }
+  .arena-hud .combat-health { min-width: 80px; }
+  .arena-hud .health-caption { gap: 6px; font-size: 8px; }
+  .arena-hud .health-caption strong { font-size: 9px; }
+  .arena-hud .health-hearts { gap: 3px; }
+  .arena-hud .health-hearts svg { width: 17px; height: 15px; }
+  .arena-hud .health-track { width: 80px; }
+  .arena-hud .combat-wave { min-width: 116px; }
+  .arena-hud .combat-wave > div:first-child { font-size: 8px; }
+  .arena-hud .combat-wave > div:last-child { font-size: 8px; }
+  .arena-hud .hud-wallet { gap: 4px; }
+  .arena-hud .hud-wallet strong { font-size: 12px; }
+  .arena-hud .hud-wallet > span, .arena-hud .hud-score-line > span, .arena-hud .combat-kills { display: none; }
+  .arena-hud .hud-score-line { font-size: 8px; }
+  .arena-hud .hud-icon { width: 30px; height: 28px; }
+  .arena-hud .active-weapon-readout { display: none; }
+  .arena-hud .weapon-hud-group { padding: 5px; gap: 4px; }
+  .arena-hud .weapon-rail { gap: 4px; }
+  .arena-hud .weapon-slot, .arena-hud.hud-compact .weapon-slot { width: 44px; height: 52px; }
+  .arena-hud .weapon-slot.is-active, .arena-hud.hud-compact .weapon-slot.is-active { width: 48px; height: 58px; }
+  .arena-hud .slot-name { font-size: 8px; }
+  .arena-hud .hud-context-hint { bottom: 180px; font-size: 9px; max-width: 88vw; width: 360px; }
+  .arena-hud.is-touch .hud-arsenal-position { padding-bottom: 90px; }
+  .arena-hud.is-touch .hud-race-ability { width: 96px !important; height: 80px !important; }
+}
+/* The mobile panel's navigation remains outside the fixed shop. */
+@media (max-height: 520px) and (orientation: landscape) {
+  .store-frame > .absolute { display: none; }
+  .store-header { padding: 5px 12px; }
+  .store-header .store-back { min-height: 40px; padding: 5px 10px; }
+  .store-heading h1 { font-size: 10px; }
+  .store-notice { display: none; }
+  .store-notice.has-feedback { display: block; font-size: 8px; padding-block: 3px; }
+  .store-footer-copy span { display: none; }
+  .store-footer-copy strong { font-size: 8px; }
+  .store-footer { padding: 6px 12px; }
+  .store-footer > .pxb { min-height: 40px; }
+  .shop-section-title { font-size: 10px; margin-bottom: 10px; }
+}
+[data-device="mobile"] .store-backdrop.px-backdrop { padding: 6px; bottom: 54px; }
+[data-device="mobile"] .store-backdrop .store-frame.shop-frame { height: 100%; max-height: 100% !important; overflow: hidden; padding: 0 !important; }
+@media (prefers-reduced-motion: reduce) { .store-frame *, .arena-hud * { animation: none !important; transition: none !important; } }

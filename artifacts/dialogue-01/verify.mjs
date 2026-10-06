@@ -14,6 +14,10 @@ const click=async()=>{await page.locator('.story-advance-hint').click();await wa
 const pos=()=>page.evaluate(()=>({x:window.testPlayer.x,y:window.testPlayer.y}));
 try {
  await page.goto(base);await page.locator('.world-canvas').waitFor();await wait(2600);
+ const welcome=await page.evaluate(async()=> (await import('/src/story/storyContent.ts')).createKetlinDialogue('Akira').lines);
+ assert.ok(welcome.some(line=>line.text.includes('Jeff'))&&welcome.some(line=>line.text.includes('casa')));
+ assert.ok(welcome.every(line=>!/(desaparecid|guerreiros.*não voltaram)/i.test(line.text)));
+ checks.push('First welcome establishes work and home before the missing warriors are revealed');
  await page.keyboard.down('w');await wait(140);await page.keyboard.up('w');
  await page.locator('.cinematic-dialogue').waitFor();
  assert.equal(await page.locator('.dialogue-portrait').count(),2);
@@ -45,10 +49,14 @@ try {
  assert.equal(await page.locator('.cinematic-dialogue').isVisible(),true);checks.push('Fullscreen preserves active conversation');
  await page.screenshot({path:'artifacts/dialogue-01/fullscreen.png'});
  await page.evaluate(()=>document.exitFullscreen());
- for(let i=1;i<9;i++) { // line 1 is already revealed
+ for(let i=2;i<welcome.length;i++) { // line 1 is already revealed
   await click();
-  if(i<8) await click();
+  assert.equal(await page.locator('.is-speaking').getAttribute('data-participant'),welcome[i].speaker);
+  await click();
+  if(i===6) await page.screenshot({path:'artifacts/dialogue-01/late-welcome.png'});
  }
+ checks.push('Speaker focus follows every line through the full welcome');
+ await click();
  // Last line may still be typing depending on elapsed time.
  for(let i=0;i<3&&await page.locator('.cinematic-dialogue').count();i++) await click();
  assert.equal(await page.locator('.cinematic-dialogue').count(),0);

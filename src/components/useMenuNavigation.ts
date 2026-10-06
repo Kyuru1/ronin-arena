@@ -1,9 +1,9 @@
-import { useEffect } from "react";
+import { useEffect, type RefObject } from "react";
 
-export function useMenuNavigation(enabled = true) {
+export function useMenuNavigation(enabled = true, scope?: RefObject<HTMLElement | null>) {
   useEffect(() => {
     if (!enabled) return;
-    const getButtons = () => Array.from(document.querySelectorAll<HTMLButtonElement>("button:not([disabled])"));
+    const getButtons = () => Array.from((scope?.current ?? document).querySelectorAll<HTMLButtonElement>("button:not([disabled])")).filter(button => button.getClientRects().length > 0);
     const focusFirst = () => {
       if (document.activeElement?.tagName === "BUTTON") return;
       getButtons()[0]?.focus();
@@ -18,7 +18,7 @@ export function useMenuNavigation(enabled = true) {
       if ((event.target as HTMLElement).tagName === "INPUT" && event.key !== "Escape") return;
       if (event.key === "ArrowDown" || event.key === "ArrowRight") { event.preventDefault(); moveFocus(1); }
       if (event.key === "ArrowUp" || event.key === "ArrowLeft") { event.preventDefault(); moveFocus(-1); }
-      if (event.key === "Escape") {
+      if (event.key === "Escape" && !scope) {
         const back = getButtons().find((button) => /VOLTAR|MENU/.test(button.textContent ?? ""));
         if (back) { event.preventDefault(); back.click(); }
         else (document.activeElement as HTMLElement)?.blur();
@@ -47,5 +47,5 @@ export function useMenuNavigation(enabled = true) {
       cancelAnimationFrame(frame);
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [enabled]);
+  }, [enabled, scope]);
 }

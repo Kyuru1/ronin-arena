@@ -27,6 +27,8 @@ export default function PixelSprite({
     ctx.drawImage(spr.canvas, 0, 0);
     c.style.width = `${spr.w * scale}px`;
     c.style.height = `${spr.h * scale}px`;
+    c.style.setProperty("--sprite-width", `${spr.w * scale}px`);
+    c.style.setProperty("--sprite-height", `${spr.h * scale}px`);
   }, [name, scale]);
 
   return <canvas ref={ref} className={`pixelated ${className}`} style={style} aria-hidden />;

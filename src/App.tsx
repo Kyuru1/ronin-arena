@@ -106,6 +106,9 @@ const defaultOpts: UiOpts = {
   vsync: true,
   language: "pt",
   hudScale: 1,
+  hudEditMode: false,
+  showContextHints: true,
+  hudDensity: "expanded",
   textScale: 1,
   keyboardOnly: false,
   keyboardBindings: { up: "w", down: "s", left: "a", right: "d", attack: " ", dash: "shift", specialAbility: "f", prev: "q", next: "e", pause: "escape" },
@@ -807,6 +810,10 @@ export default function App() {
             onSpectate={(direction) => gameRef.current?.spectateNext(direction)}
             onPotionDismiss={dismissPotionTutorial}
             hudScale={opts.hudScale}
+            hudEditMode={opts.hudEditMode}
+            showContextHints={opts.showContextHints}
+            hudDensity={opts.hudDensity}
+            onHudEditDone={() => applyOpts({ hudEditMode: false })}
             language={opts.language}
             t={t}
           />
@@ -831,6 +838,7 @@ export default function App() {
               openAccount={pendingScore}
               onOpenCoop={handleOpenCoop}
               onStory={handleStartStory}
+              storyEnabled={STORY_MODE_ENABLED}
             />
           </div>
         )}
@@ -884,6 +892,7 @@ export default function App() {
             language={opts.language}
             t={t}
             abilityBinding={opts.keyboardBindings.specialAbility === " " ? "ESPAÇO · Y / TRIÂNGULO" : opts.keyboardBindings.specialAbility.toUpperCase() + " · Y / TRIÂNGULO"}
+            isTouch={isTouch}
           />
         )}
       </div>

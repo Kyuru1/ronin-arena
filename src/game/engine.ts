@@ -1129,13 +1129,13 @@ export class Game {
 
   private onKeyDown = (e: KeyboardEvent) => {
     const k = e.key.toLowerCase();
+    // Menus own Tab, Space and arrow navigation while combat is suspended.
+    if (this.phase !== "playing") return;
     if (["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "tab"].includes(k)) {
       e.preventDefault();
     }
     if (this.keys.has(k)) return;
     this.keys.add(k);
-    if (this.phase !== "playing") return;
-
     const bindings = this.opts.keyboardBindings;
     if (this.isCoop && this.hp <= 0) {
       if (k === bindings.prev || k === "arrowleft") this.spectateNext(-1);
@@ -6240,5 +6240,4 @@ function gibColor(t: EnemyType) {
 function prevent(e: Event) {
   e.preventDefault();
 }
-
 

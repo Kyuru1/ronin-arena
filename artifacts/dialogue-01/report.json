@@ -1,11 +1,13 @@
 {
   "checks": [
+    "First welcome establishes work and home before the missing warriors are revealed",
     "Ketlin proximity starts conversation with two native portraits",
     "Movement blocked during conversation",
     "Double click reveals without skipping the current line",
     "Pause suspends typing and input, resume continues",
     "Mobile, landscape and window layouts fit the viewport",
     "Fullscreen preserves active conversation",
+    "Speaker focus follows every line through the full welcome",
     "Conversation removes its box and restores movement",
     "Completed conversation does not reopen on proximity",
     "Three-person cast and idempotent completion",
